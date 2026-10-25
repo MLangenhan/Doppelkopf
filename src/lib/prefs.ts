@@ -5,9 +5,11 @@ import { useCallback, useSyncExternalStore } from 'react';
 export interface Prefs {
   /** Spielbare Karten hervorheben, nicht spielbare abdunkeln. Aus = "schwarz spielen" ohne Hilfe. */
   highlightPlayable: boolean;
+  /** 3D-Szene und Hintergrund-Partikel */
+  effects: boolean;
 }
 
-const DEFAULTS: Prefs = { highlightPlayable: true };
+const DEFAULTS: Prefs = { highlightPlayable: true, effects: true };
 const KEY = 'doko:prefs';
 
 const listeners = new Set<() => void>();
@@ -53,4 +55,14 @@ export function usePrefs() {
   const prefs = useSyncExternalStore(subscribe, read, () => DEFAULTS);
   const set = useCallback(<K extends keyof Prefs>(key: K, value: Prefs[K]) => write({ ...read(), [key]: value }), []);
   return [prefs, set] as const;
+}
+
+/** Ob aufwendige Effekte laufen sollen: Einstellung an, keine reduzierte Bewegung, kein sehr schwaches Gerät. */
+export function useEffectsEnabled(): boolean {
+  const [prefs] = usePrefs();
+  if (!prefs.effects || typeof window === 'undefined') return false;
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false;
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  if ((nav.hardwareConcurrency ?? 8) <= 2 || (nav.deviceMemory ?? 8) <= 2) return false;
+  return true;
 }

@@ -1,14 +1,19 @@
 import { motion } from 'motion/react';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, lazy, Suspense, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { PlayingCard } from '../components/PlayingCard';
 import { useAuth } from '../lib/auth';
+import { useEffectsEnabled } from '../lib/prefs';
 import { errorMessage, supabase } from '../lib/supabase';
+
+// three.js nur laden, wenn die 3D-Szene wirklich gezeigt wird
+const CardScene = lazy(() => import('../components/CardScene'));
 
 const HERO = ['H-10-0', 'C-Q-0', 'S-Q-0', 'D-A-0', 'C-J-0'];
 
 export function LoginPage() {
   const { session } = useAuth();
+  const effects = useEffectsEnabled();
   const location = useLocation();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
@@ -57,22 +62,33 @@ export function LoginPage() {
   }
 
   return (
-    <div className="felt flex min-h-full flex-col items-center justify-center gap-10 px-4 py-10">
-      <div className="flex flex-col items-center gap-6">
-        <div className="mb-4 flex h-36 items-end" aria-hidden>
-          {HERO.map((c, i) => (
-            <PlayingCard
-              key={c}
-              card={c}
-              width={84}
-              className="-mx-3"
-              initial={{ opacity: 0, y: 60, rotate: 0 }}
-              animate={{ opacity: 1, y: Math.abs(i - 2) * 10, rotate: (i - 2) * 9 }}
-              transition={{ delay: 0.15 + i * 0.08, type: 'spring', stiffness: 160, damping: 18 }}
-              style={{ transformOrigin: '50% 120%' }}
-            />
-          ))}
+    <div className="felt relative isolate flex min-h-full flex-col items-center justify-center gap-10 px-4 py-10">
+      {effects && (
+        <div className="fixed inset-0 -z-10">
+          <Suspense fallback={null}>
+            <CardScene variant="hero" />
+          </Suspense>
+          {/* Schleier zur Mitte: Text und Formular bleiben immer gut lesbar */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_32rem_30rem_at_center,var(--color-felt-900)_35%,transparent_100%)] opacity-90" />
         </div>
+      )}
+      <div className="flex flex-col items-center gap-6">
+        {!effects && (
+          <div className="mb-4 flex h-36 items-end" aria-hidden>
+            {HERO.map((c, i) => (
+              <PlayingCard
+                key={c}
+                card={c}
+                width={84}
+                className="-mx-3"
+                initial={{ opacity: 0, y: 60, rotate: 0 }}
+                animate={{ opacity: 1, y: Math.abs(i - 2) * 10, rotate: (i - 2) * 9 }}
+                transition={{ delay: 0.15 + i * 0.08, type: 'spring', stiffness: 160, damping: 18 }}
+                style={{ transformOrigin: '50% 120%' }}
+              />
+            ))}
+          </div>
+        )}
         <motion.h1
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}

@@ -1,6 +1,7 @@
 import type { RuleSettings } from '@engine';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Atmosphere } from '../components/Atmosphere';
 import { GameView } from '../components/GameView';
 import { Lobby } from '../components/Lobby';
 import { useToast } from '../components/Toast';
@@ -79,7 +80,8 @@ export function TablePage() {
         </span>
       </TopBar>
       {showLobby ? (
-        <div className="felt flex-1 overflow-y-auto">
+        <div className="felt relative isolate flex-1 overflow-y-auto">
+          <Atmosphere />
           <Lobby
             table={table}
             members={t.members}
