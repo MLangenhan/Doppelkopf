@@ -1,4 +1,4 @@
-import type { Card } from '@engine';
+import { type Card, suitOf } from '@engine';
 import { AnimatePresence, motion } from 'motion/react';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { PlayingCard } from './PlayingCard';
@@ -90,7 +90,7 @@ export function Hand({
               type="button"
               aria-pressed={isSelected}
               disabled={!interactive}
-              data-cursor={mode === 'pick' ? (isSelected ? 'Abwählen' : 'Wählen') : isPlayable ? (isSelected ? 'Spielen' : 'Wählen') : undefined}
+              data-suit={suitOf(card)}
               onClick={() => click(card)}
               className={`absolute bottom-0 rounded-[6%/4.2%] outline-none focus-visible:ring-4 focus-visible:ring-gold-300 ${
                 interactive ? 'cursor-pointer' : 'cursor-default'

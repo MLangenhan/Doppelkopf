@@ -20,8 +20,11 @@ Frontend: React, Vite, Tailwind und Motion. Schriften: Big Shoulders Display fü
 - **Übungsmodus** gegen drei Bots, ohne Konto und ohne Server.
 - **Persönliche Einstellungen** (Zahnrad oben rechts): Spielbare Karten hervorheben lässt sich abschalten, um ohne Hilfe zu spielen.
 - **Stich nehmen**: Ein fertiger Stich bleibt liegen, bis der Gewinner ihn mit der Leertaste (oder per Klick) nimmt. Nach 10 Sekunden darf jeder wegräumen. Der letzte Stich ist immer klein sichtbar.
+- **Trumpf-Einschlag**: Dulle, Kreuz-Dame und Schweinchen knallen mit Beben, Druckwelle und Sound auf den Tisch.
+- **Stichstapel**: Gewonnene Stiche drehen sich um, fliegen zum Gewinner und stapeln sich unter seiner Kamera.
+- **Augen-Auswertung**: Am Ende zählen die Augen hoch, der Sieger steht erst fest, wenn er die 121er-Marke überquert.
 - **Große Momente**: Ansagen, Soli, Hochzeit, Schweinchen, Doppelkopf, Fuchs und Karlchen erscheinen groß auf der Spielfläche, beim Sieg gibt es Konfetti.
-- **Eigener Cursor** (Punkt und Ring, zeigt „Spielen“ oder „Nehmen“) und **Karten mit 3D-Neigung** und Glanzlicht in der Hand. Beides nur mit Maus, abschaltbar über „Effekte“.
+- **Eigener Cursor** als Farbzeichen (wird über einer Karte zu deren Farbe, über dem Stich zur Hand) und **Karten mit 3D-Neigung** und Glanzlicht in der Hand. Beides nur mit Maus, abschaltbar über „Effekte“.
 - **Sounds** für Karten, Stiche, Ansagen, „Du bist dran“ und das Spielende – im Browser erzeugt (Web Audio), ohne Audiodateien. An/aus und Lautstärke in den Einstellungen.
 - **Kein Schummeln möglich**: Gemischt und gespielt wird ausschließlich in der Edge Function. Jeder Browser bekommt nur die eigene Hand (Row Level Security).
 

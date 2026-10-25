@@ -102,6 +102,17 @@ export const sound = {
     thump(c, at + 0.003, 0.35);
   },
 
+  /** Großer Trumpf knallt auf den Tisch */
+  slam() {
+    const c = audio();
+    if (!c) return;
+    const at = c.currentTime;
+    noiseBurst(c, at, { filter: 'lowpass', freq: 2400, q: 0.6, gain: 1.2, attack: 0.002, decay: 0.16 });
+    noiseBurst(c, at, { filter: 'bandpass', freq: 3200, q: 0.9, gain: 0.7, attack: 0.002, decay: 0.07 });
+    thump(c, at, 0.9, 120, 42);
+    thump(c, at + 0.01, 0.5, 70, 35);
+  },
+
   /** Austeilen: schnelle Folge leiser Karten */
   deal(count: number) {
     const c = audio();

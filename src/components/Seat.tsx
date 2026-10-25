@@ -104,12 +104,33 @@ export function Seat({
           )}
         </AnimatePresence>
       </div>
-      <div className="tag flex min-h-4 flex-wrap items-center gap-x-2 text-[10px] text-white/45">
+      <div className="tag flex min-h-5 flex-wrap items-center gap-x-2 text-[10px] text-white/45">
+        {!!tricks && <TrickPile count={tricks} />}
         {facts.map((f, i) => (
           <span key={i}>{f}</span>
         ))}
         {status && <span>{status}</span>}
       </div>
     </div>
+  );
+}
+
+/** Gewonnene Stiche als kleiner Stapel verdeckter Karten. Neue landen mit einem kleinen Fall. */
+function TrickPile({ count }: { count: number }) {
+  return (
+    <span className="mr-1 flex items-center pl-2.5" aria-hidden>
+      <AnimatePresence initial={false}>
+        {Array.from({ length: count }, (_, i) => (
+          <motion.span
+            key={i}
+            className="-ml-2.5 inline-block h-5 w-3.5 rounded-[2px] bg-[#1d4f8f] shadow-[0_1px_2px_rgba(0,0,0,0.5)] ring-1 ring-white/60"
+            style={{ rotate: ((i * 37) % 11) - 5 }}
+            initial={{ y: -28, opacity: 0, scale: 1.5 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 18, delay: 0.55 }}
+          />
+        ))}
+      </AnimatePresence>
+    </span>
   );
 }

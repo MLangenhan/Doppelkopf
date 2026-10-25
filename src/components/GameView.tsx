@@ -5,13 +5,14 @@ import {
   type Declaration,
   faceOf,
   type GameAction,
+  isTrump,
   legalCards,
   SOLO_NAMES,
   sortHand,
   sumAugen,
 } from '@engine';
 import { ListOrdered, Video, VideoOff, X } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useAnimate } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   announceOptions,
@@ -22,7 +23,7 @@ import {
   partyLabel,
   trumpMode,
 } from '../lib/gameText';
-import { usePrefs } from '../lib/prefs';
+import { useEffectsEnabled, usePrefs } from '../lib/prefs';
 import { sound } from '../lib/sound';
 import type { GameRow, Member, ResultRow } from '../lib/supabase';
 import type { RemoteVideo } from '../lib/video';
@@ -243,12 +244,41 @@ export function GameView({
     if (prev.trickDone && prev.trickKey !== now.trickKey) sound.collect();
     if (now.ann > prev.ann) sound.announce();
     if (now.turn && !prev.turn) sound.turn();
-    if (now.result && !prev.result && view.result?.winner && myPos >= 0) {
-      const mine = view.result.reTeam.includes(myPos) ? 're' : 'kontra';
-      if (view.result.winner === mine) sound.win();
-      else sound.lose();
-    }
   });
+  // ---- Trumpf-Einschlag: Dulle, Kreuz-Dame oder Schweinchen knallen auf den Tisch ----
+  const effects = useEffectsEnabled();
+  const [tableRef, animateTable] = useAnimate<HTMLElement>();
+  const [impact, setImpact] = useState<{ key: string; rel: Rel } | null>(null);
+  const seenCards = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const ids = currentPlays.map(({ card }) => `${game.id}:${card}`);
+    // Beim Öffnen der Seite liegende Karten nicht nachträglich knallen lassen
+    if (!seenCards.current) {
+      seenCards.current = new Set(ids);
+      return;
+    }
+    const trickCtx = { mode: trumpMode(view), schweinchen: false };
+    const leader = view.current?.leader ?? 0;
+    currentPlays.forEach(({ card, rel: r }, i) => {
+      const id = ids[i];
+      if (seenCards.current!.has(id)) return;
+      seenCards.current!.add(id);
+      const by = card === pending ? myPos : (leader + i) % 4;
+      const face = faceOf(card);
+      const big =
+        (isTrump(card, trickCtx) && (face === 'H-10' || face === 'C-Q')) ||
+        (face === 'D-A' && (view.schweinchen === by || (by === myPos && hasSchweinchen(view, hand))));
+      if (!big) return;
+      sound.slam();
+      if (!effects) return;
+      setImpact({ key: id, rel: r });
+      setTimeout(() => setImpact((cur) => (cur?.key === id ? null : cur)), 900);
+      if (tableRef.current) {
+        animateTable(tableRef.current, { x: [0, -7, 6, -4, 2, 0], y: [0, 4, -3, 2, -1, 0] }, { duration: 0.42, ease: 'easeOut' });
+      }
+    });
+  });
+
   // ---- Große Momente ----
   const moments = useMoments();
   const momentState = useRef<{
@@ -484,6 +514,7 @@ export function GameView({
   return (
     <div className="flex min-h-0 flex-1">
       <main
+        ref={tableRef}
         className="felt relative isolate grid min-w-0 flex-1 gap-3 p-3"
         style={{ gridTemplateColumns: `${camW}px minmax(0, 1fr) ${camW}px`, gridTemplateRows: 'auto minmax(0, 1fr) auto' }}
       >
@@ -579,6 +610,7 @@ export function GameView({
             }
             cardWidth={trickCardW}
             onCollect={iCollect ? collect : undefined}
+            impact={impact}
           >
             <MomentOverlay moment={moments.current} />
           </TrickArea>

@@ -1,5 +1,5 @@
 import type { Card } from '@engine';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, type Variants } from 'motion/react';
 import type { ReactNode } from 'react';
 import { PlayingCard } from './PlayingCard';
 
@@ -26,8 +26,56 @@ export interface TrickPlay {
   rel: Rel;
 }
 
-const cardVariants = {
-  enter: (rel: Rel) => ({ opacity: 0, x: FROM[rel].x, y: FROM[rel].y, rotate: SPOT[rel].r * 3, scale: 1.05 }),
+interface CardCustom {
+  rel: Rel;
+  i: number;
+  w: Rel | null;
+  isWinner: boolean;
+  complete: boolean;
+  cw: number;
+  ch: number;
+}
+
+const COLLECT_S = 0.75;
+
+const showCard = (c: CardCustom) => ({
+  opacity: 1,
+  x: SPOT[c.rel].x * c.cw,
+  y: SPOT[c.rel].y * c.ch,
+  rotate: SPOT[c.rel].r,
+  scale: c.isWinner ? 1.08 : c.complete ? 0.97 : 1,
+  scaleX: 1,
+  scaleY: 1,
+  transition: { type: 'spring' as const, stiffness: 220, damping: 24 },
+});
+
+const cardVariants: Variants = {
+  enter: (c: CardCustom) => ({ opacity: 0, x: FROM[c.rel].x, y: FROM[c.rel].y, rotate: SPOT[c.rel].r * 3, scale: 1.05 }),
+  show: (c: CardCustom) => showCard(c),
+  // Stich komplett: gleiche Lage, aber neu ausgewertet (Gewinnerkarte hebt sich ab)
+  done: (c: CardCustom) => showCard(c),
+  // Einsammeln: Karte dreht sich um (zusammenklappen, Rückseite) und fliegt in die Ecke des Gewinners
+  collect: (c: CardCustom) =>
+    c.w === null
+      ? { opacity: 0 }
+      : {
+          scaleX: [null, 0, 0.4],
+          scaleY: [null, 1, 0.4],
+          x: [null, SPOT[c.rel].x * c.cw * 0.6, FROM[c.w].x],
+          y: [null, SPOT[c.rel].y * c.ch * 0.6, FROM[c.w].y],
+          rotate: [null, 0, 0],
+          opacity: [1, 1, 0],
+          transition: { duration: COLLECT_S, times: [0, 0.3, 1], delay: c.i * 0.05, ease: 'easeInOut' as const },
+        },
+};
+
+const backVariants: Variants = {
+  show: { opacity: 0 },
+  done: { opacity: 0 },
+  collect: (c: CardCustom) => ({
+    opacity: [0, 0, 1, 1],
+    transition: { duration: COLLECT_S, times: [0, 0.29, 0.31, 1], delay: c.i * 0.05 },
+  }),
 };
 
 const SUITS = ['♣', '♥', '♠', '♦'];
@@ -40,6 +88,7 @@ export function TrickArea({
   winnerLabel,
   cardWidth,
   onCollect,
+  impact,
   children,
 }: {
   /** Eindeutig je Stich, damit beim nächsten Stich die alten Karten wegfliegen */
@@ -52,6 +101,8 @@ export function TrickArea({
   cardWidth: number;
   /** Wenn gesetzt, nimmt ein Klick auf den Stich ihn an sich */
   onCollect?: () => void;
+  /** Trumpf-Einschlag: Druckwelle an der Stelle dieser Karte (key ändert sich je Einschlag) */
+  impact?: { key: string; rel: Rel } | null;
   /** Overlays über der Fläche (z. B. große Momente) */
   children?: ReactNode;
 }) {
@@ -87,6 +138,30 @@ export function TrickArea({
         </div>
       </div>
 
+      {/* Druckwelle beim Trumpf-Einschlag */}
+      <AnimatePresence>
+        {impact && (
+          <motion.div
+            key={impact.key}
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-1/2"
+            style={{ x: SPOT[impact.rel].x * cardWidth, y: SPOT[impact.rel].y * cardH }}
+            exit={{ opacity: 0 }}
+          >
+            {[0, 0.12].map((d) => (
+              <motion.span
+                key={d}
+                className="absolute rounded-full border-2 border-gold-300"
+                style={{ width: cardWidth, height: cardWidth, left: -cardWidth / 2, top: -cardWidth / 2 }}
+                initial={{ scale: 0.3, opacity: 0.9 }}
+                animate={{ scale: 4.2, opacity: 0 }}
+                transition={{ duration: 0.75, delay: d, ease: [0.2, 0.7, 0.3, 1] }}
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Karten */}
       <div
         className={`absolute inset-0 ${onCollect ? 'pointer-events-auto cursor-pointer' : ''}`}
@@ -96,51 +171,49 @@ export function TrickArea({
         aria-label={onCollect ? 'Stich nehmen' : undefined}
         aria-live="polite"
       >
-        <AnimatePresence custom={winnerRel}>
+        <AnimatePresence>
           <motion.div
             key={trickKey}
             className="absolute inset-0"
+            initial="enter"
+            animate={complete ? 'done' : 'show'}
             exit="collect"
-            custom={winnerRel}
-            variants={{
-              collect: (w: Rel | null) => ({
-                x: w === null ? 0 : FROM[w].x * 0.7,
-                y: w === null ? 0 : FROM[w].y * 0.7,
-                scale: 0.45,
-                opacity: 0,
-                transition: { duration: 0.55, ease: [0.4, 0, 0.2, 1] },
-              }),
-            }}
+            // Hält den Stich im DOM, bis alle Karten beim Gewinner angekommen sind
+            variants={{ show: { opacity: 1 }, done: { opacity: 1 }, collect: { opacity: 1, transition: { duration: COLLECT_S + 0.25 } } }}
           >
             {plays.map(({ card, rel }, i) => {
-              const spot = SPOT[rel];
-              const isWinner = winnerRel === rel;
+              const custom: CardCustom = {
+                rel,
+                i,
+                w: winnerRel,
+                isWinner: winnerRel === rel,
+                complete,
+                cw: cardWidth,
+                ch: cardH,
+              };
               return (
                 <motion.div
                   key={card}
                   className="absolute top-1/2 left-1/2"
                   style={{ zIndex: i + 1, marginLeft: -cardWidth / 2, marginTop: -cardH / 2 }}
-                  custom={rel}
+                  custom={custom}
                   variants={cardVariants}
-                  initial="enter"
-                  animate={{
-                    opacity: 1,
-                    x: spot.x * cardWidth,
-                    y: spot.y * cardH,
-                    rotate: spot.r,
-                    scale: isWinner ? 1.08 : complete ? 0.97 : 1,
-                  }}
-                  transition={{ type: 'spring', stiffness: 220, damping: 24 }}
                 >
-                  <PlayingCard card={card} width={cardWidth} className={isWinner ? 'ring-[3px] ring-gold-400' : ''} />
+                  <PlayingCard card={card} width={cardWidth} className={custom.isWinner ? 'ring-[3px] ring-gold-400' : ''} />
+                  <motion.div className="absolute inset-0" custom={custom} variants={backVariants} aria-hidden>
+                    <PlayingCard back width={cardWidth} />
+                  </motion.div>
                 </motion.div>
               );
             })}
             {complete && winnerLabel && (
               <motion.div
-                initial={{ opacity: 0, y: 6, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ delay: 0.25 }}
+                variants={{
+                  enter: { opacity: 0, y: 6, scale: 0.9 },
+                  show: { opacity: 1, y: 0, scale: 1, transition: { delay: 0.25 } },
+                  done: { opacity: 1, y: 0, scale: 1, transition: { delay: 0.25 } },
+                  collect: { opacity: 0, transition: { duration: 0.15 } },
+                }}
                 className="absolute bottom-[4%] left-1/2 z-10 -translate-x-1/2 rounded-full bg-felt-950/90 px-3 py-1 text-sm font-semibold whitespace-nowrap text-gold-300 shadow-lg ring-1 ring-gold-400/30"
               >
                 {winnerLabel}

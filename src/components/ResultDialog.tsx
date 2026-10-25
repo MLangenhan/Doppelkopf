@@ -1,5 +1,8 @@
 import type { Party, PublicGameState } from '@engine';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
+import { useEffect, useRef, useState } from 'react';
+import { useEffectsEnabled } from '../lib/prefs';
+import { sound } from '../lib/sound';
 import { partyLabel, resultKindLabel, SCHMEISSEN_LABEL } from '../lib/gameText';
 import type { SchmeissenReason } from '@engine';
 import { Confetti } from './Moments';
@@ -74,21 +77,32 @@ function ResultBody({ view, name, myPos }: { view: PublicGameState; name: (pos: 
   const winner = r.winner;
   const myParty: Party | null = myPos >= 0 ? (r.reTeam.includes(myPos) ? 're' : 'kontra') : null;
   const iWon = myParty !== null && winner === myParty;
-  const rePct = (r.augen.re / 240) * 100;
+  const { re, kontra, revealed } = useAugenReveal(r.augen, winner, myParty);
   const kind = view.revealedKind ?? view.kind ?? 'normal';
   const soloist = r.soloScoring ? r.reTeam[0] : null;
 
   return (
     <>
-      <Confetti active={iWon} />
+      <Confetti active={iWon && revealed} />
       <p className="tag text-[11px] text-white/50">
         {resultKindLabel(kind, view.solo)}
         {soloist !== null && ` von ${name(soloist)}`}
         {view.revealedKind === 'silentSolo' && ' – Überraschung!'}
       </p>
       <h2 id="result-title" className="display text-6xl">
-        {winner ? `${partyLabel(winner)} gewinnt` : 'Kein Gewinner'}
-        {myParty && winner && (
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={revealed ? 'r' : 'w'}
+            className={`inline-block ${revealed ? '' : 'text-white/40'}`}
+            initial={{ opacity: 0, y: 10, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+          >
+            {!revealed ? 'Auswertung …' : winner ? `${partyLabel(winner)} gewinnt` : 'Kein Gewinner'}
+          </motion.span>
+        </AnimatePresence>
+        {revealed && myParty && winner && (
           <span className={`tag ml-3 align-middle text-xs ${iWon ? 'text-emerald-300' : 'text-red-300'}`}>
             {iWon ? 'Gewonnen' : 'Verloren'}
           </span>
@@ -97,10 +111,13 @@ function ResultBody({ view, name, myPos }: { view: PublicGameState; name: (pos: 
 
       <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
         {(['re', 'kontra'] as const).map((p) => (
-          <div key={p} className={`rounded-xl p-3 ${winner === p ? 'bg-white/10 ring-1 ring-gold-400/60' : 'bg-white/5'}`}>
+          <div
+            key={p}
+            className={`rounded-xl p-3 transition-colors duration-500 ${revealed && winner === p ? 'bg-white/10 ring-1 ring-gold-400/60' : 'bg-white/5'}`}
+          >
             <div className="flex items-center justify-between">
               <PartyBadge party={p} />
-              <span className="tabular-nums text-lg font-bold">{r.augen[p]}</span>
+              <span className="display text-4xl tabular-nums">{p === 're' ? re : kontra}</span>
             </div>
             <div className="mt-1.5 text-white/75">{(p === 're' ? r.reTeam : r.kontraTeam).map(name).join(' & ')}</div>
             <div className="text-xs text-white/50">
@@ -110,23 +127,29 @@ function ResultBody({ view, name, myPos }: { view: PublicGameState; name: (pos: 
         ))}
       </div>
 
-      <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-kontra/70" aria-hidden>
+      {/* Re wächst von links, Kontra von rechts, die Marke steht bei 121 */}
+      <div className="relative mt-4 h-3 rounded-full bg-white/[0.06]" aria-hidden>
+        <div className="absolute inset-y-0 left-0 rounded-l-full bg-re" style={{ width: `${(re / 240) * 100}%` }} />
+        <div className="absolute inset-y-0 right-0 rounded-r-full bg-kontra" style={{ width: `${(kontra / 240) * 100}%` }} />
         <motion.div
-          className="h-full rounded-full bg-re"
-          initial={{ width: '50%' }}
-          animate={{ width: `${rePct}%` }}
-          transition={{ duration: 0.9, delay: 0.3, ease: 'easeOut' }}
+          className="absolute -inset-y-1.5 w-0.5 rounded bg-white/70"
+          style={{ left: `${(121 / 240) * 100}%` }}
+          animate={revealed ? { backgroundColor: '#e8cd85', scaleY: [1, 1.8, 1], boxShadow: '0 0 14px rgba(232,205,133,0.9)' } : {}}
+          transition={{ duration: 0.5 }}
         />
+        <span className="tag absolute -top-5 -translate-x-1/2 text-[9px] text-white/45" style={{ left: `${(121 / 240) * 100}%` }}>
+          121
+        </span>
       </div>
 
-      {r.lines.length > 0 && (
+      {revealed && r.lines.length > 0 && (
         <ul className="mt-5 space-y-1 text-sm">
           {r.lines.map((l, i) => (
             <motion.li
               key={i}
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 + i * 0.06 }}
+              transition={{ delay: 0.15 + i * 0.06 }}
               className="flex items-center justify-between rounded-lg px-2 py-1 odd:bg-white/5"
             >
               <span className="flex items-center gap-2">
@@ -139,13 +162,13 @@ function ResultBody({ view, name, myPos }: { view: PublicGameState; name: (pos: 
         </ul>
       )}
 
-      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {r.scores.map((s, p) => (
+      <div className={`mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 ${revealed ? '' : 'invisible'}`}>
+        {revealed && r.scores.map((s, p) => (
           <motion.div
             key={p}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.6 + p * 0.07, type: 'spring' }}
+            transition={{ delay: 0.3 + r.lines.length * 0.06 + p * 0.07, type: 'spring' }}
             className={`rounded-xl px-3 py-2 text-center ${p === myPos ? 'ring-2 ring-gold-400' : ''} ${
               s > 0 ? 'bg-emerald-500/20' : s < 0 ? 'bg-red-500/20' : 'bg-white/10'
             }`}
@@ -157,4 +180,44 @@ function ResultBody({ view, name, myPos }: { view: PublicGameState; name: (pos: 
       </div>
     </>
   );
+}
+
+/**
+ * Spannende Auswertung: Die Augen zählen hoch, der Gewinner steht erst fest, wenn seine
+ * Partei die Siegmarke überschreitet (bzw. am Ende). Ohne Effekte sofort das Ergebnis.
+ */
+function useAugenReveal(augen: Record<Party, number>, winner: Party | null, myParty: Party | null) {
+  const effects = useEffectsEnabled();
+  const [p, setP] = useState(effects ? 0 : 1);
+  useEffect(() => {
+    if (!effects) return;
+    let raf = 0;
+    const start = performance.now();
+    const step = (now: number) => {
+      const x = Math.min(1, (now - start - 350) / 2600);
+      setP(Math.max(0, x));
+      if (x < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [effects]);
+
+  const ease = 1 - Math.pow(1 - p, 3);
+  const re = Math.round(augen.re * ease);
+  const kontra = Math.round(augen.kontra * ease);
+  const needed = winner === 're' ? 121 : 120;
+  const crossed = winner !== null && augen[winner] >= needed && (winner === 're' ? re : kontra) >= needed;
+  const revealed = p >= 1 || crossed;
+
+  const fired = useRef(false);
+  useEffect(() => {
+    if (!revealed || fired.current) return;
+    fired.current = true;
+    if (myParty && winner) {
+      if (winner === myParty) sound.win();
+      else sound.lose();
+    } else sound.announce();
+  }, [revealed, myParty, winner]);
+
+  return { re, kontra, revealed };
 }
