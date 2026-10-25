@@ -67,7 +67,7 @@ export function StatsPage() {
     <div className="felt min-h-full">
       <TopBar />
       <main className="mx-auto max-w-5xl px-4 pt-6 pb-16">
-        <h1 className="font-display text-3xl font-bold">Statistik</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Statistik</h1>
         <p className="mt-1 text-white/60">Über alle Abende hinweg.</p>
 
         <section className="panel mt-6 overflow-x-auto p-2 sm:p-4">
@@ -99,12 +99,12 @@ export function StatsPage() {
                     transition={{ delay: i * 0.04 }}
                     className={`border-b border-white/5 last:border-0 ${s.user_id === me ? 'bg-gold-400/10' : ''}`}
                   >
-                    <td className="px-2 py-2 text-white/50">{i === 0 ? '🏆' : i + 1}</td>
+                    <td className={`px-2 py-2 font-semibold ${i === 0 ? 'text-gold-300' : 'text-white/50'}`}>{i + 1}</td>
                     <td className="px-2 py-2 font-semibold">{s.display_name}</td>
-                    <td className={`px-2 py-2 text-right font-mono font-bold ${s.points > 0 ? 'text-emerald-300' : s.points < 0 ? 'text-red-300' : ''}`}>
+                    <td className={`px-2 py-2 text-right tabular-nums font-bold ${s.points > 0 ? 'text-emerald-300' : s.points < 0 ? 'text-red-300' : ''}`}>
                       {s.points > 0 ? `+${s.points}` : s.points}
                     </td>
-                    <td className="px-2 py-2 text-right font-mono">{(s.points / s.games).toFixed(2)}</td>
+                    <td className="px-2 py-2 text-right tabular-nums">{(s.points / s.games).toFixed(2)}</td>
                     <td className="px-2 py-2 text-right">{s.games}</td>
                     <td className="px-2 py-2 text-right">{pct(s.wins, s.games)}</td>
                     <td className="px-2 py-2 text-right">{pct(s.re_wins, s.re_games)}</td>
@@ -133,11 +133,10 @@ export function StatsPage() {
                 <ol className="mt-2 space-y-0.5 text-sm">
                   {totals.map(([uid, pts], i) => (
                     <li key={uid} className="flex justify-between">
-                      <span className={uid === me ? 'text-gold-300' : 'text-white/80'}>
-                        {i === 0 && pts > 0 ? '🏆 ' : ''}
+                      <span className={i === 0 && pts > 0 ? 'font-semibold text-gold-300' : uid === me ? 'text-white' : 'text-white/80'}>
                         {names.get(uid) ?? '?'}
                       </span>
-                      <span className="font-mono">{pts > 0 ? `+${pts}` : pts}</span>
+                      <span className="tabular-nums">{pts > 0 ? `+${pts}` : pts}</span>
                     </li>
                   ))}
                 </ol>

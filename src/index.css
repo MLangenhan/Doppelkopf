@@ -1,22 +1,23 @@
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
 
-  --color-felt-950: #06150f;
-  --color-felt-900: #0b2a1f;
-  --color-felt-800: #0f3a2a;
-  --color-felt-700: #155038;
-  --color-felt-600: #1c6847;
-  --color-gold-300: #f6dc8c;
-  --color-gold-400: #efc75e;
-  --color-gold-500: #e0ad3a;
-  --color-re: #4fa3ff;
-  --color-kontra: #ff7a59;
+  /* Ruhiges Grün-Anthrazit: 950 = tiefste Ebene, 800 = Flächen, 600 = Ränder/Hover */
+  --color-felt-950: #0a1612;
+  --color-felt-900: #10201a;
+  --color-felt-800: #17302a;
+  --color-felt-700: #1e3b33;
+  --color-felt-600: #29493f;
+  --color-gold-300: #e8cd85;
+  --color-gold-400: #d9b45a;
+  --color-gold-500: #c49b3d;
+  --color-re: #6aa8f0;
+  --color-kontra: #ee8a6b;
 
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.25), 0 6px 14px -4px rgb(0 0 0 / 0.45);
-  --shadow-panel: 0 10px 40px -12px rgb(0 0 0 / 0.6);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 10px -4px rgb(0 0 0 / 0.4);
+  --shadow-panel: 0 1px 2px rgb(0 0 0 / 0.25), 0 8px 24px -12px rgb(0 0 0 / 0.5);
 }
 
 :root {
@@ -32,44 +33,40 @@ body,
 body {
   margin: 0;
   font-family: var(--font-sans);
-  color: #eef5f0;
-  background:
-    radial-gradient(ellipse at 50% 35%, #1a5e40 0%, #0f3a2a 45%, #071a12 100%) fixed,
-    #0b2a1f;
+  color: #e9f0ec;
+  background: var(--color-felt-900);
   -webkit-font-smoothing: antialiased;
 }
 
-/* Feiner Filz-Look */
+/* Spielfläche: flach, nur ein ganz leichter Lichtkegel zur Mitte */
 .felt {
-  background-image:
-    radial-gradient(ellipse at 50% 40%, rgb(255 255 255 / 0.06), transparent 60%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background: radial-gradient(ellipse at 50% 40%, var(--color-felt-800), var(--color-felt-900) 70%);
 }
 
 @utility panel {
-  @apply rounded-2xl border border-white/10 bg-felt-950/70 shadow-panel backdrop-blur-md;
+  @apply rounded-xl border border-white/[0.08] bg-felt-800 shadow-panel;
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors
     focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-400
     disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 @utility btn-primary {
-  @apply btn bg-gold-400 text-felt-950 hover:bg-gold-300 active:scale-[0.98];
+  @apply btn bg-gold-400 text-felt-950 hover:bg-gold-300;
 }
 
 @utility btn-secondary {
-  @apply btn border border-white/15 bg-white/10 text-white hover:bg-white/15 active:scale-[0.98];
+  @apply btn border border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.11];
 }
 
 @utility btn-ghost {
-  @apply btn text-white/80 hover:bg-white/10 hover:text-white;
+  @apply btn text-white/75 hover:bg-white/[0.07] hover:text-white;
 }
 
 @utility input {
-  @apply w-full rounded-xl border border-white/15 bg-black/30 px-3.5 py-2.5 text-white placeholder-white/40 outline-none
+  @apply w-full rounded-lg border border-white/10 bg-felt-950 px-3.5 py-2.5 text-white placeholder-white/35 outline-none
     transition focus:border-gold-400 focus:ring-2 focus:ring-gold-400/30;
 }
 
