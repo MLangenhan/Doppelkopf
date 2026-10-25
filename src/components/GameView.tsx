@@ -173,10 +173,12 @@ export function GameView({
   const sittingOut = members.filter((m) => !game.players.includes(m.user_id));
   const [showLastTrick, setShowLastTrick] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const wide = vp.w >= 1180;
+  // Seitenleiste nur auf sehr breiten Bildschirmen dauerhaft, sonst als Schublade – der Tisch braucht den Platz
+  const wide = vp.w >= 1700;
 
-  const trickCardW = Math.round(Math.max(64, Math.min(108, Math.min(vp.w * 0.075, vp.h * 0.1))));
-  const seatW = Math.round(Math.max(150, Math.min(280, vp.w * 0.17, vp.h * 0.3)));
+  const trickCardW = Math.round(Math.max(64, Math.min(104, Math.min(vp.w * 0.07, vp.h * 0.1))));
+  // Kameras in den vier Ecken, so groß wie es der Platz erlaubt
+  const camW = Math.round(Math.max(180, Math.min(400, vp.w * 0.22, vp.h * 0.36)));
 
   const calloutsFor = (pos: number) =>
     view.announcementLog.filter((a) => a.pos === pos).map((a) => levelLabel(a.level, a.party));
@@ -273,28 +275,6 @@ export function GameView({
 
   const sidebar = (
     <div className="flex h-full flex-col gap-5 overflow-y-auto p-4">
-      {sittingOut.length > 0 && (
-        <section>
-          <h3 className="mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Setzt aus</h3>
-          <div className="grid gap-2">
-            {sittingOut.map((m) => (
-              <VideoTile
-                key={m.user_id}
-                stream={streamOf(m.user_id)}
-                name={m.display_name}
-                mirror={m.user_id === me}
-                videoOff={m.user_id === me && !camera.enabled}
-                className="aspect-[4/3] w-full"
-              >
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-2.5 pt-6 pb-2 text-sm font-semibold">
-                  {m.display_name}
-                  {m.user_id === me && ' (du)'}
-                </div>
-              </VideoTile>
-            ))}
-          </div>
-        </section>
-      )}
       <section>
         <h3 className="mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Punkte heute</h3>
         <ScoreSheet results={results} members={members} me={me} />
@@ -310,7 +290,6 @@ export function GameView({
         </ul>
       </section>
       <div className="mt-auto flex flex-col gap-2">
-        <CameraButton camera={camera} />
         {onShowLobby && (
           <button className="btn-ghost" onClick={onShowLobby} disabled={!finished}>
             {finished ? 'Plätze & Regeln' : 'Plätze & Regeln (nach dem Spiel)'}
@@ -322,67 +301,89 @@ export function GameView({
 
   return (
     <div className="flex min-h-0 flex-1">
-      <main className="felt relative flex min-w-0 flex-1 flex-col">
-        {/* Infoleiste */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 pt-3 text-sm">
-          <span className="rounded-md bg-black/30 px-2 py-0.5 font-semibold">Spiel {game.number}</span>
-          <span className="font-medium text-white/90">{gameKindLabel(view, name)}</span>
-          {announcementText && <span className="rounded-md bg-gold-400/90 px-2 py-0.5 font-semibold text-felt-950">{announcementText}</span>}
-          {view.armut?.returnedTrumps != null && view.kind === 'armut' && (
-            <span className="text-white/60">
-              {view.armut.returnedTrumps} {view.armut.returnedTrumps === 1 ? 'Trumpf' : 'Trümpfe'} zurück
-            </span>
-          )}
-          <span className="flex-1" />
-          {view.lastTrick && view.phase === 'playing' && (
-            <button className="btn-ghost px-2.5 py-1" onClick={() => setShowLastTrick((v) => !v)} aria-expanded={showLastTrick}>
-              Letzter Stich
-            </button>
-          )}
-          {!wide && (
-            <button className="btn-ghost px-2.5 py-1" onClick={() => setSidebarOpen(true)}>
-              Punkte
-            </button>
+      <main
+        className="felt relative grid min-w-0 flex-1 gap-3 p-3"
+        style={{ gridTemplateColumns: `${camW}px minmax(0, 1fr) ${camW}px`, gridTemplateRows: 'auto minmax(0, 1fr) auto' }}
+      >
+        {/* Oben links: Spieler links von mir */}
+        <div className="self-start">{seatFor(1)}</div>
+
+        {/* Oben Mitte: Infoleiste und wer aussetzt */}
+        <div className="flex min-w-0 flex-col items-center gap-3 self-start">
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-sm">
+            <span className="rounded-md bg-black/30 px-2 py-0.5 font-semibold">Spiel {game.number}</span>
+            <span className="font-medium text-white/90">{gameKindLabel(view, name)}</span>
+            {announcementText && (
+              <span className="rounded-md bg-gold-400/90 px-2 py-0.5 font-semibold text-felt-950">{announcementText}</span>
+            )}
+            {view.armut?.returnedTrumps != null && view.kind === 'armut' && (
+              <span className="text-white/60">
+                {view.armut.returnedTrumps} {view.armut.returnedTrumps === 1 ? 'Trumpf' : 'Trümpfe'} zurück
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-1">
+            {view.lastTrick && view.phase === 'playing' && (
+              <button className="btn-ghost px-2.5 py-1" onClick={() => setShowLastTrick((v) => !v)} aria-expanded={showLastTrick}>
+                Letzter Stich
+              </button>
+            )}
+            {!wide && (
+              <button className="btn-ghost px-2.5 py-1" onClick={() => setSidebarOpen(true)}>
+                Punkte & Regeln
+              </button>
+            )}
+            <CameraButton camera={camera} compact />
+          </div>
+          {sittingOut.map((m) => (
+            <VideoTile
+              key={m.user_id}
+              stream={streamOf(m.user_id)}
+              name={m.display_name}
+              mirror={m.user_id === me}
+              videoOff={m.user_id === me && !camera.enabled}
+              className="aspect-[4/3] w-40"
+            >
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-2 pt-5 pb-1.5 text-xs font-semibold">
+                {m.display_name}
+                {m.user_id === me && ' (du)'} · setzt aus
+              </div>
+            </VideoTile>
+          ))}
+        </div>
+
+        {/* Oben rechts: gegenüber */}
+        <div className="self-start">{seatFor(2)}</div>
+
+        {/* Mitte: der Stich */}
+        <div className="col-span-3 grid min-h-0 place-items-center">
+          <TrickArea
+            trickKey={shownTrick.key}
+            plays={shownTrick.plays}
+            winnerRel={shownTrick.winner === null ? null : rel(shownTrick.winner)}
+            winnerName={shownTrick.winner === null ? undefined : name(shownTrick.winner)}
+            cardWidth={trickCardW}
+          />
+        </div>
+
+        {/* Unten links: ich */}
+        <div className="self-end">
+          {myPos >= 0 ? (
+            seatFor(0)
+          ) : (
+            <div className="panel grid aspect-[4/3] place-items-center p-4 text-center text-sm text-white/70">
+              Du setzt diese Runde aus und schaust zu.
+            </div>
           )}
         </div>
 
-        <AnimatePresence>
-          {showLastTrick && view.lastTrick && (
-            <LastTrickPopover trick={view.lastTrick} name={name} onClose={() => setShowLastTrick(false)} />
-          )}
-        </AnimatePresence>
-
-        {/* Tisch */}
-        <div
-          className="grid min-h-0 flex-1 items-center gap-3 px-3"
-          style={{ gridTemplateColumns: `${seatW}px 1fr ${seatW}px`, gridTemplateRows: 'auto 1fr' }}
-        >
-          <div className="col-span-3 flex justify-center pt-1">
-            <div style={{ width: seatW }}>{seatFor(2)}</div>
-          </div>
-          <div>{seatFor(1)}</div>
-          <div className="grid place-items-center">
-            <TrickArea
-              trickKey={shownTrick.key}
-              plays={shownTrick.plays}
-              winnerRel={shownTrick.winner === null ? null : rel(shownTrick.winner)}
-              winnerName={shownTrick.winner === null ? undefined : name(shownTrick.winner)}
-              cardWidth={trickCardW}
-            />
-          </div>
-          <div>{seatFor(3)}</div>
-        </div>
-
-        {/* Eigener Bereich */}
-        <div className="flex items-end gap-3 px-3 pb-3">
-          <div className="hidden shrink-0 md:block" style={{ width: Math.round(seatW * 0.8) }}>
-            {myPos >= 0 ? seatFor(0) : null}
-          </div>
+        {/* Unten Mitte: Hand, Aktionen, Ansagen */}
+        <div className="flex min-w-0 items-end gap-3 self-end">
           <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
             <div className="flex min-h-11 items-end justify-center">
               <AnimatePresence mode="wait">{panel}</AnimatePresence>
             </div>
-            {myPos >= 0 ? (
+            {myPos >= 0 && (
               <Hand
                 cards={shownHand}
                 dealKey={game.id}
@@ -400,19 +401,28 @@ export function GameView({
                 }
                 onPlay={play}
               />
-            ) : (
-              <div className="panel px-5 py-3 text-sm text-white/75">Du setzt diese Runde aus und schaust zu.</div>
             )}
           </div>
-          <div className="w-28 shrink-0 self-center">
-            <AnnouncePanel
-              options={announce}
-              party={party}
-              busy={busy}
-              onAnnounce={(level: AnnounceLevel) => run(() => act({ type: 'announce', level }))}
-            />
-          </div>
+          {announce.length > 0 && (
+            <div className="w-28 shrink-0 self-center">
+              <AnnouncePanel
+                options={announce}
+                party={party}
+                busy={busy}
+                onAnnounce={(level: AnnounceLevel) => run(() => act({ type: 'announce', level }))}
+              />
+            </div>
+          )}
         </div>
+
+        {/* Unten rechts: Spieler rechts von mir */}
+        <div className="self-end">{seatFor(3)}</div>
+
+        <AnimatePresence>
+          {showLastTrick && view.lastTrick && (
+            <LastTrickPopover trick={view.lastTrick} name={name} onClose={() => setShowLastTrick(false)} />
+          )}
+        </AnimatePresence>
       </main>
 
       {wide ? (
@@ -476,7 +486,7 @@ function LastTrickPopover({ trick, name, onClose }: { trick: Trick; name: (pos: 
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      className="panel absolute top-12 right-4 z-30 p-3"
+      className="panel absolute top-24 left-1/2 z-30 -translate-x-1/2 p-3"
       role="dialog"
       aria-label="Letzter Stich"
     >

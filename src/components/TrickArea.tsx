@@ -2,21 +2,22 @@ import type { Card } from '@engine';
 import { AnimatePresence, motion } from 'motion/react';
 import { PlayingCard } from './PlayingCard';
 
-/** Relative Sitzposition: 0 = ich (unten), 1 = links, 2 = gegenüber, 3 = rechts. */
+/** Relative Sitzposition im Uhrzeigersinn: 0 = ich (unten links), 1 = oben links, 2 = oben rechts, 3 = unten rechts. */
 export type Rel = 0 | 1 | 2 | 3;
 
 const SPOT: Record<Rel, { x: number; y: number; r: number }> = {
-  0: { x: 0, y: 0.5, r: -3 },
-  1: { x: -1.1, y: 0.04, r: -9 },
-  2: { x: 0, y: -0.5, r: 4 },
-  3: { x: 1.1, y: -0.04, r: 8 },
+  0: { x: -0.62, y: 0.36, r: -8 },
+  1: { x: -0.62, y: -0.36, r: 6 },
+  2: { x: 0.62, y: -0.36, r: -5 },
+  3: { x: 0.62, y: 0.36, r: 9 },
 };
 
+/** Woher die Karten einfliegen: aus der Ecke des jeweiligen Spielers */
 const FROM: Record<Rel, { x: number; y: number }> = {
-  0: { x: 0, y: 360 },
-  1: { x: -480, y: 0 },
-  2: { x: 0, y: -360 },
-  3: { x: 480, y: 0 },
+  0: { x: -520, y: 320 },
+  1: { x: -520, y: -320 },
+  2: { x: 520, y: -320 },
+  3: { x: 520, y: 320 },
 };
 
 export interface TrickPlay {
@@ -45,7 +46,7 @@ export function TrickArea({
 }) {
   const cardH = cardWidth * (244.64 / 169.075);
   return (
-    <div className="relative" style={{ width: cardWidth * 3.4, height: cardH * 2.1 }} aria-live="polite">
+    <div className="relative" style={{ width: cardWidth * 2.8, height: cardH * 1.75 }} aria-live="polite">
       <AnimatePresence custom={winnerRel}>
         <motion.div
           key={trickKey}
