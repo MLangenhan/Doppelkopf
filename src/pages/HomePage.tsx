@@ -1,12 +1,16 @@
 import { DEFAULT_SETTINGS, normalizeSettings, type RuleSettings } from '@engine';
 import { AnimatePresence, motion } from 'motion/react';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, lazy, Suspense, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { RulesForm } from '../components/RulesForm';
 import { useToast } from '../components/Toast';
 import { TopBar } from '../components/TopBar';
 import { useAuth } from '../lib/auth';
+import { useEffectsEnabled } from '../lib/prefs';
 import { api, supabase, type TableRow } from '../lib/supabase';
+
+// three.js nur laden, wenn die 3D-Szene wirklich gezeigt wird
+const CardScene = lazy(() => import('../components/CardScene'));
 
 const RULES_KEY = 'doko:lastRules';
 
@@ -26,6 +30,7 @@ interface RecentTable extends TableRow {
 
 export function HomePage() {
   const { profile, session } = useAuth();
+  const effects = useEffectsEnabled();
   const navigate = useNavigate();
   const toast = useToast();
   const [rules, setRules] = useState<RuleSettings>(loadRules);
@@ -90,15 +95,28 @@ export function HomePage() {
   return (
     <div className="felt min-h-full">
       <TopBar />
-      <main className="mx-auto max-w-5xl px-4 pt-6 pb-16">
-        <motion.h1
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-3xl font-semibold tracking-tight text-white sm:text-4xl"
-        >
-          Hallo {profile?.display_name ?? ''}
-        </motion.h1>
-        <p className="mt-1 text-white/65">Eröffne einen Tisch und schick den Link an deine Runde.</p>
+      <section className="relative isolate overflow-hidden border-b border-white/[0.06]">
+        {effects && (
+          <div className="absolute inset-0 -z-10">
+            <Suspense fallback={null}>
+              <CardScene variant="banner" />
+            </Suspense>
+            {/* Links bleibt der Text auf ruhigem Grund */}
+            <div className="absolute inset-0 bg-gradient-to-r from-felt-900 via-felt-900/80 to-transparent" />
+          </div>
+        )}
+        <div className="mx-auto flex min-h-56 max-w-5xl flex-col justify-center px-4 py-10">
+          <motion.h1
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-3xl font-semibold tracking-tight text-white sm:text-5xl"
+          >
+            Hallo {profile?.display_name ?? ''}
+          </motion.h1>
+          <p className="mt-2 max-w-md text-white/65">Eröffne einen Tisch und schick den Link an deine Runde.</p>
+        </div>
+      </section>
+      <main className="mx-auto max-w-5xl px-4 pt-2 pb-16">
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_20rem]">
           <motion.form

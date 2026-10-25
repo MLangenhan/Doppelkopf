@@ -45,29 +45,50 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
             <p className="mt-1 text-sm text-white/55">Gilt nur für dich, in diesem Browser.</p>
 
             <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Spielhilfen</h3>
-            <label className="flex cursor-pointer items-start gap-3 rounded-lg p-2 hover:bg-white/5">
-              <input
-                type="checkbox"
-                className="peer sr-only"
-                checked={prefs.highlightPlayable}
-                onChange={(e) => setPref('highlightPlayable', e.target.checked)}
-              />
-              <span
-                aria-hidden
-                className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-white/20 transition peer-checked:bg-gold-400 peer-focus-visible:ring-2 peer-focus-visible:ring-gold-300
-                  after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-4"
-              />
-              <span className="text-sm">
-                <span className="font-medium text-white">Spielbare Karten hervorheben</span>
-                <span className="block text-white/55">
-                  Ausgeschaltet spielst du ohne Hilfe: Alle Karten sehen gleich aus. Wer nicht bedient, bekommt einen
-                  Hinweis und muss eine andere Karte wählen.
-                </span>
-              </span>
-            </label>
+            <Toggle
+              checked={prefs.highlightPlayable}
+              onChange={(v) => setPref('highlightPlayable', v)}
+              label="Spielbare Karten hervorheben"
+              hint="Ausgeschaltet spielst du ohne Hilfe: Alle Karten sehen gleich aus. Wer nicht bedient, bekommt einen Hinweis und muss eine andere Karte wählen."
+            />
+
+            <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Darstellung</h3>
+            <Toggle
+              checked={prefs.effects}
+              onChange={(v) => setPref('effects', v)}
+              label="Effekte"
+              hint="3D-Karten auf der Startseite und Partikel hinter dem Tisch. Bei reduzierter Bewegung im System bleiben sie immer aus."
+            />
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+function Toggle({
+  checked,
+  onChange,
+  label,
+  hint,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3 rounded-lg p-2 hover:bg-white/5">
+      <input type="checkbox" className="peer sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <span
+        aria-hidden
+        className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-white/20 transition peer-checked:bg-gold-400 peer-focus-visible:ring-2 peer-focus-visible:ring-gold-300
+          after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-4"
+      />
+      <span className="text-sm">
+        <span className="font-medium text-white">{label}</span>
+        <span className="block text-white/55">{hint}</span>
+      </span>
+    </label>
   );
 }

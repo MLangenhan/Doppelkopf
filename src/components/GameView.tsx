@@ -23,6 +23,7 @@ import { usePrefs } from '../lib/prefs';
 import type { GameRow, Member, ResultRow } from '../lib/supabase';
 import type { RemoteVideo } from '../lib/video';
 import { AnnouncePanel, ArmutOfferPanel, ArmutReturnPanel, ReservationPanel } from './ActionPanels';
+import { Atmosphere } from './Atmosphere';
 import { CameraButton, type CameraControls } from './CameraButton';
 import { Hand } from './Hand';
 import { PlayingCard } from './PlayingCard';
@@ -302,9 +303,11 @@ export function GameView({
   return (
     <div className="flex min-h-0 flex-1">
       <main
-        className="felt relative grid min-w-0 flex-1 gap-3 p-3"
+        className="felt relative isolate grid min-w-0 flex-1 gap-3 p-3"
         style={{ gridTemplateColumns: `${camW}px minmax(0, 1fr) ${camW}px`, gridTemplateRows: 'auto minmax(0, 1fr) auto' }}
       >
+        <Atmosphere />
+
         {/* Oben links: Spieler links von mir */}
         <div className="self-start">{seatFor(1)}</div>
 
