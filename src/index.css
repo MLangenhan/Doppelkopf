@@ -32,6 +32,15 @@ body,
   height: 100%;
 }
 
+/* Auf dem Handy die sichtbare Höhe nehmen (ohne die ein- und ausfahrende Adressleiste) */
+#root {
+  height: 100dvh;
+}
+
+body {
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);

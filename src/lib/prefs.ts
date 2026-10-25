@@ -2,18 +2,56 @@ import { useCallback, useSyncExternalStore } from 'react';
 
 // Persönliche Anzeige-Einstellungen. Liegen nur im Browser (localStorage), nicht am Tisch.
 
+/** Einzeln schaltbare Effekte */
+export type FxKey = 'scene' | 'atmosphere' | 'cursor' | 'tilt' | 'impact' | 'moments' | 'confetti' | 'reveal';
+
+export const FX_LABELS: Record<FxKey, { label: string; hint: string }> = {
+  cursor: { label: 'Farbzeichen-Zeiger', hint: 'Der Mauszeiger wird zum ♠ und nimmt über Karten deren Farbe an.' },
+  tilt: { label: 'Karten neigen', hint: 'Karten in der Hand kippen zur Maus und glänzen.' },
+  impact: { label: 'Trumpf-Einschlag', hint: 'Dulle, Kreuz-Dame und Schweinchen lassen den Tisch beben.' },
+  moments: { label: 'Große Momente', hint: 'Ansagen, Soli, Fuchs, Doppelkopf und Karlchen erscheinen groß in der Mitte.' },
+  reveal: { label: 'Spannende Auswertung', hint: 'Die Augen zählen am Ende hoch, bis der Gewinner feststeht.' },
+  confetti: { label: 'Konfetti', hint: 'Bei einem Sieg regnet es Konfetti.' },
+  atmosphere: { label: 'Atmosphäre', hint: 'Leichte Partikel hinter dem Tisch.' },
+  scene: { label: '3D-Karten', hint: 'Schwebende 3D-Karten auf der Anmelde- und Startseite.' },
+};
+
+/** Reihenfolge der Karten in der Hand */
+export type HandSort = 'trumpFirst' | 'trumpLast' | 'suits' | 'custom';
+
+export const HAND_SORT_LABELS: Record<HandSort, string> = {
+  trumpFirst: 'Trumpf zuerst',
+  trumpLast: 'Trumpf zuletzt',
+  suits: 'Nach Farben',
+  custom: 'Eigene Reihenfolge',
+};
+
 export interface Prefs {
   /** Spielbare Karten hervorheben, nicht spielbare abdunkeln. Aus = "schwarz spielen" ohne Hilfe. */
   highlightPlayable: boolean;
-  /** 3D-Szene und Hintergrund-Partikel */
-  effects: boolean;
+  /** Einzelne Effekte */
+  fx: Record<FxKey, boolean>;
+  /** Kartenreihenfolge in der Hand */
+  handSort: HandSort;
   /** Soundeffekte (Karten, Ansagen, du bist dran …) */
   sound: boolean;
   /** Lautstärke 0–1 */
   volume: number;
+  /** Kamera beim Betreten eines Tisches einschalten */
+  camera: boolean;
 }
 
-const DEFAULTS: Prefs = { highlightPlayable: true, effects: true, sound: true, volume: 0.6 };
+const ALL_FX = Object.keys(FX_LABELS) as FxKey[];
+const fxAll = (on: boolean) => Object.fromEntries(ALL_FX.map((k) => [k, on])) as Record<FxKey, boolean>;
+
+const DEFAULTS: Prefs = {
+  highlightPlayable: true,
+  fx: fxAll(true),
+  handSort: 'trumpFirst',
+  sound: true,
+  volume: 0.6,
+  camera: true,
+};
 const KEY = 'doko:prefs';
 
 const listeners = new Set<() => void>();
@@ -23,7 +61,10 @@ function read(): Prefs {
   if (cache) return cache;
   try {
     const raw = localStorage.getItem(KEY);
-    cache = { ...DEFAULTS, ...(raw ? (JSON.parse(raw) as Partial<Prefs>) : {}) };
+    const stored = (raw ? JSON.parse(raw) : {}) as Partial<Prefs> & { effects?: boolean };
+    // Früher gab es nur einen Schalter für alle Effekte
+    const fx = { ...fxAll(stored.effects !== false), ...stored.fx };
+    cache = { ...DEFAULTS, ...stored, fx };
   } catch {
     cache = { ...DEFAULTS };
   }
@@ -61,12 +102,38 @@ export function usePrefs() {
   return [prefs, set] as const;
 }
 
-/** Ob aufwendige Effekte laufen sollen: Einstellung an, keine reduzierte Bewegung, kein sehr schwaches Gerät. */
-export function useEffectsEnabled(): boolean {
-  const [prefs] = usePrefs();
-  if (!prefs.effects || typeof window === 'undefined') return false;
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false;
+export function setFx(key: FxKey, on: boolean) {
+  const p = read();
+  write({ ...p, fx: { ...p.fx, [key]: on } });
+}
+
+export function setAllFx(on: boolean) {
+  write({ ...read(), fx: fxAll(on) });
+}
+
+/** Für Code außerhalb von React (z. B. Kamera-Wunsch) */
+export function getPrefs(): Prefs {
+  return read();
+}
+
+export function setPref<K extends keyof Prefs>(key: K, value: Prefs[K]) {
+  write({ ...read(), [key]: value });
+}
+
+const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+const weakDevice = () => {
+  if (typeof navigator === 'undefined') return false;
   const nav = navigator as Navigator & { deviceMemory?: number };
-  if ((nav.hardwareConcurrency ?? 8) <= 2 || (nav.deviceMemory ?? 8) <= 2) return false;
+  return (nav.hardwareConcurrency ?? 8) <= 2 || (nav.deviceMemory ?? 8) <= 2;
+};
+
+/**
+ * Ob ein Effekt laufen soll: Einstellung an und keine reduzierte Bewegung im System.
+ * Die schweren Effekte (3D, Partikel) bleiben auf sehr schwachen Geräten zusätzlich aus.
+ */
+export function useFx(key: FxKey): boolean {
+  const [prefs] = usePrefs();
+  if (!prefs.fx[key] || typeof window === 'undefined' || reducedMotion()) return false;
+  if ((key === 'scene' || key === 'atmosphere') && weakDevice()) return false;
   return true;
 }

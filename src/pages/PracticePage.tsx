@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import {
   applyAction,
   createGame,
@@ -130,6 +131,7 @@ export function PracticePage() {
     setState(applyAction(stateRef.current, 0, action));
   }, []);
 
+  const navigate = useNavigate();
   const startGame = useCallback(async () => {
     const s = stateRef.current;
     // Bei Neugeben bleibt der Geber, sonst rückt er weiter
@@ -154,6 +156,7 @@ export function PracticePage() {
         online={['bot-1', 'bot-2', 'bot-3']}
         act={act}
         startGame={startGame}
+        onLeave={() => navigate('/')}
       />
     </div>
   );

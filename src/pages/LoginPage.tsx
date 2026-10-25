@@ -3,7 +3,7 @@ import { type FormEvent, lazy, Suspense, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { PlayingCard } from '../components/PlayingCard';
 import { useAuth } from '../lib/auth';
-import { useEffectsEnabled } from '../lib/prefs';
+import { useFx } from '../lib/prefs';
 import { errorMessage, supabase } from '../lib/supabase';
 
 // three.js nur laden, wenn die 3D-Szene wirklich gezeigt wird
@@ -27,7 +27,7 @@ const HERO = ['H-10-0', 'C-Q-0', 'S-Q-0', 'D-A-0', 'C-J-0'];
 
 export function LoginPage() {
   const { session } = useAuth();
-  const effects = useEffectsEnabled();
+  const effects = useFx('scene');
   const location = useLocation();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');

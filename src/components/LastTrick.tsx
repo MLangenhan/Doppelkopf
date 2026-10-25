@@ -2,9 +2,9 @@ import type { Trick } from '@engine';
 import { PlayingCard } from './PlayingCard';
 
 /** Kleine, immer sichtbare Ansicht des letzten Stichs. Zum Vergrößern mit der Maus darüberfahren. */
-export function LastTrick({ trick, name }: { trick: Trick | null; name: (pos: number) => string }) {
+export function LastTrick({ trick, name, cardW = 44 }: { trick: Trick | null; name: (pos: number) => string; cardW?: number }) {
   if (!trick) {
-    return <div className="h-[86px]" aria-hidden />;
+    return <div style={{ height: cardW * 1.447 + 22 }} aria-hidden />;
   }
   return (
     <div className="group flex flex-col items-center gap-1" aria-label={`Letzter Stich, gewonnen von ${name(trick.winner!)}`}>
@@ -16,7 +16,7 @@ export function LastTrick({ trick, name }: { trick: Trick | null; name: (pos: nu
           const pos = (trick.leader + i) % 4;
           return (
             <div key={c} className="relative" title={name(pos)}>
-              <PlayingCard card={c} width={44} className={pos === trick.winner ? 'ring-2 ring-gold-400' : 'opacity-90'} />
+              <PlayingCard card={c} width={cardW} className={pos === trick.winner ? 'ring-2 ring-gold-400' : 'opacity-90'} />
             </div>
           );
         })}

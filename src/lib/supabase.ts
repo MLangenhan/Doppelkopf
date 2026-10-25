@@ -8,6 +8,8 @@ const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 export const supabase = createClient(url, key, {
   // PKCE: Bestätigungslinks kommen als ?code=… zurück und vertragen sich so mit dem HashRouter
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' },
+  // Herzschlag im Web Worker: Hintergrund-Tabs drosseln Timer, sonst fliegt man beim Tab-Wechsel aus dem Kanal
+  realtime: { worker: true },
 });
 
 export interface Profile {
@@ -41,7 +43,7 @@ export interface GameRow {
   players: string[];
   state: PublicGameState;
   version: number;
-  status: 'running' | 'finished' | 'redeal';
+  status: 'running' | 'finished' | 'redeal' | 'aborted';
   created_at: string;
   finished_at: string | null;
 }
@@ -82,6 +84,7 @@ async function callGame(body: Record<string, unknown>) {
 export const api = {
   startGame: (tableId: string) => callGame({ type: 'start', tableId }),
   act: (gameId: string, action: GameAction) => callGame({ type: 'action', gameId, action }),
+  abortGame: (gameId: string) => callGame({ type: 'abort', gameId }),
 
   async createTable(settings: RuleSettings, name: string): Promise<TableRow> {
     const { data, error } = await supabase.rpc('create_table', { p_settings: settings, p_name: name });

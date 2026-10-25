@@ -1,5 +1,6 @@
 import { motion, useMotionTemplate, useMotionValue, useReducedMotion, useSpring } from 'motion/react';
 import { type ReactNode, useState } from 'react';
+import { useFx } from '../lib/prefs';
 
 /**
  * Karte, die sich zur Maus neigt, mit einem Glanzlicht, das über die Oberfläche wandert.
@@ -10,7 +11,8 @@ export function TiltCard({ children, max = 14 }: { children: ReactNode; max?: nu
   const [fine] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches,
   );
-  const enabled = fine && !reduce;
+  const on = useFx('tilt');
+  const enabled = fine && !reduce && on;
 
   const px = useMotionValue(0.5);
   const py = useMotionValue(0.5);

@@ -1,11 +1,12 @@
 import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect } from 'react';
-import { usePrefs } from '../lib/prefs';
+import { FX_LABELS, type FxKey, HAND_SORT_LABELS, type HandSort, setAllFx, setFx, usePrefs } from '../lib/prefs';
 import { sound } from '../lib/sound';
 
 export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [prefs, setPref] = usePrefs();
+  const reduced = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   useEffect(() => {
     if (!open) return;
@@ -28,7 +29,7 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
           aria-labelledby="settings-title"
         >
           <motion.div
-            className="panel w-full max-w-md p-6"
+            className="panel max-h-full w-full max-w-md overflow-y-auto p-5 sm:p-6"
             initial={{ y: 12, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 8, opacity: 0 }}
@@ -83,13 +84,52 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
               </div>
             )}
 
-            <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Darstellung</h3>
-            <Toggle
-              checked={prefs.effects}
-              onChange={(v) => setPref('effects', v)}
-              label="Effekte"
-              hint="3D-Karten auf der Startseite und Partikel hinter dem Tisch. Bei reduzierter Bewegung im System bleiben sie immer aus."
-            />
+            <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Kartenhand</h3>
+            <div className="grid grid-cols-2 gap-1.5 px-2" role="radiogroup" aria-label="Sortierung">
+              {(Object.keys(HAND_SORT_LABELS) as HandSort[]).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  role="radio"
+                  aria-checked={prefs.handSort === k}
+                  onClick={() => setPref('handSort', k)}
+                  className={`rounded-lg px-3 py-2 text-left text-sm transition ${
+                    prefs.handSort === k ? 'bg-white/15 text-white ring-1 ring-gold-400/60' : 'bg-white/5 text-white/65 hover:text-white'
+                  }`}
+                >
+                  {HAND_SORT_LABELS[k]}
+                </button>
+              ))}
+            </div>
+            <p className="px-2 pt-1.5 text-xs text-white/50">
+              Bei „Eigene Reihenfolge“ ziehst du Karten in der Hand einfach an ihren Platz.
+            </p>
+
+            <div className="mt-5 mb-2 flex items-center justify-between">
+              <h3 className="text-xs font-semibold tracking-wider text-white/50 uppercase">Effekte</h3>
+              <span className="flex gap-1">
+                <button type="button" className="btn-ghost px-2 py-0.5 text-xs" onClick={() => setAllFx(true)}>
+                  Alle an
+                </button>
+                <button type="button" className="btn-ghost px-2 py-0.5 text-xs" onClick={() => setAllFx(false)}>
+                  Alle aus
+                </button>
+              </span>
+            </div>
+            {reduced && (
+              <p className="mb-1 px-2 text-xs text-gold-300">
+                Dein System wünscht reduzierte Bewegung – Effekte bleiben deshalb aus.
+              </p>
+            )}
+            {(Object.keys(FX_LABELS) as FxKey[]).map((k) => (
+              <Toggle
+                key={k}
+                checked={prefs.fx[k]}
+                onChange={(v) => setFx(k, v)}
+                label={FX_LABELS[k].label}
+                hint={FX_LABELS[k].hint}
+              />
+            ))}
           </motion.div>
         </motion.div>
       )}

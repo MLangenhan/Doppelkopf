@@ -265,11 +265,14 @@ export function AnnouncePanel({
   party,
   onAnnounce,
   busy,
+  row,
 }: {
   options: AnnounceLevel[];
   party: Party | null;
   onAnnounce: (l: AnnounceLevel) => void;
   busy: boolean;
+  /** Nebeneinander statt untereinander (Handy) */
+  row?: boolean;
 }) {
   const [armed, setArmed] = useState<AnnounceLevel | null>(null);
 
@@ -281,7 +284,7 @@ export function AnnouncePanel({
 
   if (!party || options.length === 0) return null;
   return (
-    <div className="flex flex-col items-stretch gap-1.5" role="group" aria-label="Ansagen">
+    <div className={`flex items-stretch gap-1.5 ${row ? 'flex-row items-center justify-center' : 'flex-col'}`} role="group" aria-label="Ansagen">
       <span className="text-center text-[11px] font-semibold tracking-wider text-white/50 uppercase">Ansage</span>
       {/* Nur die nächsten beiden Stufen anbieten – übersichtlicher, Sprünge sind trotzdem möglich */}
       {options.slice(0, 2).map((l) => {

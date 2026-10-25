@@ -17,6 +17,7 @@ export function VideoTile({
   className = '',
   children,
   connecting,
+  small,
 }: {
   stream: MediaStream | null | undefined;
   name: string;
@@ -26,6 +27,8 @@ export function VideoTile({
   /** Goldener Rahmen (z. B. wer dran ist) */
   highlight?: boolean;
   connecting?: boolean;
+  /** Kleine Kachel (Handy): kleinerer Avatar */
+  small?: boolean;
   className?: string;
   children?: ReactNode;
 }) {
@@ -38,6 +41,24 @@ export function VideoTile({
     if (stream) v.play().catch(() => {});
   }, [stream, videoOff]);
 
+  // Nach dem Zurückwechseln in den Tab oder neuen Spuren pausierte Videos wieder anwerfen
+  useEffect(() => {
+    if (!stream) return;
+    const resume = () => {
+      const v = ref.current;
+      if (v && document.visibilityState === 'visible' && v.paused) v.play().catch(() => {});
+    };
+    document.addEventListener('visibilitychange', resume);
+    stream.addEventListener('addtrack', resume);
+    const tracks = stream.getVideoTracks();
+    tracks.forEach((t) => t.addEventListener('unmute', resume));
+    return () => {
+      document.removeEventListener('visibilitychange', resume);
+      stream.removeEventListener('addtrack', resume);
+      tracks.forEach((t) => t.removeEventListener('unmute', resume));
+    };
+  }, [stream]);
+
   const showVideo = !!stream && !videoOff;
 
   return (
@@ -48,12 +69,15 @@ export function VideoTile({
           autoPlay
           playsInline
           muted
+          onPause={(e) => document.visibilityState === 'visible' && e.currentTarget.play().catch(() => {})}
           className={`h-full w-full object-cover ${mirror ? '-scale-x-100' : ''}`}
         />
       ) : (
         <div className="grid h-full w-full place-items-center bg-felt-800">
           <div
-            className="grid aspect-square w-[34%] max-w-20 place-items-center rounded-full text-2xl font-bold text-felt-950 shadow-lg"
+            className={`grid aspect-square place-items-center rounded-full font-bold text-felt-950 shadow-lg ${
+              small ? 'w-[30%] -translate-y-2 text-sm' : 'w-[34%] max-w-20 text-2xl'
+            }`}
             style={{ background: colorFor(name) }}
             aria-hidden
           >

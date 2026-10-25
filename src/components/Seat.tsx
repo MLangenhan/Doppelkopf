@@ -2,6 +2,7 @@ import type { Party } from '@engine';
 import { AnimatePresence, motion } from 'motion/react';
 import type { ReactNode } from 'react';
 import { Brackets } from './Cursor';
+import { PlayingCard } from './PlayingCard';
 import { VideoTile } from './VideoTile';
 
 export function PartyBadge({ party, small }: { party: Party; small?: boolean }) {
@@ -31,6 +32,8 @@ export function Seat({
   online,
   connecting,
   videoOff,
+  pile,
+  compact,
   className = '',
 }: {
   name: string;
@@ -47,6 +50,10 @@ export function Seat({
   online?: boolean;
   connecting?: boolean;
   videoOff?: boolean;
+  /** Gewonnene Stiche als sichtbarer Stapel neben der Kachel, zur Tischmitte hin */
+  pile?: { side: 'left' | 'right'; v: 'above' | 'below'; cardW: number };
+  /** Kleine Kachel fürs Handy */
+  compact?: boolean;
   className?: string;
 }) {
   const facts = [
@@ -56,7 +63,8 @@ export function Seat({
   ].filter(Boolean);
 
   return (
-    <div className={`flex flex-col gap-2 ${className}`}>
+    <div className={`relative flex flex-col ${compact ? 'gap-1' : 'gap-2'} ${className}`}>
+      {pile && !!tricks && <TrickPile count={tricks} {...pile} />}
       <div className="relative">
         <VideoTile
           stream={stream}
@@ -64,12 +72,19 @@ export function Seat({
           mirror={isMe}
           connecting={connecting}
           videoOff={videoOff}
+          small={compact}
           className={`aspect-[4/3] w-full transition-[box-shadow] duration-300 ${isTurn ? 'shadow-[0_0_0_1px_rgba(217,180,90,0.6)]' : ''}`}
         >
-          <div className="absolute bottom-2 left-2 flex max-w-[85%] items-center gap-2 rounded-md bg-felt-950/75 px-2 py-1">
+          <div
+            className={`absolute flex max-w-[92%] items-center rounded-md bg-felt-950/75 ${
+              compact ? 'bottom-1 left-1 gap-1 px-1 py-0.5' : 'bottom-2 left-2 gap-2 px-2 py-1'
+            }`}
+          >
             {online === false && <span className="size-1.5 shrink-0 rounded-full bg-white/30" title="Nicht verbunden" />}
-            <span className="truncate text-sm font-medium">{isMe && name !== 'Du' ? `${name} (du)` : name}</span>
-            {party && <PartyBadge party={party} small />}
+            <span className={`truncate font-medium ${compact ? 'text-[11px]' : 'text-sm'}`}>
+              {isMe && name !== 'Du' && !compact ? `${name} (du)` : name}
+            </span>
+            {party && !compact && <PartyBadge party={party} small />}
           </div>
           <AnimatePresence>
             {callouts && callouts.length > 0 && (
@@ -78,7 +93,7 @@ export function Seat({
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="absolute top-2 right-2 flex flex-col items-end gap-1"
+                className={`absolute flex flex-col items-end gap-1 ${compact ? 'top-1 right-1' : 'top-2 right-2'}`}
               >
                 {callouts.map((c) => (
                   <span key={c} className="tag rounded bg-gold-400 px-1.5 py-0.5 text-[10px] text-felt-950">
@@ -104,8 +119,8 @@ export function Seat({
           )}
         </AnimatePresence>
       </div>
-      <div className="tag flex min-h-5 flex-wrap items-center gap-x-2 text-[10px] text-white/45">
-        {!!tricks && <TrickPile count={tricks} />}
+      <div className={`tag flex min-h-5 flex-wrap items-center gap-x-2 text-white/45 ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
+        {compact && party && <PartyBadge party={party} small />}
         {facts.map((f, i) => (
           <span key={i}>{f}</span>
         ))}
@@ -115,22 +130,41 @@ export function Seat({
   );
 }
 
-/** Gewonnene Stiche als kleiner Stapel verdeckter Karten. Neue landen mit einem kleinen Fall. */
-function TrickPile({ count }: { count: number }) {
+/** Gewonnene Stiche als Stapel verdeckter Karten. Neue landen mit einem kleinen Fall. */
+function TrickPile({ count, side, v, cardW }: { count: number; side: 'left' | 'right'; v: 'above' | 'below'; cardW: number }) {
+  const cardH = cardW * (244.64 / 169.075);
   return (
-    <span className="mr-1 flex items-center pl-2.5" aria-hidden>
-      <AnimatePresence initial={false}>
-        {Array.from({ length: count }, (_, i) => (
-          <motion.span
-            key={i}
-            className="-ml-2.5 inline-block h-5 w-3.5 rounded-[2px] bg-[#1d4f8f] shadow-[0_1px_2px_rgba(0,0,0,0.5)] ring-1 ring-white/60"
-            style={{ rotate: ((i * 37) % 11) - 5 }}
-            initial={{ y: -28, opacity: 0, scale: 1.5 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 18, delay: 0.55 }}
-          />
-        ))}
-      </AnimatePresence>
-    </span>
+    <div
+      className={`pointer-events-none absolute z-10 flex items-end gap-2 ${side === 'left' ? 'left-1' : 'right-1'} ${
+        v === 'below' ? 'top-full mt-1' : 'bottom-full mb-2'
+      }`}
+      aria-label={`${count} ${count === 1 ? 'Stich' : 'Stiche'}`}
+    >
+      <div className="relative" style={{ width: cardW + 16, height: cardH + 12 }}>
+        <AnimatePresence initial={false}>
+          {Array.from({ length: count }, (_, i) => (
+            <motion.div
+              key={i}
+              className="absolute bottom-0 left-0"
+              style={{ rotate: ((i * 37) % 13) - 6, x: (i % 4) * 1.5 + Math.min(i, 8) * 1, y: -Math.min(i, 10) * 1.2 }}
+              initial={{ y: -60, opacity: 0, scale: 1.4 }}
+              animate={{ y: -Math.min(i, 10) * 1.2, opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 20, delay: 0.55 }}
+            >
+              <PlayingCard back width={cardW} className="ring-1 ring-black/20" />
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+      <motion.span
+        key={count}
+        initial={{ scale: 1.6, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 420, damping: 18, delay: 0.6 }}
+        className="display mb-1 text-3xl leading-none text-white/85 tabular-nums"
+      >
+        {count}
+      </motion.span>
+    </div>
   );
 }

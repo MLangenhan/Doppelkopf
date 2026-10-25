@@ -1,7 +1,7 @@
 import type { Party, PublicGameState } from '@engine';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
-import { useEffectsEnabled } from '../lib/prefs';
+import { useFx } from '../lib/prefs';
 import { sound } from '../lib/sound';
 import { partyLabel, resultKindLabel, SCHMEISSEN_LABEL } from '../lib/gameText';
 import type { SchmeissenReason } from '@engine';
@@ -26,6 +26,25 @@ export function ResultDialog({
   canStart: boolean;
 }) {
   const r = view.result;
+  // Leertaste: erst die Auswertung überspringen, dann das nächste Spiel geben
+  const [skip, setSkip] = useState(false);
+  const [revealed, setRevealed] = useState(!!view.redeal);
+  const state = useRef({ revealed, busy, canStart, onNext });
+  state.current = { revealed, busy, canStart, onNext };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.code !== 'Space' || el?.closest('input, textarea, select, [contenteditable]')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.repeat) return;
+      const s = state.current;
+      if (!s.revealed) setSkip(true);
+      else if (!s.busy && s.canStart) s.onNext();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, []);
 
   return (
     <motion.div
@@ -38,7 +57,7 @@ export function ResultDialog({
       aria-labelledby="result-title"
     >
       <motion.div
-        className="panel max-h-full w-full max-w-lg overflow-y-auto p-6"
+        className="panel max-h-full w-full max-w-lg overflow-y-auto p-5 sm:p-6"
         initial={{ y: 30, scale: 0.95, opacity: 0 }}
         animate={{ y: 0, scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 240, damping: 24, delay: 0.1 }}
@@ -55,16 +74,22 @@ export function ResultDialog({
             </p>
           </>
         ) : r ? (
-          <ResultBody view={view} name={name} myPos={myPos} />
+          <ResultBody view={view} name={name} myPos={myPos} skip={skip} onRevealed={() => setRevealed(true)} />
         ) : null}
 
-        <div className="mt-6 flex flex-wrap justify-end gap-3">
-          <button className="btn-ghost" onClick={onClose}>
-            Tisch ansehen
-          </button>
-          <button className="btn-primary min-w-40" onClick={onNext} disabled={busy || !canStart} autoFocus>
-            {view.redeal ? 'Neu geben' : 'Nächstes Spiel'}
-          </button>
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <span className="tag hidden text-[10px] text-white/40 sm:inline">
+            <kbd className="mr-1.5 rounded border border-white/20 px-1.5">Leertaste</kbd>
+            {revealed ? (canStart ? 'nächstes Spiel' : '') : 'überspringen'}
+          </span>
+          <div className="ml-auto flex flex-wrap justify-end gap-3">
+            <button className="btn-ghost" onClick={onClose}>
+              Tisch ansehen
+            </button>
+            <button className="btn-primary min-w-40" onClick={onNext} disabled={busy || !canStart}>
+              {view.redeal ? 'Neu geben' : 'Nächstes Spiel'}
+            </button>
+          </div>
         </div>
         {!canStart && <p className="mt-2 text-right text-xs text-white/50">Es werden 4 oder 5 Spieler am Tisch gebraucht.</p>}
       </motion.div>
@@ -72,12 +97,27 @@ export function ResultDialog({
   );
 }
 
-function ResultBody({ view, name, myPos }: { view: PublicGameState; name: (pos: number) => string; myPos: number }) {
+function ResultBody({
+  view,
+  name,
+  myPos,
+  skip,
+  onRevealed,
+}: {
+  view: PublicGameState;
+  name: (pos: number) => string;
+  myPos: number;
+  skip: boolean;
+  onRevealed: () => void;
+}) {
   const r = view.result!;
   const winner = r.winner;
   const myParty: Party | null = myPos >= 0 ? (r.reTeam.includes(myPos) ? 're' : 'kontra') : null;
   const iWon = myParty !== null && winner === myParty;
-  const { re, kontra, revealed } = useAugenReveal(r.augen, winner, myParty);
+  const { re, kontra, revealed } = useAugenReveal(r.augen, winner, myParty, skip);
+  useEffect(() => {
+    if (revealed) onRevealed();
+  }, [revealed, onRevealed]);
   const kind = view.revealedKind ?? view.kind ?? 'normal';
   const soloist = r.soloScoring ? r.reTeam[0] : null;
 
@@ -89,7 +129,7 @@ function ResultBody({ view, name, myPos }: { view: PublicGameState; name: (pos: 
         {soloist !== null && ` von ${name(soloist)}`}
         {view.revealedKind === 'silentSolo' && ' – Überraschung!'}
       </p>
-      <h2 id="result-title" className="display text-6xl">
+      <h2 id="result-title" className="display text-5xl sm:text-6xl">
         <AnimatePresence mode="wait" initial={false}>
           <motion.span
             key={revealed ? 'r' : 'w'}
@@ -186,11 +226,12 @@ function ResultBody({ view, name, myPos }: { view: PublicGameState; name: (pos: 
  * Spannende Auswertung: Die Augen zählen hoch, der Gewinner steht erst fest, wenn seine
  * Partei die Siegmarke überschreitet (bzw. am Ende). Ohne Effekte sofort das Ergebnis.
  */
-function useAugenReveal(augen: Record<Party, number>, winner: Party | null, myParty: Party | null) {
-  const effects = useEffectsEnabled();
+function useAugenReveal(augen: Record<Party, number>, winner: Party | null, myParty: Party | null, skip: boolean) {
+  const effects = useFx('reveal');
   const [p, setP] = useState(effects ? 0 : 1);
+  if (skip && p < 1) setP(1);
   useEffect(() => {
-    if (!effects) return;
+    if (!effects || skip) return;
     let raf = 0;
     const start = performance.now();
     const step = (now: number) => {
@@ -200,7 +241,7 @@ function useAugenReveal(augen: Record<Party, number>, winner: Party | null, myPa
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [effects]);
+  }, [effects, skip]);
 
   const ease = 1 - Math.pow(1 - p, 3);
   const re = Math.round(augen.re * ease);

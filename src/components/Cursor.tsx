@@ -1,7 +1,7 @@
 import { Hand } from 'lucide-react';
 import { motion, useMotionValue, useReducedMotion, useSpring } from 'motion/react';
 import { useEffect, useState } from 'react';
-import { useEffectsEnabled } from '../lib/prefs';
+import { useFx } from '../lib/prefs';
 
 type Suit = 'C' | 'S' | 'H' | 'D';
 const GLYPH: Record<Suit, string> = { C: '♣', S: '♠', H: '♥', D: '♦' };
@@ -14,7 +14,7 @@ const GLYPH: Record<Suit, string> = { C: '♣', S: '♠', H: '♥', D: '♦' };
  */
 export function Cursor() {
   const reduce = useReducedMotion();
-  const effects = useEffectsEnabled();
+  const effects = useFx('cursor');
   const [fine] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches,
   );
@@ -36,7 +36,7 @@ export function Cursor() {
       const target = el as HTMLElement | null;
       const card = target?.closest<HTMLElement>('[data-suit]');
       const action = target?.closest<HTMLElement>(
-        'a, button:not([disabled]), [data-cursor], input, select, label, [role=button]',
+        'a, button:not([disabled]):not([aria-disabled=true]), [data-cursor], input, select, label, [role=button]',
       );
       if (card) setSuit(card.dataset.suit as Suit);
       setOverCard(!!card);

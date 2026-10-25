@@ -8,7 +8,7 @@ import { arrowLink, SectionLabel } from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
 import { TopBar } from '../components/TopBar';
 import { useAuth } from '../lib/auth';
-import { useEffectsEnabled } from '../lib/prefs';
+import { useFx } from '../lib/prefs';
 import { api, supabase, type TableRow } from '../lib/supabase';
 
 // three.js nur laden, wenn die 3D-Szene wirklich gezeigt wird
@@ -32,7 +32,7 @@ interface RecentTable extends TableRow {
 
 export function HomePage() {
   const { profile, session } = useAuth();
-  const effects = useEffectsEnabled();
+  const effects = useFx('scene');
   const navigate = useNavigate();
   const toast = useToast();
   const [rules, setRules] = useState<RuleSettings>(loadRules);
@@ -119,7 +119,7 @@ export function HomePage() {
         </div>
       </section>
       <main className="mx-auto max-w-5xl px-4 pb-20">
-        <section className="grid gap-12 border-t border-white/[0.08] py-10 lg:grid-cols-[1fr_17rem]">
+        <section className="grid grid-cols-[minmax(0,1fr)] gap-12 border-t border-white/[0.08] py-10 lg:grid-cols-[minmax(0,1fr)_17rem]">
           <form onSubmit={create}>
             <SectionLabel n="01">Neuer Tisch</SectionLabel>
             <div className="flex items-end gap-4 border-b border-white/15 transition-colors focus-within:border-gold-400">

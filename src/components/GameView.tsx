@@ -8,10 +8,9 @@ import {
   isTrump,
   legalCards,
   SOLO_NAMES,
-  sortHand,
   sumAugen,
 } from '@engine';
-import { ListOrdered, Video, VideoOff, X } from 'lucide-react';
+import { ArrowDownUp, ListOrdered, LogOut, Video, VideoOff, X } from 'lucide-react';
 import { AnimatePresence, motion, useAnimate } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -23,7 +22,8 @@ import {
   partyLabel,
   trumpMode,
 } from '../lib/gameText';
-import { useEffectsEnabled, usePrefs } from '../lib/prefs';
+import { arrangeHand } from '../lib/handSort';
+import { HAND_SORT_LABELS, type HandSort, useFx, usePrefs } from '../lib/prefs';
 import { sound } from '../lib/sound';
 import type { GameRow, Member, ResultRow } from '../lib/supabase';
 import type { RemoteVideo } from '../lib/video';
@@ -40,6 +40,24 @@ import { Seat } from './Seat';
 import { useToast } from './Toast';
 import { type Rel, TrickArea, type TrickPlay } from './TrickArea';
 import { VideoTile } from './VideoTile';
+import { LeaveDialog } from './LeaveDialog';
+
+const orderKey = (gameId: string) => `doko:order:${gameId}`;
+function loadOrder(gameId: string): { game: string; cards: Card[] } | null {
+  try {
+    const raw = sessionStorage.getItem(orderKey(gameId));
+    return raw ? { game: gameId, cards: JSON.parse(raw) as Card[] } : null;
+  } catch {
+    return null;
+  }
+}
+function saveOrder(gameId: string, cards: Card[]) {
+  try {
+    sessionStorage.setItem(orderKey(gameId), JSON.stringify(cards));
+  } catch {
+    // egal, dann gilt die Reihenfolge nur bis zum Neuladen
+  }
+}
 
 function useViewport() {
   const [size, setSize] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
@@ -63,6 +81,8 @@ export function GameView({
   act,
   startGame,
   onShowLobby,
+  onLeave,
+  onAbort,
 }: {
   game: GameRow;
   hand: Card[];
@@ -75,6 +95,10 @@ export function GameView({
   act: (a: GameAction) => Promise<void>;
   startGame: () => Promise<void>;
   onShowLobby?: () => void;
+  /** Zurück zur Übersicht (man bleibt am Tisch sitzen) */
+  onLeave?: () => void;
+  /** Laufendes Spiel für alle abbrechen */
+  onAbort?: () => Promise<void> | void;
 }) {
   const toast = useToast();
   const vp = useViewport();
@@ -106,14 +130,29 @@ export function GameView({
   }, [hand, pending]);
 
   const ctx = { mode: trumpMode(view), schweinchen: hasSchweinchen(view, hand) };
+  const [prefs, setPref] = usePrefs();
+  // Eigene Reihenfolge je Spiel, übersteht auch ein Neuladen der Seite
+  const [customOrder, setCustomOrder] = useState<{ game: string; cards: Card[] } | null>(() => loadOrder(game.id));
+  const custom = customOrder?.game === game.id ? customOrder.cards : null;
   const shownHand = useMemo(
-    () => sortHand(hand.filter((c) => c !== pending), ctx),
-    [hand, pending, ctx.mode, ctx.schweinchen],
+    () => arrangeHand(hand.filter((c) => c !== pending), ctx, prefs.handSort, custom),
+    [hand, pending, ctx.mode, ctx.schweinchen, prefs.handSort, custom], // eslint-disable-line react-hooks/exhaustive-deps
   );
+  const reorder = (cards: Card[]) => {
+    setCustomOrder({ game: game.id, cards });
+    saveOrder(game.id, cards);
+    if (prefs.handSort !== 'custom') setPref('handSort', 'custom');
+  };
+  const cycleSort = () => {
+    const keys = Object.keys(HAND_SORT_LABELS) as HandSort[];
+    const next = keys[(keys.indexOf(prefs.handSort) + 1) % keys.length];
+    // Eigene Reihenfolge ohne gemerkte Ordnung startet von der aktuellen Anzeige
+    if (next === 'custom' && !custom) reorder(shownHand);
+    else setPref('handSort', next);
+  };
 
   const myTurnToPlay = view.phase === 'playing' && view.turn === myPos && !pending && !view.collectPending;
   // Ohne Hervorhebung ("schwarz spielen") ist jede Karte wählbar; der Server prüft das Bedienen
-  const [prefs] = usePrefs();
   const playable =
     myTurnToPlay && view.current
       ? new Set(prefs.highlightPlayable ? legalCards(hand, view.current.cards, ctx) : hand)
@@ -246,7 +285,8 @@ export function GameView({
     if (now.turn && !prev.turn) sound.turn();
   });
   // ---- Trumpf-Einschlag: Dulle, Kreuz-Dame oder Schweinchen knallen auf den Tisch ----
-  const effects = useEffectsEnabled();
+  const effects = useFx('impact');
+  const momentsOn = useFx('moments');
   const [tableRef, animateTable] = useAnimate<HTMLElement>();
   const [impact, setImpact] = useState<{ key: string; rel: Rel } | null>(null);
   const seenCards = useRef<Set<string> | null>(null);
@@ -302,7 +342,7 @@ export function GameView({
       tricks: trickCount,
     };
     momentState.current = now;
-    if (!prev || prev.game !== now.game) return;
+    if (!prev || prev.game !== now.game || !momentsOn) return;
     let special = false;
 
     for (const a of view.announcementLog.slice(prev.ann)) {
@@ -354,10 +394,15 @@ export function GameView({
   });
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
   // Seitenleiste nur auf sehr breiten Bildschirmen dauerhaft, sonst als Schublade – der Tisch braucht den Platz
   const wide = vp.w >= 1700;
+  // Handy (hochkant oder sehr niedrig quer): eigenes, gestapeltes Layout
+  const mobile = vp.w < 760 || vp.h < 480;
 
-  const trickCardW = Math.round(Math.max(60, Math.min(96, Math.min(vp.w * 0.065, vp.h * 0.085))));
+  const trickCardW = mobile
+    ? Math.round(Math.max(40, Math.min(72, (vp.w - 24) / 4.6, (vp.h - 500) / 3)))
+    : Math.round(Math.max(60, Math.min(96, Math.min(vp.w * 0.065, vp.h * 0.085))));
   // Kameras in den vier Ecken, so groß wie es der Platz erlaubt
   const camW = Math.round(Math.max(180, Math.min(400, vp.w * 0.22, vp.h * 0.36)));
 
@@ -377,7 +422,13 @@ export function GameView({
     return null;
   };
 
-  const seatFor = (r: Rel) => {
+  const PILE: Record<Rel, { side: 'left' | 'right'; v: 'above' | 'below' }> = {
+    0: { side: 'right', v: 'above' },
+    1: { side: 'right', v: 'below' },
+    2: { side: 'left', v: 'below' },
+    3: { side: 'left', v: 'above' },
+  };
+  const seatFor = (r: Rel, compact = false) => {
     const pos = posAt(r);
     const uid = game.players[pos];
     const isMe = uid === me;
@@ -396,6 +447,8 @@ export function GameView({
         callouts={calloutsFor(pos)}
         online={isMe || online.includes(uid)}
         connecting={!isMe && online.includes(uid) && remotes[uid]?.status === 'connecting'}
+        pile={compact ? undefined : { ...PILE[r], cardW: Math.round(trickCardW * 0.62) }}
+        compact={compact}
       />
     );
   };
@@ -511,8 +564,174 @@ export function GameView({
     </div>
   );
 
+  const infoLine = (
+    <div className="tag flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[11px] text-white/50">
+      <span className="text-white/80">Spiel {String(game.number).padStart(2, '0')}</span>
+      <span aria-hidden>/</span>
+      <span className="text-white/80">{gameKindLabel(view, name)}</span>
+      {announcementText && (
+        <>
+          <span aria-hidden>/</span>
+          <span className="text-gold-300">{announcementText}</span>
+        </>
+      )}
+      {view.armut?.returnedTrumps != null && view.kind === 'armut' && (
+        <>
+          <span aria-hidden>/</span>
+          <span>
+            {view.armut.returnedTrumps} {view.armut.returnedTrumps === 1 ? 'Trumpf' : 'Trümpfe'} zurück
+          </span>
+        </>
+      )}
+    </div>
+  );
+
+  const toolbar = (
+    <div className="flex items-center gap-1">
+      {!wide && (
+        <button className="btn-ghost p-2" onClick={() => setSidebarOpen(true)} aria-label="Punkte und Regeln" data-cursor="Punkte">
+          <ListOrdered className="size-4" />
+        </button>
+      )}
+      {camera.state === 'on' ? (
+        <button
+          className={`btn-ghost p-2 ${camera.enabled ? '' : 'text-red-300'}`}
+          onClick={camera.toggle}
+          aria-pressed={camera.enabled}
+          aria-label={camera.enabled ? 'Kamera ausschalten' : 'Kamera einschalten'}
+          data-cursor={camera.enabled ? 'Kamera aus' : 'Kamera an'}
+        >
+          {camera.enabled ? <Video className="size-4" /> : <VideoOff className="size-4" />}
+        </button>
+      ) : camera.state === 'off' ? (
+        <button className="btn-ghost p-2 text-white/55" onClick={camera.start} aria-label="Kamera einschalten" data-cursor="Kamera an">
+          <VideoOff className="size-4" />
+        </button>
+      ) : (
+        <CameraButton camera={camera} compact />
+      )}
+      {myPos >= 0 && (
+        <button
+          className="btn-ghost flex items-center gap-1.5 p-2"
+          onClick={cycleSort}
+          aria-label={`Sortierung: ${HAND_SORT_LABELS[prefs.handSort]} – wechseln`}
+          title="Karten sortieren"
+          data-cursor="Sortieren"
+        >
+          <ArrowDownUp className="size-4" />
+          <span className="tag hidden text-[10px] text-white/55 sm:inline">{HAND_SORT_LABELS[prefs.handSort]}</span>
+        </button>
+      )}
+      {onLeave && (
+        <button className="btn-ghost p-2" onClick={() => setLeaveOpen(true)} aria-label="Spiel verlassen" data-cursor="Verlassen">
+          <LogOut className="size-4" />
+        </button>
+      )}
+    </div>
+  );
+
+  const trickArea = (
+    <TrickArea
+      trickKey={shownTrick.key}
+      plays={shownTrick.plays}
+      winnerRel={shownTrick.winner === null ? null : rel(shownTrick.winner)}
+      winnerLabel={
+        shownTrick.winner === null ? undefined : shownTrick.winner === myPos ? 'Dein Stich' : `Stich für ${name(shownTrick.winner)}`
+      }
+      cardWidth={trickCardW}
+      onCollect={iCollect ? collect : undefined}
+      impact={impact}
+    >
+      <MomentOverlay moment={moments.current} />
+    </TrickArea>
+  );
+
+  const handEl = myPos >= 0 && (
+    <Hand
+      cards={shownHand}
+      dealKey={game.id}
+      mode={view.phase === 'armutReturn' && isRichReturning ? 'pick' : view.phase === 'playing' ? 'play' : 'view'}
+      playable={playable}
+      picked={picked}
+      highlight={newCards}
+      maxCardW={mobile ? 84 : 124}
+      onPick={(c) =>
+        setPicked((cur) => {
+          const next = new Set(cur);
+          if (next.has(c)) next.delete(c);
+          else if (next.size < 3) next.add(c);
+          return next;
+        })
+      }
+      onPlay={play}
+      onReorder={reorder}
+    />
+  );
+
+  const announceEl = announce.length > 0 && (
+    <AnnouncePanel
+      options={announce}
+      party={party}
+      busy={busy}
+      row={mobile}
+      onAnnounce={(level: AnnounceLevel) => run(() => act({ type: 'announce', level }))}
+    />
+  );
+
+  const lastTrick = view.phase === 'playing' && (
+    <LastTrick trick={view.collectPending ? view.previousTrick : view.lastTrick} name={name} cardW={mobile ? 30 : 44} />
+  );
+
+  const sittingOutTiles = sittingOut.map((m) => (
+    <VideoTile
+      key={m.user_id}
+      stream={streamOf(m.user_id)}
+      name={m.display_name}
+      mirror={m.user_id === me}
+      videoOff={m.user_id === me && !camera.enabled}
+      className={`aspect-[4/3] ${mobile ? 'w-24' : 'w-40'}`}
+    >
+      <div className="tag absolute bottom-1.5 left-1.5 rounded bg-felt-950/75 px-1.5 py-0.5 text-[10px]">
+        {m.display_name}
+        {m.user_id === me && ' (du)'} · setzt aus
+      </div>
+    </VideoTile>
+  ));
+
   return (
     <div className="flex min-h-0 flex-1">
+      {mobile ? (
+        // Handy: Kameras klein in einer Reihe, darunter der Stich, unten die Hand
+        <main ref={tableRef} className="felt relative isolate flex min-w-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto px-2 pt-1 pb-2">
+          <Atmosphere />
+          <div className="grid grid-cols-4 gap-1.5">
+            {seatFor(1, true)}
+            {seatFor(2, true)}
+            {seatFor(3, true)}
+            {myPos >= 0 ? (
+              seatFor(0, true)
+            ) : (
+              <div className="panel grid aspect-[4/3] place-items-center p-1 text-center text-[10px] text-white/70">Du schaust zu</div>
+            )}
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">{infoLine}</div>
+            {toolbar}
+          </div>
+          {(lastTrick || sittingOutTiles.length > 0) && (
+            <div className="flex items-start justify-center gap-3">
+              {lastTrick}
+              {sittingOutTiles}
+            </div>
+          )}
+          <div className="grid min-h-0 flex-1 place-items-center">{trickArea}</div>
+          <div className="flex min-h-11 flex-col items-center justify-end gap-2">
+            <AnimatePresence mode="wait">{panel}</AnimatePresence>
+            {announceEl}
+          </div>
+          {handEl}
+        </main>
+      ) : (
       <main
         ref={tableRef}
         className="felt relative isolate grid min-w-0 flex-1 gap-3 p-3"
@@ -525,96 +744,17 @@ export function GameView({
 
         {/* Oben Mitte: Infoleiste und wer aussetzt */}
         <div className="flex min-w-0 flex-col items-center gap-3 self-start">
-          {/* Eine schlanke Infozeile statt vieler Kästen */}
-          <div className="tag flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[11px] text-white/50">
-            <span className="text-white/80">Spiel {String(game.number).padStart(2, '0')}</span>
-            <span aria-hidden>/</span>
-            <span className="text-white/80">{gameKindLabel(view, name)}</span>
-            {announcementText && (
-              <>
-                <span aria-hidden>/</span>
-                <span className="text-gold-300">{announcementText}</span>
-              </>
-            )}
-            {view.armut?.returnedTrumps != null && view.kind === 'armut' && (
-              <>
-                <span aria-hidden>/</span>
-                <span>
-                  {view.armut.returnedTrumps} {view.armut.returnedTrumps === 1 ? 'Trumpf' : 'Trümpfe'} zurück
-                </span>
-              </>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            {!wide && (
-              <button
-                className="btn-ghost p-2"
-                onClick={() => setSidebarOpen(true)}
-                aria-label="Punkte und Regeln"
-                data-cursor="Punkte"
-              >
-                <ListOrdered className="size-4" />
-              </button>
-            )}
-            {camera.state === 'on' ? (
-              <button
-                className={`btn-ghost p-2 ${camera.enabled ? '' : 'text-red-300'}`}
-                onClick={camera.toggle}
-                aria-pressed={camera.enabled}
-                aria-label={camera.enabled ? 'Kamera ausschalten' : 'Kamera einschalten'}
-                data-cursor={camera.enabled ? 'Kamera aus' : 'Kamera an'}
-              >
-                {camera.enabled ? <Video className="size-4" /> : <VideoOff className="size-4" />}
-              </button>
-            ) : camera.state === 'off' ? (
-              <button className="btn-ghost p-2 text-white/55" onClick={camera.start} aria-label="Kamera einschalten" data-cursor="Kamera an">
-                <VideoOff className="size-4" />
-              </button>
-            ) : (
-              <CameraButton camera={camera} compact />
-            )}
-          </div>
-          {view.phase === 'playing' && <LastTrick trick={view.collectPending ? view.previousTrick : view.lastTrick} name={name} />}
-          {sittingOut.map((m) => (
-            <VideoTile
-              key={m.user_id}
-              stream={streamOf(m.user_id)}
-              name={m.display_name}
-              mirror={m.user_id === me}
-              videoOff={m.user_id === me && !camera.enabled}
-              className="aspect-[4/3] w-40"
-            >
-              <div className="tag absolute bottom-1.5 left-1.5 rounded bg-felt-950/75 px-1.5 py-0.5 text-[10px]">
-                {m.display_name}
-                {m.user_id === me && ' (du)'} · setzt aus
-              </div>
-            </VideoTile>
-          ))}
+          {infoLine}
+          {toolbar}
+          {lastTrick}
+          {sittingOutTiles}
         </div>
 
         {/* Oben rechts: gegenüber */}
         <div className="self-start">{seatFor(2)}</div>
 
         {/* Mitte: der Stich */}
-        <div className="col-span-3 grid min-h-0 place-items-center">
-          <TrickArea
-            trickKey={shownTrick.key}
-            plays={shownTrick.plays}
-            winnerRel={shownTrick.winner === null ? null : rel(shownTrick.winner)}
-            winnerLabel={
-              shownTrick.winner === null
-                ? undefined
-                : shownTrick.winner === myPos
-                  ? 'Dein Stich'
-                  : `Stich für ${name(shownTrick.winner)}`
-            }
-            cardWidth={trickCardW}
-            onCollect={iCollect ? collect : undefined}
-            impact={impact}
-          >
-            <MomentOverlay moment={moments.current} />
-          </TrickArea>
-        </div>
+        <div className="col-span-3 grid min-h-0 place-items-center">{trickArea}</div>
 
         {/* Unten links: ich */}
         <div className="self-end">
@@ -633,42 +773,15 @@ export function GameView({
             <div className="flex min-h-11 items-end justify-center">
               <AnimatePresence mode="wait">{panel}</AnimatePresence>
             </div>
-            {myPos >= 0 && (
-              <Hand
-                cards={shownHand}
-                dealKey={game.id}
-                mode={view.phase === 'armutReturn' && isRichReturning ? 'pick' : view.phase === 'playing' ? 'play' : 'view'}
-                playable={playable}
-                picked={picked}
-                highlight={newCards}
-                onPick={(c) =>
-                  setPicked((cur) => {
-                    const next = new Set(cur);
-                    if (next.has(c)) next.delete(c);
-                    else if (next.size < 3) next.add(c);
-                    return next;
-                  })
-                }
-                onPlay={play}
-              />
-            )}
+            {handEl}
           </div>
-          {announce.length > 0 && (
-            <div className="w-28 shrink-0 self-center">
-              <AnnouncePanel
-                options={announce}
-                party={party}
-                busy={busy}
-                onAnnounce={(level: AnnounceLevel) => run(() => act({ type: 'announce', level }))}
-              />
-            </div>
-          )}
+          {announceEl && <div className="w-28 shrink-0 self-center">{announceEl}</div>}
         </div>
 
         {/* Unten rechts: Spieler rechts von mir */}
         <div className="self-end">{seatFor(3)}</div>
-
       </main>
+      )}
 
       {wide ? (
         <aside className="w-72 shrink-0 border-l border-white/10 bg-felt-950">{sidebar}</aside>
@@ -699,6 +812,14 @@ export function GameView({
           )}
         </AnimatePresence>
       )}
+
+      <LeaveDialog
+        open={leaveOpen}
+        onClose={() => setLeaveOpen(false)}
+        onLeave={onLeave}
+        practice={!onAbort}
+        onAbort={onAbort && myPos >= 0 && game.status === 'running' ? onAbort : undefined}
+      />
 
       <AnimatePresence>
         {showResult && (

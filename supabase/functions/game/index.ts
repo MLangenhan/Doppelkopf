@@ -2,6 +2,7 @@
 // Aktionen:
 //   { type: 'start', tableId }               → neues Spiel austeilen
 //   { type: 'action', gameId, action }        → Zug ausführen (Vorbehalt, Karte, Ansage, Armut)
+//   { type: 'abort', gameId }                 → laufendes Spiel abbrechen (zählt nicht, gleicher Geber gibt neu)
 
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import {
@@ -161,6 +162,20 @@ async function act(db: SupabaseClient, userId: string, gameId: string, action: G
   return { version: after.version };
 }
 
+async function abort(db: SupabaseClient, userId: string, gameId: string) {
+  const { data: game, error: gErr } = await db.from('games').select('id, status, players').eq('id', gameId).single();
+  if (gErr || !game) throw new GameError('Dieses Spiel gibt es nicht.');
+  if (!(game.players as string[]).includes(userId)) throw new GameError('Du spielst in diesem Spiel nicht mit.');
+  if (game.status !== 'running') throw new GameError('Dieses Spiel ist schon vorbei.');
+  const { error } = await db
+    .from('games')
+    .update({ status: 'aborted', finished_at: new Date().toISOString() })
+    .eq('id', gameId)
+    .eq('status', 'running');
+  if (error) throw new Error(error.message);
+  return { ok: true };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Nur POST' }, 405);
@@ -181,6 +196,9 @@ Deno.serve(async (req) => {
     }
     if (body?.type === 'action' && typeof body.gameId === 'string' && body.action) {
       return json(await act(db, auth.user.id, body.gameId, body.action as GameAction));
+    }
+    if (body?.type === 'abort' && typeof body.gameId === 'string') {
+      return json(await abort(db, auth.user.id, body.gameId));
     }
     return json({ error: 'Ungültige Anfrage' }, 400);
   } catch (e) {

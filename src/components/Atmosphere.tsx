@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useEffectsEnabled } from '../lib/prefs';
+import { useFx } from '../lib/prefs';
 
 // Feine, langsam aufsteigende Lichtpunkte und ein wandernder Schimmer hinter dem Tisch.
 // Bewusst als 2D-Canvas mit 30 Bildern pro Sekunde: braucht neben vier Videos kaum Leistung.
@@ -16,7 +16,7 @@ interface Mote {
 }
 
 export function Atmosphere() {
-  const enabled = useEffectsEnabled();
+  const enabled = useFx('atmosphere');
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {

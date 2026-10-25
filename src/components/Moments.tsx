@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFx } from '../lib/prefs';
 
 // Große Momente am Tisch: Ansagen, Soli, Fuchs, Doppelkopf … erscheinen kurz groß über der Spielfläche.
 
@@ -92,10 +93,10 @@ export function MomentOverlay({ moment }: { moment: Shown | null }) {
 /** Konfetti-Regen, z. B. beim Sieg. Leichtgewichtig auf einem Canvas. */
 export function Confetti({ active }: { active: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const on = useFx('confetti');
   useEffect(() => {
     const canvas = ref.current;
-    if (!active || !canvas) return;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    if (!active || !canvas || !on) return;
     const ctx = canvas.getContext('2d')!;
     const dpr = Math.min(window.devicePixelRatio, 1.5);
     const w = (canvas.width = window.innerWidth * dpr);
@@ -135,6 +136,6 @@ export function Confetti({ active }: { active: boolean }) {
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [active]);
+  }, [active, on]);
   return <canvas ref={ref} className="pointer-events-none fixed inset-0 z-[60] h-full w-full" aria-hidden />;
 }

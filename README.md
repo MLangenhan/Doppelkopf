@@ -15,16 +15,19 @@ Frontend: React, Vite, Tailwind und Motion. Schriften: Big Shoulders Display fü
   - Vorbehalte: Hochzeit, Armut (bei genau 3 Trümpfen), alle Soli einzeln wählbar, Schmeißen (über 80 Augen, 5 Könige, weniger als 3 Trümpfe, 5 Neunen)
   - stilles Solo
 - **4 oder 5 Spieler**: Zu fünft setzt der Geber aus und schaut per Kamera zu.
-- **Kamera**: Alle sehen sich gegenseitig, direkt per WebRTC (peer-to-peer). Supabase Realtime dient nur zum Verbindungsaufbau.
-- **Statistik** über alle Abende: Punkte, Siegquote, Soli, Re-Quote und ein Punktezettel je Abend.
+- **Kamera**: Alle sehen sich gegenseitig, direkt per WebRTC (peer-to-peer). Supabase Realtime dient nur zum Verbindungsaufbau. Tab-Wechsel und kurze Funklöcher überstehen die Verbindungen; beendet das Handy die Kamera, wird sie beim Zurückkehren automatisch neu geholt. Ob die Kamera an oder aus ist, merkt sich der Browser.
+- **Statistik** über alle Abende mit Aufschlüsselung je Spieler: Siegquote, Ø-Punkte, längste Siegesserie, bestes und schlechtestes Spiel, Punkteverlauf, Re/Kontra, Spielarten (Soli getrennt nach selbst gespielt und dagegen) und Partner. Dazu ein Punktezettel je Abend.
 - **Übungsmodus** gegen drei Bots, ohne Konto und ohne Server.
-- **Persönliche Einstellungen** (Zahnrad oben rechts): Spielbare Karten hervorheben lässt sich abschalten, um ohne Hilfe zu spielen.
+- **Persönliche Einstellungen** (Zahnrad oben rechts): Spielbare Karten hervorheben lässt sich abschalten, um ohne Hilfe zu spielen. Jeder Effekt (Zeiger, Neigung, Trumpf-Einschlag, große Momente, Auswertung, Konfetti, Atmosphäre, 3D-Karten) ist einzeln schaltbar.
+- **Karten sortieren**: Trumpf zuerst, Trumpf zuletzt, nach Farben oder eigene Reihenfolge – Karten einfach in der Hand an ihren Platz ziehen. Der Knopf neben der Infozeile schaltet die Sortierung durch.
+- **Verlassen**: Zurück zur Übersicht (der Platz bleibt) oder das laufende Spiel für alle abbrechen; ein abgebrochenes Spiel zählt nicht.
+- **Handy**: eigenes Layout mit kleinen Kameras oben, Stich in der Mitte und Hand unten.
 - **Stich nehmen**: Ein fertiger Stich bleibt liegen, bis der Gewinner ihn mit der Leertaste (oder per Klick) nimmt. Nach 10 Sekunden darf jeder wegräumen. Der letzte Stich ist immer klein sichtbar.
 - **Trumpf-Einschlag**: Dulle, Kreuz-Dame und Schweinchen knallen mit Beben, Druckwelle und Sound auf den Tisch.
-- **Stichstapel**: Gewonnene Stiche drehen sich um, fliegen zum Gewinner und stapeln sich unter seiner Kamera.
-- **Augen-Auswertung**: Am Ende zählen die Augen hoch, der Sieger steht erst fest, wenn er die 121er-Marke überquert.
+- **Stichstapel**: Gewonnene Stiche drehen sich um, fliegen zum Gewinner und liegen als sichtbarer Kartenstapel mit Zähler neben seiner Kamera.
+- **Augen-Auswertung**: Am Ende zählen die Augen hoch, der Sieger steht erst fest, wenn er die 121er-Marke überquert. Leertaste überspringt, ein zweites Mal gibt das nächste Spiel.
 - **Große Momente**: Ansagen, Soli, Hochzeit, Schweinchen, Doppelkopf, Fuchs und Karlchen erscheinen groß auf der Spielfläche, beim Sieg gibt es Konfetti.
-- **Eigener Cursor** als Farbzeichen (wird über einer Karte zu deren Farbe, über dem Stich zur Hand) und **Karten mit 3D-Neigung** und Glanzlicht in der Hand. Beides nur mit Maus, abschaltbar über „Effekte“.
+- **Eigener Cursor** als Farbzeichen (wird über einer Karte zu deren Farbe, über dem Stich zur Hand) und **Karten mit 3D-Neigung** und Glanzlicht in der Hand. Beides nur mit Maus und einzeln abschaltbar.
 - **Sounds** für Karten, Stiche, Ansagen, „Du bist dran“ und das Spielende – im Browser erzeugt (Web Audio), ohne Audiodateien. An/aus und Lautstärke in den Einstellungen.
 - **Kein Schummeln möglich**: Gemischt und gespielt wird ausschließlich in der Edge Function. Jeder Browser bekommt nur die eigene Hand (Row Level Security).
 

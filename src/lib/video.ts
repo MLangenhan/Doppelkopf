@@ -1,5 +1,6 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { setPref } from './prefs';
 import { supabase } from './supabase';
 
 // ---------------------------------------------------------------------------
@@ -13,6 +14,10 @@ export function useCamera() {
   const [state, setState] = useState<CameraState>('off');
   const [enabled, setEnabled] = useState(true);
   const streamRef = useRef<MediaStream | null>(null);
+  const enabledRef = useRef(true);
+  const alive = useRef(true);
+  // Merkt sich, ob wir die Kamera neu holen müssen, sobald der Tab wieder sichtbar ist
+  const lost = useRef(false);
 
   const start = useCallback(async () => {
     if (streamRef.current) return;
@@ -26,10 +31,26 @@ export function useCamera() {
         video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 }, facingMode: 'user' },
         audio: false,
       });
+      if (!alive.current) {
+        s.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      lost.current = false;
+      s.getVideoTracks().forEach((t) => {
+        t.enabled = enabledRef.current;
+        // Handys beenden die Kamera gern, wenn man die App verlässt: dann still neu holen
+        t.addEventListener('ended', () => {
+          if (streamRef.current !== s) return;
+          streamRef.current = null;
+          lost.current = true;
+          setState('off');
+          if (document.visibilityState === 'visible') void start();
+        });
+      });
       streamRef.current = s;
       setStream(s);
       setState('on');
-      setEnabled(true);
+      setPref('camera', true);
     } catch (e) {
       const name = (e as DOMException).name;
       setState(name === 'NotAllowedError' || name === 'SecurityError' ? 'denied' : 'unavailable');
@@ -40,21 +61,44 @@ export function useCamera() {
   const toggle = useCallback(() => {
     const s = streamRef.current;
     if (!s) {
+      enabledRef.current = true;
+      setEnabled(true);
       start();
       return;
     }
     const next = !s.getVideoTracks().some((t) => t.enabled);
     s.getVideoTracks().forEach((t) => (t.enabled = next));
+    enabledRef.current = next;
     setEnabled(next);
+    setPref('camera', next);
   }, [start]);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const s = streamRef.current;
+      if (s && s.getVideoTracks().every((t) => t.readyState === 'ended')) {
+        streamRef.current = null;
+        lost.current = true;
+      }
+      if (lost.current) void start();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('pageshow', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pageshow', onVisible);
+    };
+  }, [start]);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
-    },
-    [],
-  );
+    };
+  }, []);
 
   return { stream, state, enabled: state === 'on' && enabled, start, toggle };
 }
@@ -94,13 +138,29 @@ interface Peer {
   makingOffer: boolean;
   ignoreOffer: boolean;
   senders: RTCRtpSender[];
+  /** Timer: nach kurzem Verbindungsabbruch ICE neu starten */
+  iceTimer?: ReturnType<typeof setTimeout>;
 }
+
+/** So lange bleibt eine Verbindung bestehen, wenn jemand kurz aus der Anwesenheit fällt (Tab-Wechsel, Funkloch). */
+const LEAVE_GRACE_MS = 30_000;
 
 export type PeerStatus = 'connecting' | 'connected' | 'failed';
 
 export interface RemoteVideo {
   stream: MediaStream | null;
   status: PeerStatus;
+}
+
+/** Eigene Spuren senden: vorhandene Sender bekommen die neue Spur (ohne Neuverhandlung), sonst addTrack. */
+function attachTracks(p: Peer, stream: MediaStream | null) {
+  if (!stream || p.pc.signalingState === 'closed') return;
+  for (const track of stream.getTracks()) {
+    if (p.senders.some((sender) => sender.track === track)) continue;
+    const reuse = p.senders.find((sender) => !sender.track || sender.track.kind === track.kind);
+    if (reuse) void reuse.replaceTrack(track).catch((e) => console.warn('Spur ersetzen fehlgeschlagen', e));
+    else p.senders.push(p.pc.addTrack(track, stream));
+  }
 }
 
 export function useVideoMesh(tableId: string | undefined, me: string | null, localStream: MediaStream | null) {
@@ -135,21 +195,19 @@ export function useVideoMesh(tableId: string | undefined, me: string | null, loc
       });
     };
 
+    const leaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
     const closePeer = (userId: string) => {
+      clearTimeout(leaveTimers.get(userId));
+      leaveTimers.delete(userId);
       const p = peerMap.get(userId);
       if (!p) return;
+      clearTimeout(p.iceTimer);
       p.pc.close();
       peerMap.delete(userId);
       setRemote(userId, null);
     };
 
-    const addLocalTracks = (p: Peer) => {
-      const s = localRef.current;
-      if (!s) return;
-      for (const track of s.getTracks()) {
-        if (!p.senders.some((sender) => sender.track === track)) p.senders.push(p.pc.addTrack(track, s));
-      }
-    };
+    const addLocalTracks = (p: Peer) => attachTracks(p, localRef.current);
 
     const createPeer = (userId: string, session: string): Peer => {
       const pc = new RTCPeerConnection({ iceServers: iceServers() });
@@ -179,10 +237,17 @@ export function useVideoMesh(tableId: string | undefined, me: string | null, loc
         setRemote(userId, { stream });
       };
       pc.onconnectionstatechange = () => {
+        clearTimeout(p.iceTimer);
         if (pc.connectionState === 'connected') setRemote(userId, { status: 'connected' });
         if (pc.connectionState === 'failed') {
           setRemote(userId, { status: 'failed' });
           pc.restartIce();
+        }
+        // "disconnected" erholt sich oft von selbst; wenn nicht, nach kurzer Zeit neu verhandeln
+        if (pc.connectionState === 'disconnected') {
+          p.iceTimer = setTimeout(() => {
+            if (pc.connectionState === 'disconnected') pc.restartIce();
+          }, 4000);
         }
       };
       addLocalTracks(p);
@@ -238,17 +303,37 @@ export function useVideoMesh(tableId: string | undefined, me: string | null, loc
         setOnline([...present.keys()]);
         // Neue Peers: der "unhöfliche" (kleinere ID) startet die Verbindung, damit nicht beide gleichzeitig anbieten
         for (const [userId, session] of present) {
+          clearTimeout(leaveTimers.get(userId));
+          leaveTimers.delete(userId);
           const existing = peerMap.get(userId);
           if (existing && existing.session === session) continue;
           if (me < userId || existing) ensurePeer(userId, session);
         }
-        for (const userId of [...peerMap.keys()]) if (!present.has(userId)) closePeer(userId);
+        // Wer verschwindet, bekommt eine Schonfrist: Die Verbindung läuft oft direkt weiter
+        for (const userId of [...peerMap.keys()]) {
+          if (present.has(userId) || leaveTimers.has(userId)) continue;
+          const p = peerMap.get(userId)!;
+          if (p.pc.connectionState === 'connected') {
+            leaveTimers.set(userId, setTimeout(() => closePeer(userId), LEAVE_GRACE_MS));
+          } else closePeer(userId);
+        }
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') await channel.track({ user: me, session: mySession });
       });
 
+    // Zurück im Tab: Anwesenheit auffrischen und hängende Verbindungen neu anstoßen
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      void channel.track({ user: me, session: mySession });
+      for (const p of peerMap.values()) {
+        if (p.pc.connectionState === 'failed' || p.pc.connectionState === 'disconnected') p.pc.restartIce();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
     return () => {
+      document.removeEventListener('visibilitychange', onVisible);
       for (const userId of [...peerMap.keys()]) closePeer(userId);
       supabase.removeChannel(channel);
       channelRef.current = null;
@@ -256,15 +341,11 @@ export function useVideoMesh(tableId: string | undefined, me: string | null, loc
     };
   }, [tableId, me, setRemote]);
 
-  // Kamera kommt später dazu → an alle bestehenden Verbindungen anhängen
+  // Kamera kommt später dazu oder wurde neu geholt → an alle bestehenden Verbindungen hängen
   useEffect(() => {
     localRef.current = localStream;
     if (!localStream) return;
-    for (const p of peers.current.values()) {
-      for (const track of localStream.getTracks()) {
-        if (!p.senders.some((s) => s.track === track)) p.senders.push(p.pc.addTrack(track, localStream));
-      }
-    }
+    for (const p of peers.current.values()) attachTracks(p, localStream);
   }, [localStream]);
 
   return { remotes, online };

@@ -1,11 +1,12 @@
 import type { RuleSettings } from '@engine';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Atmosphere } from '../components/Atmosphere';
 import { GameView } from '../components/GameView';
 import { Lobby } from '../components/Lobby';
 import { useToast } from '../components/Toast';
 import { TopBar } from '../components/TopBar';
+import { getPrefs } from '../lib/prefs';
 import { api } from '../lib/supabase';
 import { useTable } from '../lib/useTable';
 import { useCamera, useVideoMesh } from '../lib/video';
@@ -20,12 +21,20 @@ export function TablePage() {
   const [busy, setBusy] = useState(false);
   const [lobby, setLobby] = useState(false);
 
-  // Kamera beim Betreten des Tisches anfragen
+  // Kamera beim Betreten des Tisches anfragen – außer man hat sie zuletzt bewusst ausgeschaltet
   useEffect(() => {
-    if (t.table) camera.start();
+    if (t.table && getPrefs().camera) camera.start();
   }, [t.table?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const running = t.game?.status === 'running';
+  // Hinweis, wenn jemand das laufende Spiel abbricht
+  const gameStatus = t.game ? `${t.game.id}:${t.game.status}` : null;
+  const lastStatus = useRef(gameStatus);
+  useEffect(() => {
+    const prev = lastStatus.current;
+    lastStatus.current = gameStatus;
+    if (prev && gameStatus && prev !== gameStatus && gameStatus.endsWith(':aborted')) toast('Das Spiel wurde abgebrochen', 'info');
+  }, [gameStatus, toast]);
   useEffect(() => {
     if (running) setLobby(false);
   }, [running]);
@@ -69,7 +78,8 @@ export function TablePage() {
   }
 
   const table = t.table;
-  const showLobby = !t.game || (lobby && !running);
+  const aborted = t.game?.status === 'aborted';
+  const showLobby = !t.game || aborted || (lobby && !running);
 
   return (
     <div className="flex h-full flex-col">
@@ -91,7 +101,7 @@ export function TablePage() {
             online={online}
             busy={busy}
             hasPlayed={!!t.game}
-            onBack={t.game ? () => setLobby(false) : undefined}
+            onBack={t.game && !aborted ? () => setLobby(false) : undefined}
             onStart={() => run(t.startGame)}
             onTakeSeat={(seat) => run(() => api.takeSeat(table.id, seat))}
             onSaveRules={(s: RuleSettings) =>
@@ -121,6 +131,8 @@ export function TablePage() {
           act={t.act}
           startGame={t.startGame}
           onShowLobby={() => setLobby(true)}
+          onLeave={() => navigate('/')}
+          onAbort={() => run(() => api.abortGame(t.game!.id))}
         />
       )}
     </div>

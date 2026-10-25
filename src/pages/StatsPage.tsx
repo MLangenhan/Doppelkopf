@@ -1,6 +1,8 @@
-import { motion } from 'motion/react';
+import { ChevronDown } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { PlayerStats } from '../components/PlayerStats';
 import { SectionLabel } from '../components/SectionLabel';
 import { TopBar } from '../components/TopBar';
 import { useAuth } from '../lib/auth';
@@ -27,6 +29,7 @@ export function StatsPage() {
   const [stats, setStats] = useState<PlayerStats[] | null>(null);
   const [results, setResults] = useState<ResultRow[]>([]);
   const [tables, setTables] = useState<TableRow[]>([]);
+  const [open, setOpen] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -71,7 +74,8 @@ export function StatsPage() {
         <p className="tag text-[11px] text-white/45">
           <span className="text-gold-400">Rangliste</span> / über alle Abende
         </p>
-        <h1 className="display mt-2 text-7xl sm:text-8xl">Statistik</h1>
+        <h1 className="display mt-2 text-6xl sm:text-8xl">Statistik</h1>
+        <p className="mt-3 text-sm text-white/50">Tippe auf einen Namen für die Aufschlüsselung.</p>
 
         <section className="mt-10 border-t border-white/[0.08] py-10">
           <SectionLabel n="01">Spieler</SectionLabel>
@@ -87,32 +91,53 @@ export function StatsPage() {
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.04 }}
-                  className="grid grid-cols-[2.5rem_1fr_auto] items-center gap-4 border-b border-white/[0.08] py-5"
+                  className="border-b border-white/[0.08]"
                 >
-                  <span className={`tag text-xs ${i === 0 ? 'text-gold-400' : 'text-white/35'}`}>{String(i + 1).padStart(2, '0')}</span>
-                  <div className="min-w-0">
-                    <div className={`truncate text-xl font-medium ${s.user_id === me ? 'text-gold-300' : 'text-white'}`}>
-                      {s.display_name}
-                    </div>
-                    <div className="tag mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-white/40">
-                      <span>{s.games} Spiele</span>
-                      <span>{pct(s.wins, s.games)} gewonnen</span>
-                      <span>Re {pct(s.re_wins, s.re_games)}</span>
-                      <span>Ø {(s.points / s.games).toFixed(2)}</span>
-                      <span>
-                        {s.solos} {s.solos === 1 ? 'Solo' : 'Soli'}
-                        {s.solos > 0 && ` · ${s.solos_won} gew.`}
-                      </span>
-                      <span>
-                        {s.evenings} {s.evenings === 1 ? 'Abend' : 'Abende'}
-                      </span>
-                    </div>
-                  </div>
-                  <span
-                    className={`display text-5xl tabular-nums ${s.points > 0 ? 'text-emerald-300' : s.points < 0 ? 'text-red-300' : 'text-white/60'}`}
+                  <button
+                    type="button"
+                    onClick={() => setOpen((cur) => (cur === s.user_id ? null : s.user_id))}
+                    aria-expanded={open === s.user_id}
+                    data-cursor={open === s.user_id ? 'Zuklappen' : 'Details'}
+                    className="group grid w-full grid-cols-[2rem_1fr_auto] items-center gap-3 py-5 text-left sm:grid-cols-[2.5rem_1fr_auto_1.5rem] sm:gap-4"
                   >
-                    {s.points > 0 ? `+${s.points}` : s.points}
-                  </span>
+                    <span className={`tag text-xs ${i === 0 ? 'text-gold-400' : 'text-white/35'}`}>{String(i + 1).padStart(2, '0')}</span>
+                    <div className="min-w-0">
+                      <div
+                        className={`truncate text-xl font-medium transition-colors group-hover:text-gold-300 ${s.user_id === me ? 'text-gold-300' : 'text-white'}`}
+                      >
+                        {s.display_name}
+                      </div>
+                      <div className="tag mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-white/40">
+                        <span>{s.games} Spiele</span>
+                        <span>{pct(s.wins, s.games)} gewonnen</span>
+                        <span>
+                          {s.evenings} {s.evenings === 1 ? 'Abend' : 'Abende'}
+                        </span>
+                      </div>
+                    </div>
+                    <span
+                      className={`display text-4xl tabular-nums sm:text-5xl ${s.points > 0 ? 'text-emerald-300' : s.points < 0 ? 'text-red-300' : 'text-white/60'}`}
+                    >
+                      {s.points > 0 ? `+${s.points}` : s.points}
+                    </span>
+                    <ChevronDown
+                      className={`hidden size-5 text-white/40 transition-transform sm:block ${open === s.user_id ? 'rotate-180' : ''}`}
+                      aria-hidden
+                    />
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {open === s.user_id && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="overflow-hidden"
+                      >
+                        <PlayerStats results={results} userId={s.user_id} name={(id) => names.get(id) ?? '?'} />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.li>
               ))}
             </ol>
