@@ -7,6 +7,7 @@ import {
   sortHand,
   type Trick,
 } from '@engine';
+import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -18,6 +19,7 @@ import {
   partyLabel,
   trumpMode,
 } from '../lib/gameText';
+import { usePrefs } from '../lib/prefs';
 import type { GameRow, Member, ResultRow } from '../lib/supabase';
 import type { RemoteVideo } from '../lib/video';
 import { AnnouncePanel, ArmutOfferPanel, ArmutReturnPanel, ReservationPanel } from './ActionPanels';
@@ -105,7 +107,12 @@ export function GameView({
   );
 
   const myTurnToPlay = view.phase === 'playing' && view.turn === myPos && !pending;
-  const playable = myTurnToPlay && view.current ? new Set(legalCards(hand, view.current.cards, ctx)) : null;
+  // Ohne Hervorhebung ("schwarz spielen") ist jede Karte wählbar; der Server prüft das Bedienen
+  const [prefs] = usePrefs();
+  const playable =
+    myTurnToPlay && view.current
+      ? new Set(prefs.highlightPlayable ? legalCards(hand, view.current.cards, ctx) : hand)
+      : null;
 
   const play = (card: Card) => {
     setPending(card);
@@ -183,7 +190,7 @@ export function GameView({
       return null;
     }
     if (view.kind === 'solo' && view.soloist === pos) return <span className="font-semibold text-gold-300">Solist</span>;
-    if (view.schweinchen === pos) return <span>🐷 Schweinchen</span>;
+    if (view.schweinchen === pos) return <span className="font-semibold text-gold-300">Schweinchen</span>;
     return null;
   };
 
@@ -409,7 +416,7 @@ export function GameView({
       </main>
 
       {wide ? (
-        <aside className="w-72 shrink-0 border-l border-white/10 bg-felt-950/60 backdrop-blur-md">{sidebar}</aside>
+        <aside className="w-72 shrink-0 border-l border-white/10 bg-felt-950">{sidebar}</aside>
       ) : (
         <AnimatePresence>
           {sidebarOpen && (
@@ -429,7 +436,7 @@ export function GameView({
                 transition={{ type: 'spring', stiffness: 300, damping: 32 }}
               >
                 <button className="btn-ghost absolute top-2 right-2 px-2 py-1" onClick={() => setSidebarOpen(false)} aria-label="Schließen">
-                  ✕
+                  <X className="h-5 w-5" />
                 </button>
                 {sidebar}
               </motion.aside>
@@ -476,7 +483,7 @@ function LastTrickPopover({ trick, name, onClose }: { trick: Trick; name: (pos: 
       <div className="mb-2 flex items-center justify-between gap-4 text-sm">
         <span className="font-semibold">Letzter Stich – {name(trick.winner!)}</span>
         <button className="text-white/60 hover:text-white" onClick={onClose} aria-label="Schließen">
-          ✕
+          <X className="h-4 w-4" />
         </button>
       </div>
       <div className="flex gap-2">

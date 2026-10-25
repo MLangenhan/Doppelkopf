@@ -25,7 +25,7 @@ export function ResultDialog({
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/55 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -41,7 +41,7 @@ export function ResultDialog({
       >
         {view.redeal ? (
           <>
-            <h2 id="result-title" className="font-display text-2xl font-bold text-gold-300">
+            <h2 id="result-title" className="text-2xl font-semibold tracking-tight">
               Neu geben
             </h2>
             <p className="mt-2 text-white/80">
@@ -84,9 +84,13 @@ function ResultBody({ view, name, myPos }: { view: PublicGameState; name: (pos: 
         {soloist !== null && ` von ${name(soloist)}`}
         {view.revealedKind === 'silentSolo' && ' – Überraschung!'}
       </p>
-      <h2 id="result-title" className="font-display text-3xl font-bold text-gold-300">
+      <h2 id="result-title" className="text-3xl font-semibold tracking-tight">
         {winner ? `${partyLabel(winner)} gewinnt` : 'Kein Gewinner'}
-        {myParty && winner && <span className="ml-2 text-2xl">{iWon ? '🎉' : '😬'}</span>}
+        {myParty && winner && (
+          <span className={`ml-3 align-middle text-base font-semibold ${iWon ? 'text-emerald-300' : 'text-red-300'}`}>
+            {iWon ? 'Gewonnen' : 'Verloren'}
+          </span>
+        )}
       </h2>
 
       <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
@@ -94,7 +98,7 @@ function ResultBody({ view, name, myPos }: { view: PublicGameState; name: (pos: 
           <div key={p} className={`rounded-xl p-3 ${winner === p ? 'bg-white/10 ring-1 ring-gold-400/60' : 'bg-white/5'}`}>
             <div className="flex items-center justify-between">
               <PartyBadge party={p} />
-              <span className="font-mono text-lg font-bold">{r.augen[p]}</span>
+              <span className="tabular-nums text-lg font-bold">{r.augen[p]}</span>
             </div>
             <div className="mt-1.5 text-white/75">{(p === 're' ? r.reTeam : r.kontraTeam).map(name).join(' & ')}</div>
             <div className="text-xs text-white/50">
@@ -127,7 +131,7 @@ function ResultBody({ view, name, myPos }: { view: PublicGameState; name: (pos: 
                 <PartyBadge party={l.party} small />
                 {l.label}
               </span>
-              <span className="font-mono font-semibold">+{l.points}</span>
+              <span className="tabular-nums font-semibold">+{l.points}</span>
             </motion.li>
           ))}
         </ul>
@@ -145,7 +149,7 @@ function ResultBody({ view, name, myPos }: { view: PublicGameState; name: (pos: 
             }`}
           >
             <div className="truncate text-xs text-white/70">{name(p)}</div>
-            <div className="font-mono text-xl font-bold">{s > 0 ? `+${s}` : s}</div>
+            <div className="tabular-nums text-xl font-bold">{s > 0 ? `+${s}` : s}</div>
           </motion.div>
         ))}
       </div>

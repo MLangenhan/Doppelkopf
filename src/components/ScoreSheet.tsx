@@ -60,7 +60,7 @@ export function ScoreSheet({ results, members, me }: { results: ResultRow[]; mem
                     key={t}
                     initial={{ scale: 1.4, color: '#f6dc8c' }}
                     animate={{ scale: 1, color: t === leader && t > 0 ? '#f6dc8c' : '#ffffff' }}
-                    className="inline-block font-mono text-base font-bold"
+                    className="inline-block tabular-nums text-base font-bold"
                   >
                     {t}
                   </motion.span>
@@ -80,7 +80,7 @@ export function ScoreSheet({ results, members, me }: { results: ResultRow[]; mem
                 return (
                   <td
                     key={p.id}
-                    className={`px-1 py-1 text-right font-mono ${
+                    className={`px-1 py-1 text-right tabular-nums ${
                       pts === undefined ? 'text-white/25' : pts > 0 ? 'text-emerald-300' : pts < 0 ? 'text-red-300' : 'text-white/60'
                     } ${row.soloist === p.id ? 'font-bold underline decoration-gold-400 decoration-2 underline-offset-2' : ''}`}
                     title={row.soloist === p.id ? `${row.kind} (Solist)` : row.kind}

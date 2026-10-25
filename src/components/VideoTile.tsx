@@ -1,7 +1,6 @@
-import { motion } from 'motion/react';
 import { type ReactNode, useEffect, useRef } from 'react';
 
-const AVATAR_COLORS = ['#e76f51', '#2a9d8f', '#e9c46a', '#8ab17d', '#9b5de5', '#f15bb5', '#00bbf9'];
+const AVATAR_COLORS = ['#c98b6b', '#6fa596', '#c9ae6b', '#8fa878', '#9a88c4', '#c48aa6', '#6f9cc4'];
 
 function colorFor(name: string) {
   let h = 0;
@@ -42,7 +41,7 @@ export function VideoTile({
   const showVideo = !!stream && !videoOff;
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl bg-felt-950 ring-1 ring-white/10 ${className}`}>
+    <div className={`relative overflow-hidden rounded-xl bg-felt-950 ring-1 ring-white/[0.08] ${className}`}>
       {showVideo ? (
         <video
           ref={ref}
@@ -52,7 +51,7 @@ export function VideoTile({
           className={`h-full w-full object-cover ${mirror ? '-scale-x-100' : ''}`}
         />
       ) : (
-        <div className="grid h-full w-full place-items-center bg-gradient-to-br from-felt-800 to-felt-950">
+        <div className="grid h-full w-full place-items-center bg-felt-800">
           <div
             className="grid aspect-square w-[34%] max-w-20 place-items-center rounded-full text-2xl font-bold text-felt-950 shadow-lg"
             style={{ background: colorFor(name) }}
@@ -64,12 +63,7 @@ export function VideoTile({
         </div>
       )}
       {highlight && (
-        <motion.div
-          className="pointer-events-none absolute inset-0 rounded-2xl ring-[3px] ring-gold-400"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0.55, 1, 0.55] }}
-          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-        />
+        <div className="pointer-events-none absolute inset-0 rounded-xl ring-[3px] ring-gold-400 ring-inset" />
       )}
       {children}
     </div>

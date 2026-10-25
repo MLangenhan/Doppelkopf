@@ -1,4 +1,5 @@
 import { normalizeSettings, type RuleSettings } from '@engine';
+import { Check } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 import type { Member, TableRow } from '../lib/supabase';
@@ -59,7 +60,7 @@ export function Lobby({
     <div className="mx-auto w-full max-w-6xl px-4 py-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-bold">{table.name}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">{table.name}</h1>
           <p className="mt-1 text-white/65">
             {count < 4
               ? `Noch ${4 - count} Spieler ${4 - count === 1 ? 'fehlt' : 'fehlen'} – teile den Link!`
@@ -69,11 +70,17 @@ export function Lobby({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-xl bg-black/30 px-3 py-2 font-mono text-lg tracking-[0.25em]" aria-label="Tisch-Code">
+          <span className="rounded-xl bg-black/30 px-3 py-2 tabular-nums text-lg tracking-[0.25em]" aria-label="Tisch-Code">
             {table.code}
           </span>
           <button className="btn-secondary" onClick={copy}>
-            {copied ? '✓ Kopiert' : 'Einladungslink kopieren'}
+            {copied ? (
+              <>
+                <Check className="h-4 w-4" /> Kopiert
+              </>
+            ) : (
+              'Einladungslink kopieren'
+            )}
           </button>
         </div>
       </div>
@@ -101,7 +108,9 @@ export function Lobby({
                           title={isMe || online.includes(m.user_id) ? 'Online' : 'Nicht verbunden'}
                         />
                         <span className="truncate text-sm font-semibold">{isMe ? `${m.display_name} (du)` : m.display_name}</span>
-                        {table.host_id === m.user_id && <span className="ml-auto text-xs" title="Gastgeber">👑</span>}
+                        {table.host_id === m.user_id && (
+                          <span className="ml-auto rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-semibold">Gastgeber</span>
+                        )}
                       </div>
                     </VideoTile>
                   </motion.div>

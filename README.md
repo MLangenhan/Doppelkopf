@@ -1,7 +1,7 @@
 # Doppelkopf
 
 Doppelkopf im Browser mit Freunden, mit Kamerabild aller Mitspieler.
-Frontend: React, Vite, Tailwind und Motion. Backend: Supabase (Postgres, Realtime, Edge Function).
+Frontend: React, Vite, Tailwind, Motion und die Schrift Geist (selbst gehostet, keine Anfragen an Google). Backend: Supabase (Postgres, Realtime, Edge Function).
 
 **Live:** https://mlangenhan.github.io/Doppelkopf/
 
@@ -18,6 +18,7 @@ Frontend: React, Vite, Tailwind und Motion. Backend: Supabase (Postgres, Realtim
 - **Kamera**: Alle sehen sich gegenseitig, direkt per WebRTC (peer-to-peer). Supabase Realtime dient nur zum Verbindungsaufbau.
 - **Statistik** über alle Abende: Punkte, Siegquote, Soli, Re-Quote und ein Punktezettel je Abend.
 - **Übungsmodus** gegen drei Bots, ohne Konto und ohne Server.
+- **Persönliche Einstellungen** (Zahnrad oben rechts): Spielbare Karten hervorheben lässt sich abschalten, um ohne Hilfe zu spielen.
 - **Kein Schummeln möglich**: Gemischt und gespielt wird ausschließlich in der Edge Function. Jeder Browser bekommt nur die eigene Hand (Row Level Security).
 
 ## Einrichtung (einmalig)
@@ -97,4 +98,4 @@ Im Solo zählt der Spielwert für den Solisten dreifach.
 
 ## Lizenzen
 
-Die Kartenbilder stammen aus [SVG-cards](https://github.com/htdebeer/SVG-cards) von David Bellot und Huub de Beer, Lizenz LGPL 2.1 (siehe `public/cards/LICENSE-svg-cards.txt`).
+Die Kartenbilder stammen aus [SVG-cards](https://github.com/htdebeer/SVG-cards) von David Bellot und Huub de Beer, Lizenz LGPL 2.1 (siehe `public/cards/LICENSE-svg-cards.txt`). Angepasst: Bube und Dame tragen die deutschen Eckbuchstaben B und D.

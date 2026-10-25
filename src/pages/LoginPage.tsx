@@ -59,7 +59,7 @@ export function LoginPage() {
   return (
     <div className="felt flex min-h-full flex-col items-center justify-center gap-10 px-4 py-10">
       <div className="flex flex-col items-center gap-6">
-        <div className="flex h-36 items-end" aria-hidden>
+        <div className="mb-4 flex h-36 items-end" aria-hidden>
           {HERO.map((c, i) => (
             <PlayingCard
               key={c}
@@ -77,7 +77,7 @@ export function LoginPage() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="font-display text-5xl font-bold tracking-tight text-gold-300"
+          className="text-5xl font-semibold tracking-tight text-white"
         >
           Doppelkopf
         </motion.h1>

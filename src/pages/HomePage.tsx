@@ -94,9 +94,9 @@ export function HomePage() {
         <motion.h1
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="font-display text-3xl font-bold text-white sm:text-4xl"
+          className="text-3xl font-semibold tracking-tight text-white sm:text-4xl"
         >
-          Hallo {profile?.display_name ?? ''} 👋
+          Hallo {profile?.display_name ?? ''}
         </motion.h1>
         <p className="mt-1 text-white/65">Eröffne einen Tisch und schick den Link an deine Runde.</p>
 
@@ -159,7 +159,7 @@ export function HomePage() {
             <h2 className="text-lg font-semibold">Tisch beitreten</h2>
             <p className="mt-1 text-sm text-white/60">Code oder Einladungslink eingeben</p>
             <input
-              className="input mt-4 text-center font-mono text-lg tracking-[0.3em] uppercase"
+              className="input mt-4 text-center tabular-nums text-lg tracking-[0.3em] uppercase"
               placeholder="ABC12"
               value={code}
               onChange={(e) => setCode(e.target.value)}
@@ -202,7 +202,7 @@ export function HomePage() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-semibold">{t.name}</span>
-                      <span className="font-mono text-xs text-white/50">{t.code}</span>
+                      <span className="tabular-nums text-xs text-white/50">{t.code}</span>
                     </div>
                     <div className="mt-1 text-sm text-white/60">
                       {new Date(t.created_at).toLocaleDateString('de-DE', {

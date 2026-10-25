@@ -85,7 +85,7 @@ export function TrickArea({
                 <PlayingCard
                   card={card}
                   width={cardWidth}
-                  className={isWinner ? 'ring-4 ring-gold-400 shadow-[0_0_30px_rgba(239,199,94,0.55)]' : ''}
+                  className={isWinner ? 'ring-[3px] ring-gold-400' : ''}
                 />
               </motion.div>
             );
