@@ -1,12 +1,22 @@
 import { MotionConfig } from 'motion/react';
+import { useEffect } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
+import { usePrefs } from './lib/prefs';
+import { configureSound } from './lib/sound';
 import { ToastProvider } from './components/Toast';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { PracticePage } from './pages/PracticePage';
 import { StatsPage } from './pages/StatsPage';
 import { TablePage } from './pages/TablePage';
+
+/** Überträgt die Sound-Einstellungen an die Audio-Engine */
+function SoundSync() {
+  const [prefs] = usePrefs();
+  useEffect(() => configureSound(prefs.sound, prefs.volume), [prefs.sound, prefs.volume]);
+  return null;
+}
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
@@ -25,6 +35,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 export function App() {
   return (
     <MotionConfig reducedMotion="user">
+      <SoundSync />
       <AuthProvider>
         <ToastProvider>
           {/* HashRouter, damit GitHub Pages bei Direktaufrufen keine 404 liefert */}

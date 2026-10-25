@@ -7,9 +7,13 @@ export interface Prefs {
   highlightPlayable: boolean;
   /** 3D-Szene und Hintergrund-Partikel */
   effects: boolean;
+  /** Soundeffekte (Karten, Ansagen, du bist dran …) */
+  sound: boolean;
+  /** Lautstärke 0–1 */
+  volume: number;
 }
 
-const DEFAULTS: Prefs = { highlightPlayable: true, effects: true };
+const DEFAULTS: Prefs = { highlightPlayable: true, effects: true, sound: true, volume: 0.6 };
 const KEY = 'doko:prefs';
 
 const listeners = new Set<() => void>();

@@ -19,6 +19,7 @@ Frontend: React, Vite, Tailwind, Motion und die Schrift Geist (selbst gehostet, 
 - **Statistik** über alle Abende: Punkte, Siegquote, Soli, Re-Quote und ein Punktezettel je Abend.
 - **Übungsmodus** gegen drei Bots, ohne Konto und ohne Server.
 - **Persönliche Einstellungen** (Zahnrad oben rechts): Spielbare Karten hervorheben lässt sich abschalten, um ohne Hilfe zu spielen.
+- **Sounds** für Karten, Stiche, Ansagen, „Du bist dran“ und das Spielende – im Browser erzeugt (Web Audio), ohne Audiodateien. An/aus und Lautstärke in den Einstellungen.
 - **Kein Schummeln möglich**: Gemischt und gespielt wird ausschließlich in der Edge Function. Jeder Browser bekommt nur die eigene Hand (Row Level Security).
 
 ## Einrichtung (einmalig)

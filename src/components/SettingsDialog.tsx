@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect } from 'react';
 import { usePrefs } from '../lib/prefs';
+import { sound } from '../lib/sound';
 
 export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [prefs, setPref] = usePrefs();
@@ -51,6 +52,36 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
               label="Spielbare Karten hervorheben"
               hint="Ausgeschaltet spielst du ohne Hilfe: Alle Karten sehen gleich aus. Wer nicht bedient, bekommt einen Hinweis und muss eine andere Karte wählen."
             />
+
+            <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Ton</h3>
+            <Toggle
+              checked={prefs.sound}
+              onChange={(v) => setPref('sound', v)}
+              label="Sounds"
+              hint="Karten ausspielen, Stich einsammeln, Ansagen, wenn du dran bist und am Spielende."
+            />
+            {prefs.sound && (
+              <div className="flex items-center gap-3 px-2 pt-1 pb-2">
+                <label htmlFor="volume" className="text-sm text-white/70">
+                  Lautstärke
+                </label>
+                <input
+                  id="volume"
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={prefs.volume}
+                  onChange={(e) => setPref('volume', Number(e.target.value))}
+                  onPointerUp={() => sound.card()}
+                  onKeyUp={() => sound.card()}
+                  className="flex-1 accent-gold-400"
+                />
+                <button type="button" className="btn-secondary px-3 py-1.5" onClick={() => sound.card()}>
+                  Testen
+                </button>
+              </div>
+            )}
 
             <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Darstellung</h3>
             <Toggle

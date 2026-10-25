@@ -20,6 +20,7 @@ import {
   trumpMode,
 } from '../lib/gameText';
 import { usePrefs } from '../lib/prefs';
+import { sound } from '../lib/sound';
 import type { GameRow, Member, ResultRow } from '../lib/supabase';
 import type { RemoteVideo } from '../lib/video';
 import { AnnouncePanel, ArmutOfferPanel, ArmutReturnPanel, ReservationPanel } from './ActionPanels';
@@ -122,6 +123,7 @@ export function GameView({
         await act({ type: 'play', card });
       } catch (e) {
         setPending(null);
+        sound.nope();
         throw e;
       }
     });
@@ -172,6 +174,51 @@ export function GameView({
   const party = getMyParty(view, myPos, hand);
   const announce = announceOptions(view, myPos, party);
   const sittingOut = members.filter((m) => !game.players.includes(m.user_id));
+
+  // ---- Sounds: aus Zustandsänderungen ableiten, damit sie für alle gleich klingen ----
+  const played = trickCount * 4 + currentPlays.length;
+  const myTurnNow =
+    (view.phase === 'playing' && view.turn === myPos) ||
+    (view.phase === 'reservations' && view.declTurn === myPos) ||
+    (view.phase === 'armutOffer' && view.armut?.offerTurn === myPos) ||
+    (view.phase === 'armutReturn' && view.armut?.rich === myPos);
+  const soundState = useRef<{
+    game: string;
+    played: number;
+    ann: number;
+    turn: boolean;
+    trickKey: string;
+    trickDone: boolean;
+    result: boolean;
+  } | null>(null);
+  useEffect(() => {
+    const prev = soundState.current;
+    const now = {
+      game: game.id,
+      played,
+      ann: view.announcementLog.length,
+      turn: myTurnNow && !pending,
+      trickKey: shownTrick.key,
+      trickDone: shownTrick.winner !== null,
+      result: showResult,
+    };
+    soundState.current = now;
+    // Beim Öffnen der Seite nicht losklappern
+    if (!prev) return;
+    if (prev.game !== now.game) {
+      if (myPos >= 0) sound.deal(view.settings.withNines ? 12 : 10);
+      return;
+    }
+    for (let i = 0; i < Math.min(3, now.played - prev.played); i++) sound.card(i * 0.12);
+    if (prev.trickDone && prev.trickKey !== now.trickKey) sound.collect();
+    if (now.ann > prev.ann) sound.announce();
+    if (now.turn && !prev.turn) sound.turn();
+    if (now.result && !prev.result && view.result?.winner && myPos >= 0) {
+      const mine = view.result.reTeam.includes(myPos) ? 're' : 'kontra';
+      if (view.result.winner === mine) sound.win();
+      else sound.lose();
+    }
+  });
   const [showLastTrick, setShowLastTrick] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // Seitenleiste nur auf sehr breiten Bildschirmen dauerhaft, sonst als Schublade – der Tisch braucht den Platz
