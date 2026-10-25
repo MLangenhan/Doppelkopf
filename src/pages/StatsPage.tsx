@@ -6,7 +6,8 @@ import { PlayerStats } from '../components/PlayerStats';
 import { SectionLabel } from '../components/SectionLabel';
 import { TopBar } from '../components/TopBar';
 import { useAuth } from '../lib/auth';
-import { type ResultRow, supabase, type TableRow } from '../lib/supabase';
+import { RecentGames } from '../components/RecentGames';
+import { type GameRow, type ResultRow, supabase, type TableRow } from '../lib/supabase';
 
 interface PlayerStats {
   user_id: string;
@@ -30,13 +31,16 @@ export function StatsPage() {
   const [results, setResults] = useState<ResultRow[]>([]);
   const [tables, setTables] = useState<TableRow[]>([]);
   const [open, setOpen] = useState<string | null>(null);
+  const [recent, setRecent] = useState<GameRow[]>([]);
 
   useEffect(() => {
     (async () => {
-      const [{ data: s }, { data: r }] = await Promise.all([
+      const [{ data: s }, { data: r }, { data: g }] = await Promise.all([
         supabase.from('player_stats').select('*').gt('games', 0).order('points', { ascending: false }),
         supabase.from('game_results').select('*').order('created_at', { ascending: false }).limit(5000),
+        supabase.from('games').select('*').eq('status', 'finished').order('finished_at', { ascending: false }).limit(20),
       ]);
+      setRecent((g ?? []) as GameRow[]);
       setStats((s ?? []) as PlayerStats[]);
       const rows = (r ?? []) as ResultRow[];
       setResults(rows);
@@ -145,7 +149,19 @@ export function StatsPage() {
         </section>
 
         <section className="border-t border-white/[0.08] py-10">
-          <SectionLabel n="02">Abende</SectionLabel>
+          <SectionLabel n="02">Letzte Spiele</SectionLabel>
+          <div className="max-w-2xl">
+            <RecentGames
+              games={recent}
+              name={(id) => names.get(id) ?? '?'}
+              limit={6}
+              showTable={(g) => tables.find((t) => t.id === g.table_id)?.name}
+            />
+          </div>
+        </section>
+
+        <section className="border-t border-white/[0.08] py-10">
+          <SectionLabel n="03">Abende</SectionLabel>
           {evenings.length === 0 ? (
             <p className="text-white/50">Noch keine Abende.</p>
           ) : (

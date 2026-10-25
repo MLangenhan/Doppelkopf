@@ -124,6 +124,7 @@ export function TablePage() {
           hand={t.hand}
           members={t.members}
           results={t.results}
+          finishedGames={t.finished}
           me={t.me}
           camera={camera}
           remotes={remotes}

@@ -21,6 +21,7 @@ export function useTable(code: string) {
   const [game, setGame] = useState<GameRow | null>(null);
   const [hands, setHands] = useState<Record<string, HandEntry>>({});
   const [results, setResults] = useState<ResultRow[]>([]);
+  const [finished, setFinished] = useState<GameRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -93,8 +94,19 @@ export function useTable(code: string) {
   );
 
   const loadResults = useCallback(async (tableId: string) => {
-    const { data } = await supabase.from('game_results').select('*').eq('table_id', tableId);
+    const [{ data }, { data: games }] = await Promise.all([
+      supabase.from('game_results').select('*').eq('table_id', tableId),
+      // Fertige Spiele mit Abrechnung (für die Punkte-Aufschlüsselung)
+      supabase
+        .from('games')
+        .select('*')
+        .eq('table_id', tableId)
+        .eq('status', 'finished')
+        .order('number', { ascending: false })
+        .limit(30),
+    ]);
     setResults((data ?? []) as ResultRow[]);
+    setFinished((games ?? []) as GameRow[]);
   }, []);
 
   const refresh = useCallback(async () => {
@@ -204,5 +216,5 @@ export function useTable(code: string) {
 
   const hand = game ? (hands[game.id]?.cards ?? []) : [];
 
-  return { me, table, members, game, hand, results, error, loading, act, startGame, refresh };
+  return { me, table, members, game, hand, results, finished, error, loading, act, startGame, refresh };
 }

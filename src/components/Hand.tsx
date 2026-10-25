@@ -1,6 +1,6 @@
 import { type Card, suitOf } from '@engine';
 import { AnimatePresence, motion } from 'motion/react';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PlayingCard } from './PlayingCard';
 import { TiltCard } from './TiltCard';
 
@@ -21,6 +21,7 @@ export function Hand({
   picked,
   onPick,
   onPlay,
+  onSelect,
   onReorder,
   highlight,
   dealKey,
@@ -33,6 +34,8 @@ export function Hand({
   picked?: Set<Card>;
   onPick?: (card: Card) => void;
   onPlay?: (card: Card) => void;
+  /** Meldet die angehobene Karte (Leertaste spielt sie aus) */
+  onSelect?: (card: Card | null) => void;
   /** Neue Reihenfolge nach dem Ziehen */
   onReorder?: (cards: Card[]) => void;
   /** Karten, die markiert werden sollen (z. B. neu erhalten) */
@@ -64,6 +67,24 @@ export function Hand({
   if (selected && (!playable || !playable.has(selected) || !cards.includes(selected))) {
     setSelected(null);
   }
+
+  const latest = useRef({ selected, onPlay, onSelect });
+  latest.current = { selected, onPlay, onSelect };
+  useEffect(() => latest.current.onSelect?.(selected), [selected]);
+  // Leertaste spielt die angehobene Karte aus
+  useEffect(() => {
+    if (mode !== 'play') return;
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      const card = latest.current.selected;
+      if (e.code !== 'Space' || e.repeat || !card || el?.closest('input, textarea, select, [contenteditable]')) return;
+      e.preventDefault();
+      setSelected(null);
+      latest.current.onPlay?.(card);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mode]);
 
   const n = Math.max(cards.length, 1);
   const cardW = Math.max(48, Math.min(maxCardW, width / 6.2));

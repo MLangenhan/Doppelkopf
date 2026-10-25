@@ -6,6 +6,7 @@ import { sound } from '../lib/sound';
 import { partyLabel, resultKindLabel, SCHMEISSEN_LABEL } from '../lib/gameText';
 import type { SchmeissenReason } from '@engine';
 import { Confetti } from './Moments';
+import { SpaceHint } from './SpaceHint';
 import { PartyBadge } from './Seat';
 
 export function ResultDialog({
@@ -78,10 +79,12 @@ export function ResultDialog({
         ) : null}
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <span className="tag hidden text-[10px] text-white/40 sm:inline">
-            <kbd className="mr-1.5 rounded border border-white/20 px-1.5">Leertaste</kbd>
-            {revealed ? (canStart ? 'nächstes Spiel' : '') : 'überspringen'}
-          </span>
+          <SpaceHint
+            active={!revealed || canStart}
+            resetKey={revealed ? 'next' : 'skip'}
+            label={revealed ? 'Nächstes Spiel' : 'Überspringen'}
+            touchLabel=""
+          />
           <div className="ml-auto flex flex-wrap justify-end gap-3">
             <button className="btn-ghost" onClick={onClose}>
               Tisch ansehen

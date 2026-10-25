@@ -55,6 +55,7 @@ export function PracticePage() {
     createGame({ players: PLAYERS, starter: 0, settings }),
   );
   const [results, setResults] = useState<ResultRow[]>([]);
+  const [finished, setFinished] = useState<GameRow[]>([]);
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -105,6 +106,7 @@ export function PracticePage() {
   useEffect(() => {
     if (state.phase !== 'finished' || !state.result || recorded.current.has(gameId)) return;
     recorded.current.add(gameId);
+    setFinished((cur) => [game, ...cur]);
     const r = state.result;
     const now = new Date().toISOString();
     setResults((cur) => [
@@ -125,7 +127,7 @@ export function PracticePage() {
         };
       }),
     ]);
-  }, [state, gameId]);
+  }, [state, gameId, game]);
 
   const act = useCallback(async (action: GameAction) => {
     setState(applyAction(stateRef.current, 0, action));
@@ -150,6 +152,7 @@ export function PracticePage() {
         hand={state.hands[0]}
         members={members}
         results={results}
+        finishedGames={finished}
         me="me"
         camera={camera}
         remotes={{}}

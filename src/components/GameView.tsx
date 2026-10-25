@@ -35,6 +35,8 @@ import { LastTrick } from './LastTrick';
 import { MomentOverlay, useMoments } from './Moments';
 import { ResultDialog } from './ResultDialog';
 import { rulesSummary } from './RulesForm';
+import { RecentGames } from './RecentGames';
+import { SpaceHint } from './SpaceHint';
 import { ScoreSheet } from './ScoreSheet';
 import { Seat } from './Seat';
 import { useToast } from './Toast';
@@ -74,6 +76,7 @@ export function GameView({
   hand,
   members,
   results,
+  finishedGames = [],
   me,
   camera,
   remotes,
@@ -88,6 +91,8 @@ export function GameView({
   hand: Card[];
   members: Member[];
   results: ResultRow[];
+  /** Fertige Spiele des Abends, neuestes zuerst */
+  finishedGames?: GameRow[];
   me: string | null;
   camera: CameraControls;
   remotes: Record<string, RemoteVideo>;
@@ -151,6 +156,7 @@ export function GameView({
     else setPref('handSort', next);
   };
 
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const myTurnToPlay = view.phase === 'playing' && view.turn === myPos && !pending && !view.collectPending;
   // Ohne Hervorhebung ("schwarz spielen") ist jede Karte wählbar; der Server prüft das Bedienen
   const playable =
@@ -488,50 +494,22 @@ export function GameView({
           onConfirm={() => run(() => act({ type: 'armutReturn', cards: [...picked] }))}
         />
       );
-    } else if (pendingTrick) {
-      panel = iCollect ? (
-        <motion.div
-          key="collect"
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 rounded-full bg-gold-400 py-1.5 pr-1.5 pl-4 text-sm font-semibold text-felt-950 shadow-lg"
-        >
-          Dein Stich! Schau ihn dir an und nimm ihn dann
-          <button className="rounded-full bg-felt-950 px-3 py-1 text-gold-300 hover:bg-felt-800" onClick={collect} disabled={busy}>
-            <kbd className="mr-1.5 rounded border border-gold-400/40 px-1.5 text-[11px]">Leertaste</kbd>
-            Nehmen
-          </button>
-        </motion.div>
-      ) : (
-        <motion.div
-          key="others-collect"
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="panel flex items-center gap-3 px-4 py-2 text-sm text-white/80"
-        >
-          <span>
-            <span className="font-semibold text-white">{name(pendingTrick.winner!)}</span> nimmt den Stich …
-          </span>
-          {canForceCollect && (
-            <button className="btn-secondary px-3 py-1" onClick={collect} disabled={busy}>
-              Stich wegräumen
-            </button>
-          )}
-        </motion.div>
-      );
-    } else if (view.phase === 'playing' && view.turn === myPos && !pending) {
+    } else if (pendingTrick && canForceCollect) {
       panel = (
-        <motion.div
-          key="turn"
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-full bg-gold-400 px-4 py-1.5 text-sm font-semibold text-felt-950 shadow-lg"
-        >
-          Du bist dran – Karte zweimal antippen oder doppelklicken
+        <motion.div key="force-collect" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+          <button className="btn-secondary px-3 py-1.5" onClick={collect} disabled={busy}>
+            Stich wegräumen
+          </button>
         </motion.div>
       );
     }
   }
+  // Einziger Hinweis: nach 5 Sekunden ohne Aktion, was die Leertaste gerade tut
+  const hint = iCollect ? (
+    <SpaceHint active resetKey={`c:${shownTrick.key}`} label="Stich nehmen" touchLabel="Stich antippen zum Nehmen" />
+  ) : myTurnToPlay && selectedCard ? (
+    <SpaceHint active resetKey={`p:${selectedCard}`} label="Karte ausspielen" touchLabel="Nochmal antippen zum Ausspielen" />
+  ) : null;
 
   const announcementText = (['re', 'kontra'] as const)
     .filter((p) => view.announcements[p] !== null)
@@ -543,6 +521,10 @@ export function GameView({
       <section>
         <h3 className="mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Punkte heute</h3>
         <ScoreSheet results={results} members={members} me={me} />
+      </section>
+      <section>
+        <h3 className="mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Letzte Spiele</h3>
+        <RecentGames games={finishedGames} name={nameOfUser} />
       </section>
       <section>
         <h3 className="mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Hausregeln</h3>
@@ -664,6 +646,7 @@ export function GameView({
         })
       }
       onPlay={play}
+      onSelect={setSelectedCard}
       onReorder={reorder}
     />
   );
@@ -727,6 +710,7 @@ export function GameView({
           <div className="grid min-h-0 flex-1 place-items-center">{trickArea}</div>
           <div className="flex min-h-11 flex-col items-center justify-end gap-2">
             <AnimatePresence mode="wait">{panel}</AnimatePresence>
+            {hint}
             {announceEl}
           </div>
           {handEl}
@@ -770,8 +754,9 @@ export function GameView({
         {/* Unten Mitte: Hand, Aktionen, Ansagen */}
         <div className="flex min-w-0 items-end gap-3 self-end">
           <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
-            <div className="flex min-h-11 items-end justify-center">
+            <div className="flex min-h-11 flex-col items-center justify-end gap-2">
               <AnimatePresence mode="wait">{panel}</AnimatePresence>
+              {hint}
             </div>
             {handEl}
           </div>
