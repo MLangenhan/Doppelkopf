@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  COLLECT_TIMEOUT_MS,
   allowedDeclarations,
   announceError,
   applyAction,
@@ -21,7 +22,13 @@ function declareAll(s: GameState, decls: Partial<Record<number, Declaration>> = 
   return s;
 }
 
+/** Liegt ein fertiger Stich, nimmt ihn der Gewinner. */
+function collectIfPending(s: GameState): GameState {
+  return s.collectPending ? applyAction(s, s.turn!, { type: 'collect' }) : s;
+}
+
 function playFirstLegal(s: GameState): GameState {
+  s = collectIfPending(s);
   const pos = s.turn!;
   const card = legalCards(s.hands[pos], s.current!.cards, trickContext(s))[0];
   return applyAction(s, pos, { type: 'play', card });
@@ -29,7 +36,7 @@ function playFirstLegal(s: GameState): GameState {
 
 function playTricks(s: GameState, n: number): GameState {
   for (let i = 0; i < n * 4; i++) s = playFirstLegal(s);
-  return s;
+  return collectIfPending(s);
 }
 
 describe('Vorbehalte', () => {
@@ -248,5 +255,44 @@ describe('Öffentliche Sicht', () => {
     expect(publicView(s).schweinchen).toBeNull();
     s = applyAction(s, 0, { type: 'play', card: s.hands[0].find((c) => c.startsWith('D-A'))! });
     expect(publicView(s).schweinchen).toBe(0);
+  });
+});
+
+describe('Stich nehmen', () => {
+  function afterFirstTrick() {
+    let s = declareAll(newGame(dealWith([['C-Q'], ['C-Q'], [], []])));
+    for (let i = 0; i < 4; i++) s = playFirstLegal(s);
+    return s;
+  }
+
+  it('Fertiger Stich bleibt liegen, bis der Gewinner ihn nimmt', () => {
+    const s = afterFirstTrick();
+    const winner = s.tricks[0].winner!;
+    expect(s.collectPending).toBe(true);
+    expect(s.current!.cards).toHaveLength(4);
+    expect(s.turn).toBe(winner);
+    expect(publicView(s).collectPending).toBe(true);
+    expect(() => applyAction(s, winner, { type: 'play', card: s.hands[winner][0] })).toThrow('Stich');
+    const after = applyAction(s, winner, { type: 'collect' });
+    expect(after.collectPending).toBe(false);
+    expect(after.current).toEqual({ leader: winner, cards: [], winner: null });
+  });
+
+  it('Andere dürfen erst nach der Wartezeit wegräumen', () => {
+    const s = afterFirstTrick();
+    const other = (s.tricks[0].winner! + 1) % 4;
+    const t0 = s.tricks[0].completedAt!;
+    expect(() => applyAction(s, other, { type: 'collect' }, t0 + 2000)).toThrow('gewonnen');
+    expect(applyAction(s, other, { type: 'collect' }, t0 + COLLECT_TIMEOUT_MS).collectPending).toBe(false);
+  });
+
+  it('Das Spiel endet erst, wenn der letzte Stich genommen ist', () => {
+    let s = declareAll(newGame(dealWith([['C-Q'], ['C-Q'], [], []])));
+    for (let i = 0; i < 40; i++) s = playFirstLegal(s);
+    expect(s.phase).toBe('playing');
+    expect(s.collectPending).toBe(true);
+    s = collectIfPending(s);
+    expect(s.phase).toBe('finished');
+    expect(s.result).not.toBeNull();
   });
 });

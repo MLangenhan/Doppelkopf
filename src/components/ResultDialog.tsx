@@ -2,6 +2,7 @@ import type { Party, PublicGameState } from '@engine';
 import { motion } from 'motion/react';
 import { partyLabel, resultKindLabel, SCHMEISSEN_LABEL } from '../lib/gameText';
 import type { SchmeissenReason } from '@engine';
+import { Confetti } from './Moments';
 import { PartyBadge } from './Seat';
 
 export function ResultDialog({
@@ -79,6 +80,7 @@ function ResultBody({ view, name, myPos }: { view: PublicGameState; name: (pos: 
 
   return (
     <>
+      <Confetti active={iWon} />
       <p className="text-sm font-medium text-white/60">
         {resultKindLabel(kind, view.solo)}
         {soloist !== null && ` von ${name(soloist)}`}

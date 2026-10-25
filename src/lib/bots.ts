@@ -37,6 +37,8 @@ export function botAction(s: GameState, pos: number): GameAction | null {
     return { type: 'armutReturn', cards: sorted.slice(0, 3) };
   }
 
+  if (s.phase === 'playing' && s.collectPending && s.turn === pos) return { type: 'collect' };
+
   if (s.phase === 'playing' && s.turn === pos && s.current) {
     // Gelegentlich mit starker Hand ansagen
     const strong = hand.filter((c) => isTrump(c, ctx) && cardPower(c, ctx) >= 996).length >= 3;

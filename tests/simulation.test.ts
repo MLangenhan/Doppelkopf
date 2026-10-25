@@ -33,7 +33,7 @@ function randomGame(seed: number): GameState {
   const pick = <T,>(items: T[]) => items[Math.floor(rng() * items.length)];
   let s = createGame({ players: ['a', 'b', 'c', 'd'], starter: seed % 4, settings: randomSettings(rng), rng });
 
-  for (let guard = 0; guard < 500 && s.phase !== 'finished'; guard++) {
+  for (let guard = 0; guard < 800 && s.phase !== 'finished'; guard++) {
     if (s.phase === 'reservations') {
       const pos = s.declTurn!;
       const options = allowedDeclarations(s.hands[pos], s.settings);
@@ -50,6 +50,10 @@ function randomGame(seed: number): GameState {
         const pos = Math.floor(rng() * 4);
         const level = pick(ANNOUNCE_LEVELS);
         if (announceError(s, pos, level) === null) s = applyAction(s, pos, { type: 'announce', level });
+      }
+      if (s.collectPending) {
+        s = applyAction(s, s.turn!, { type: 'collect' });
+        continue;
       }
       const pos = s.turn!;
       const card = pick(legalCards(s.hands[pos], s.current!.cards, trickContext(s)));

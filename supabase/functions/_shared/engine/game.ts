@@ -28,7 +28,12 @@ export interface Trick {
   /** cards[i] wurde von Position (leader + i) % 4 gespielt. */
   cards: Card[];
   winner: number | null;
+  /** Zeitpunkt (ms), an dem die vierte Karte lag */
+  completedAt?: number;
 }
+
+/** Nach so vielen ms darf jeder den Stich wegräumen, falls der Gewinner nicht reagiert. */
+export const COLLECT_TIMEOUT_MS = 10_000;
 
 export interface Announcement {
   pos: number;
@@ -68,6 +73,8 @@ export interface GameState {
   announcementLog: Announcement[];
   redeal: { reason: 'schmeissen' | 'armut'; pos: number; detail?: string } | null;
   result: GameResult | null;
+  /** Der Stich ist komplett und liegt noch in der Mitte, bis ihn jemand nimmt (Aktion 'collect'). */
+  collectPending: boolean;
 }
 
 export type GameAction =
@@ -75,7 +82,8 @@ export type GameAction =
   | { type: 'armutAnswer'; accept: boolean }
   | { type: 'armutReturn'; cards: Card[] }
   | { type: 'play'; card: Card }
-  | { type: 'announce'; level: AnnounceLevel };
+  | { type: 'announce'; level: AnnounceLevel }
+  | { type: 'collect' };
 
 export class GameError extends Error {
   constructor(message: string) {
@@ -120,6 +128,7 @@ export function createGame(opts: {
     announcementLog: [],
     redeal: null,
     result: null,
+    collectPending: false,
   };
 }
 
@@ -182,7 +191,8 @@ export function announceError(s: GameState, pos: number, level: AnnounceLevel): 
   return null;
 }
 
-export function applyAction(state: GameState, pos: number, action: GameAction): GameState {
+/** `now` ist die Serverzeit in ms (nur für das Stich-Nehmen relevant). */
+export function applyAction(state: GameState, pos: number, action: GameAction, now = Date.now()): GameState {
   if (pos < 0 || pos > 3) throw new GameError('Du spielst in diesem Spiel nicht mit.');
   const s = structuredClone(state);
   switch (action.type) {
@@ -196,7 +206,10 @@ export function applyAction(state: GameState, pos: number, action: GameAction): 
       armutReturn(s, pos, action.cards);
       break;
     case 'play':
-      play(s, pos, action.card);
+      play(s, pos, action.card, now);
+      break;
+    case 'collect':
+      collect(s, pos, now);
       break;
     case 'announce': {
       const err = announceError(s, pos, action.level);
@@ -333,8 +346,9 @@ function armutReturn(s: GameState, pos: number, cards: Card[]) {
   startPlay(s, s.starter);
 }
 
-function play(s: GameState, pos: number, card: Card) {
+function play(s: GameState, pos: number, card: Card, now: number) {
   if (s.phase !== 'playing' || !s.current) throw new GameError('Gerade werden keine Karten gespielt.');
+  if (s.collectPending) throw new GameError('Erst muss der Stich genommen werden.');
   if (s.turn !== pos) throw new GameError('Du bist noch nicht dran.');
   if (!isValidCard(card) || !s.hands[pos].includes(card)) throw new GameError('Diese Karte hast du nicht.');
   const ctx = trickContext(s);
@@ -354,7 +368,8 @@ function play(s: GameState, pos: number, card: Card) {
   const isLast = s.hands.every((h) => h.length === 0);
   const winner = (s.current.leader + trickWinnerIndex(s.current.cards, ctx, isLast)) % 4;
   s.current.winner = winner;
-  s.tricks.push(s.current);
+  s.current.completedAt = now;
+  s.tricks.push(structuredClone(s.current));
 
   const h = s.hochzeit;
   if (s.kind === 'hochzeit' && h && h.partner === null && !h.alone) {
@@ -368,13 +383,26 @@ function play(s: GameState, pos: number, card: Card) {
     }
   }
 
-  if (isLast) {
+  // Der Stich bleibt liegen, bis ihn jemand nimmt – so hat jeder Zeit, ihn anzuschauen
+  s.collectPending = true;
+  s.turn = winner;
+}
+
+function collect(s: GameState, pos: number, now: number) {
+  if (s.phase !== 'playing' || !s.collectPending) throw new GameError('Gerade liegt kein fertiger Stich.');
+  const last = s.tricks[s.tricks.length - 1];
+  const waited = now - (last.completedAt ?? 0);
+  if (pos !== last.winner && waited < COLLECT_TIMEOUT_MS) {
+    throw new GameError('Den Stich nimmt, wer ihn gewonnen hat.');
+  }
+  s.collectPending = false;
+  if (s.hands.every((h) => h.length === 0)) {
     s.current = null;
     s.turn = null;
     s.phase = 'finished';
     s.result = scoreGame(s);
   } else {
-    s.current = { leader: winner, cards: [], winner: null };
-    s.turn = winner;
+    s.current = { leader: last.winner!, cards: [], winner: null };
+    s.turn = last.winner;
   }
 }

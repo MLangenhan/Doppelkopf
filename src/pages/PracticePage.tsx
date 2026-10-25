@@ -89,7 +89,8 @@ export function PracticePage() {
   useEffect(() => {
     const who = actor(state);
     if (who === null || who === 0) return;
-    const delay = state.phase === 'playing' ? (state.current?.cards.length === 0 && state.tricks.length > 0 ? 1500 : 750) : 600;
+    // Bots lassen den fertigen Stich kurz liegen, bevor sie ihn nehmen
+    const delay = state.phase !== 'playing' ? 600 : state.collectPending ? 2200 : 750;
     const t = setTimeout(() => {
       const s = stateRef.current;
       const action = botAction(s, who);

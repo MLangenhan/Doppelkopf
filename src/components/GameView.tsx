@@ -1,11 +1,14 @@
 import {
   type AnnounceLevel,
   type Card,
+  COLLECT_TIMEOUT_MS,
   type Declaration,
+  faceOf,
   type GameAction,
   legalCards,
+  SOLO_NAMES,
   sortHand,
-  type Trick,
+  sumAugen,
 } from '@engine';
 import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -27,7 +30,8 @@ import { AnnouncePanel, ArmutOfferPanel, ArmutReturnPanel, ReservationPanel } fr
 import { Atmosphere } from './Atmosphere';
 import { CameraButton, type CameraControls } from './CameraButton';
 import { Hand } from './Hand';
-import { PlayingCard } from './PlayingCard';
+import { LastTrick } from './LastTrick';
+import { MomentOverlay, useMoments } from './Moments';
 import { ResultDialog } from './ResultDialog';
 import { rulesSummary } from './RulesForm';
 import { ScoreSheet } from './ScoreSheet';
@@ -35,8 +39,6 @@ import { Seat } from './Seat';
 import { useToast } from './Toast';
 import { type Rel, TrickArea, type TrickPlay } from './TrickArea';
 import { VideoTile } from './VideoTile';
-
-const HOLD_TRICK_MS = 1600;
 
 function useViewport() {
   const [size, setSize] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
@@ -108,7 +110,7 @@ export function GameView({
     [hand, pending, ctx.mode, ctx.schweinchen],
   );
 
-  const myTurnToPlay = view.phase === 'playing' && view.turn === myPos && !pending;
+  const myTurnToPlay = view.phase === 'playing' && view.turn === myPos && !pending && !view.collectPending;
   // Ohne Hervorhebung ("schwarz spielen") ist jede Karte wählbar; der Server prüft das Bedienen
   const [prefs] = usePrefs();
   const playable =
@@ -140,34 +142,62 @@ export function GameView({
   );
   useEffect(() => setPicked(new Set()), [view.phase]);
 
-  // ---- Stich-Anzeige: fertigen Stich kurz stehen lassen ----
+  // ---- Stich-Anzeige: ein fertiger Stich liegt, bis der Gewinner ihn nimmt ----
   const trickCount = view.trickWinners.length;
-  const [expiredFor, setExpiredFor] = useState(-1);
-  useEffect(() => {
-    if (trickCount === 0) return;
-    const t = setTimeout(() => setExpiredFor(trickCount), HOLD_TRICK_MS);
-    return () => clearTimeout(t);
-  }, [trickCount, game.id]);
-
+  const pendingTrick = view.collectPending && view.current?.winner != null ? view.current : null;
   const currentPlays: TrickPlay[] = (view.current?.cards ?? []).map((card, i) => ({
     card,
     rel: rel((view.current!.leader + i) % 4),
   }));
   if (pending && !currentPlays.some((p) => p.card === pending)) currentPlays.push({ card: pending, rel: 0 });
-
-  const showCompleted = currentPlays.length === 0 && !!view.lastTrick && expiredFor !== trickCount;
-  const shownTrick: { key: string; plays: TrickPlay[]; winner: number | null } = showCompleted
-    ? {
-        key: `${game.id}:${trickCount - 1}`,
-        plays: view.lastTrick!.cards.map((card, i) => ({ card, rel: rel((view.lastTrick!.leader + i) % 4) })),
-        winner: view.lastTrick!.winner,
-      }
+  const shownTrick: { key: string; plays: TrickPlay[]; winner: number | null } = pendingTrick
+    ? { key: `${game.id}:${trickCount - 1}`, plays: currentPlays, winner: pendingTrick.winner }
     : { key: `${game.id}:${trickCount}`, plays: currentPlays, winner: null };
 
-  // ---- Ergebnis ----
+  // Stich nehmen: der Gewinner per Leertaste oder Klick; nach der Wartezeit dürfen alle wegräumen
+  const iCollect = !!pendingTrick && pendingTrick.winner === myPos;
+  const [collectSeen, setCollectSeen] = useState<{ key: string; at: number } | null>(null);
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    if (!pendingTrick) return;
+    setCollectSeen((cur) => (cur?.key === shownTrick.key ? cur : { key: shownTrick.key, at: Date.now() }));
+    const id = setInterval(() => setClock(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [pendingTrick, shownTrick.key]);
+  const canForceCollect =
+    !!pendingTrick &&
+    !iCollect &&
+    myPos >= 0 &&
+    collectSeen?.key === shownTrick.key &&
+    clock - collectSeen.at >= COLLECT_TIMEOUT_MS;
+  const collect = () => {
+    if (busy) return;
+    run(() => act({ type: 'collect' }));
+  };
+  const collectRef = useRef(collect);
+  collectRef.current = collect;
+  useEffect(() => {
+    if (!iCollect) return;
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.code !== 'Space' || e.repeat || el?.closest('input, textarea, select, [contenteditable]')) return;
+      e.preventDefault();
+      collectRef.current();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [iCollect]);
+
+  // ---- Ergebnis (kurz nach dem letzten Stich, damit man das Einsammeln noch sieht) ----
   const finished = view.phase === 'finished';
   const [dismissed, setDismissed] = useState<string | null>(null);
-  const resultReady = finished && (view.redeal !== null || expiredFor === trickCount);
+  const [readyFor, setReadyFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!finished) return;
+    const t = setTimeout(() => setReadyFor(game.id), view.redeal ? 0 : 700);
+    return () => clearTimeout(t);
+  }, [finished, game.id, view.redeal]);
+  const resultReady = finished && readyFor === game.id;
   const showResult = resultReady && dismissed !== game.id;
 
   // ---- Sonstiges ----
@@ -176,7 +206,7 @@ export function GameView({
   const sittingOut = members.filter((m) => !game.players.includes(m.user_id));
 
   // ---- Sounds: aus Zustandsänderungen ableiten, damit sie für alle gleich klingen ----
-  const played = trickCount * 4 + currentPlays.length;
+  const played = trickCount * 4 + (view.collectPending ? 0 : currentPlays.length);
   const myTurnNow =
     (view.phase === 'playing' && view.turn === myPos) ||
     (view.phase === 'reservations' && view.declTurn === myPos) ||
@@ -219,7 +249,80 @@ export function GameView({
       else sound.lose();
     }
   });
-  const [showLastTrick, setShowLastTrick] = useState(false);
+  // ---- Große Momente ----
+  const moments = useMoments();
+  const momentState = useRef<{
+    game: string;
+    ann: number;
+    kind: string | null;
+    partner: number | null;
+    alone: boolean;
+    schwein: number | null;
+    tricks: number;
+  } | null>(null);
+  useEffect(() => {
+    const prev = momentState.current;
+    const now = {
+      game: game.id,
+      ann: view.announcementLog.length,
+      kind: view.kind,
+      partner: view.hochzeit?.partner ?? null,
+      alone: !!view.hochzeit?.alone,
+      schwein: view.schweinchen,
+      tricks: trickCount,
+    };
+    momentState.current = now;
+    if (!prev || prev.game !== now.game) return;
+    let special = false;
+
+    for (const a of view.announcementLog.slice(prev.ann)) {
+      moments.push({ title: `${levelLabel(a.level, a.party)}!`, sub: name(a.pos), tone: a.party });
+    }
+    if (!prev.kind && now.kind && now.kind !== 'normal') {
+      special = true;
+      if (now.kind === 'solo') moments.push({ title: SOLO_NAMES[view.solo!], sub: `${name(view.soloist!)} spielt allein` });
+      if (now.kind === 'hochzeit') moments.push({ title: 'Hochzeit!', sub: `${name(view.hochzeit!.bride)} sucht einen Partner` });
+      if (now.kind === 'armut') moments.push({ title: 'Armut', sub: `${name(view.armut!.poor)} & ${name(view.armut!.rich!)}` });
+    }
+    if (prev.partner === null && now.partner !== null) {
+      special = true;
+      moments.push({ title: 'Verlobt!', sub: `${name(view.hochzeit!.bride)} & ${name(now.partner)}` });
+    }
+    if (!prev.alone && now.alone) {
+      special = true;
+      moments.push({ title: 'Allein!', sub: `${name(view.hochzeit!.bride)} hat keinen Partner gefunden` });
+    }
+    if (prev.schwein === null && now.schwein !== null) {
+      special = true;
+      moments.push({ title: 'Schweinchen!', sub: name(now.schwein) });
+    }
+    if (now.tricks > prev.tricks && view.lastTrick) {
+      const t = view.lastTrick;
+      const w = t.winner!;
+      const augen = sumAugen(t.cards);
+      const partyOf = (p: number) => (p === myPos ? party : view.knownParties[p]);
+      if (view.settings.doppelkopf && view.kind !== 'solo' && augen >= 40) {
+        special = true;
+        moments.push({ title: 'Doppelkopf!', sub: `${augen} Augen für ${name(w)}` });
+      }
+      if (view.settings.fuchs && view.kind !== 'solo' && view.schweinchen === null) {
+        t.cards.forEach((c, i) => {
+          const by = (t.leader + i) % 4;
+          if (faceOf(c) === 'D-A' && by !== w && partyOf(by) && partyOf(w) && partyOf(by) !== partyOf(w)) {
+            special = true;
+            moments.push({ title: 'Fuchs gefangen!', sub: `${name(w)} fängt den Fuchs von ${name(by)}` });
+          }
+        });
+      }
+      const lastOne = view.handCounts.every((n) => n === 0);
+      if (view.settings.karlchen && view.kind !== 'solo' && lastOne && faceOf(t.cards[(w - t.leader + 4) % 4]) === 'C-J') {
+        special = true;
+        moments.push({ title: 'Karlchen!', sub: `${name(w)} macht den letzten Stich` });
+      }
+    }
+    if (special) sound.announce();
+  });
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // Seitenleiste nur auf sehr breiten Bildschirmen dauerhaft, sonst als Schublade – der Tisch braucht den Platz
   const wide = vp.w >= 1700;
@@ -302,6 +405,37 @@ export function GameView({
           onConfirm={() => run(() => act({ type: 'armutReturn', cards: [...picked] }))}
         />
       );
+    } else if (pendingTrick) {
+      panel = iCollect ? (
+        <motion.div
+          key="collect"
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 rounded-full bg-gold-400 py-1.5 pr-1.5 pl-4 text-sm font-semibold text-felt-950 shadow-lg"
+        >
+          Dein Stich! Schau ihn dir an und nimm ihn dann
+          <button className="rounded-full bg-felt-950 px-3 py-1 text-gold-300 hover:bg-felt-800" onClick={collect} disabled={busy}>
+            <kbd className="mr-1.5 rounded border border-gold-400/40 px-1.5 text-[11px]">Leertaste</kbd>
+            Nehmen
+          </button>
+        </motion.div>
+      ) : (
+        <motion.div
+          key="others-collect"
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="panel flex items-center gap-3 px-4 py-2 text-sm text-white/80"
+        >
+          <span>
+            <span className="font-semibold text-white">{name(pendingTrick.winner!)}</span> nimmt den Stich …
+          </span>
+          {canForceCollect && (
+            <button className="btn-secondary px-3 py-1" onClick={collect} disabled={busy}>
+              Stich wegräumen
+            </button>
+          )}
+        </motion.div>
+      );
     } else if (view.phase === 'playing' && view.turn === myPos && !pending) {
       panel = (
         <motion.div
@@ -373,11 +507,6 @@ export function GameView({
             )}
           </div>
           <div className="flex flex-wrap items-center justify-center gap-1">
-            {view.lastTrick && view.phase === 'playing' && (
-              <button className="btn-ghost px-2.5 py-1" onClick={() => setShowLastTrick((v) => !v)} aria-expanded={showLastTrick}>
-                Letzter Stich
-              </button>
-            )}
             {!wide && (
               <button className="btn-ghost px-2.5 py-1" onClick={() => setSidebarOpen(true)}>
                 Punkte & Regeln
@@ -385,6 +514,7 @@ export function GameView({
             )}
             <CameraButton camera={camera} compact />
           </div>
+          {view.phase === 'playing' && <LastTrick trick={view.collectPending ? view.previousTrick : view.lastTrick} name={name} />}
           {sittingOut.map((m) => (
             <VideoTile
               key={m.user_id}
@@ -411,9 +541,18 @@ export function GameView({
             trickKey={shownTrick.key}
             plays={shownTrick.plays}
             winnerRel={shownTrick.winner === null ? null : rel(shownTrick.winner)}
-            winnerName={shownTrick.winner === null ? undefined : name(shownTrick.winner)}
+            winnerLabel={
+              shownTrick.winner === null
+                ? undefined
+                : shownTrick.winner === myPos
+                  ? 'Dein Stich'
+                  : `Stich für ${name(shownTrick.winner)}`
+            }
             cardWidth={trickCardW}
-          />
+            onCollect={iCollect ? collect : undefined}
+          >
+            <MomentOverlay moment={moments.current} />
+          </TrickArea>
         </div>
 
         {/* Unten links: ich */}
@@ -468,11 +607,6 @@ export function GameView({
         {/* Unten rechts: Spieler rechts von mir */}
         <div className="self-end">{seatFor(3)}</div>
 
-        <AnimatePresence>
-          {showLastTrick && view.lastTrick && (
-            <LastTrickPopover trick={view.lastTrick} name={name} onClose={() => setShowLastTrick(false)} />
-          )}
-        </AnimatePresence>
       </main>
 
       {wide ? (
@@ -527,36 +661,5 @@ export function GameView({
         </div>
       )}
     </div>
-  );
-}
-
-function LastTrickPopover({ trick, name, onClose }: { trick: Trick; name: (pos: number) => string; onClose: () => void }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      className="panel absolute top-24 left-1/2 z-30 -translate-x-1/2 p-3"
-      role="dialog"
-      aria-label="Letzter Stich"
-    >
-      <div className="mb-2 flex items-center justify-between gap-4 text-sm">
-        <span className="font-semibold">Letzter Stich – {name(trick.winner!)}</span>
-        <button className="text-white/60 hover:text-white" onClick={onClose} aria-label="Schließen">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-      <div className="flex gap-2">
-        {trick.cards.map((c, i) => {
-          const pos = (trick.leader + i) % 4;
-          return (
-            <div key={c} className="flex flex-col items-center gap-1">
-              <PlayingCard card={c} width={64} className={pos === trick.winner ? 'ring-2 ring-gold-400' : ''} />
-              <span className="max-w-16 truncate text-xs text-white/70">{name(pos)}</span>
-            </div>
-          );
-        })}
-      </div>
-    </motion.div>
   );
 }

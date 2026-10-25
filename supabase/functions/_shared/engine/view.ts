@@ -25,8 +25,12 @@ export interface PublicGameState {
   schweinchen: number | null;
   current: Trick | null;
   lastTrick: Trick | null;
+  /** Der Stich davor – damit der letzte Stich auch sichtbar bleibt, während ein neuer in der Mitte liegt */
+  previousTrick: Trick | null;
   trickWinners: number[];
   turn: number | null;
+  /** Fertiger Stich liegt noch in der Mitte (current enthält ihn samt Gewinner) */
+  collectPending: boolean;
   announcements: Record<Party, AnnounceLevel | null>;
   announcementLog: Announcement[];
   /** Was über die Parteien öffentlich bekannt ist (durch Ansagen, gespielte Kreuz-Damen usw.). */
@@ -93,8 +97,10 @@ export function publicView(s: GameState): PublicGameState {
     schweinchen: s.schweinchenRevealed || finished ? s.schweinchen : null,
     current: s.current,
     lastTrick: s.tricks.length ? s.tricks[s.tricks.length - 1] : null,
+    previousTrick: s.tricks.length > 1 ? s.tricks[s.tricks.length - 2] : null,
     trickWinners: s.tricks.map((t) => t.winner!),
     turn: s.turn,
+    collectPending: s.collectPending,
     announcements: s.announcements,
     announcementLog: s.announcementLog,
     knownParties: knownParties(s),
