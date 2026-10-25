@@ -1,11 +1,12 @@
 import { normalizeSettings, type RuleSettings } from '@engine';
-import { Check } from 'lucide-react';
+import { ArrowRight, Check, Copy } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 import type { Member, TableRow } from '../lib/supabase';
 import type { RemoteVideo } from '../lib/video';
 import { CameraButton, type CameraControls } from './CameraButton';
 import { RulesForm, rulesSummary } from './RulesForm';
+import { arrowLink, SectionLabel } from './SectionLabel';
 import { VideoTile } from './VideoTile';
 
 export function Lobby({
@@ -56,117 +57,128 @@ export function Lobby({
     }
   }
 
+  const status =
+    count < 4
+      ? `Noch ${4 - count} Spieler ${4 - count === 1 ? 'fehlt' : 'fehlen'}`
+      : count === 4
+        ? 'Alle da – es kann losgehen'
+        : 'Zu fünft – der Geber setzt jeweils aus';
+
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="mx-auto w-full max-w-6xl px-4 pt-4 pb-16">
+      {/* Kopf: Name, Status, Einladung */}
+      <header className="flex flex-wrap items-end justify-between gap-6 pb-8">
         <div>
-          <h1 className="display text-5xl sm:text-6xl">{table.name}</h1>
-          <p className="mt-1 text-white/65">
-            {count < 4
-              ? `Noch ${4 - count} Spieler ${4 - count === 1 ? 'fehlt' : 'fehlen'} – teile den Link!`
-              : count === 4
-                ? 'Alle da – es kann losgehen.'
-                : 'Zu fünft: Der Geber setzt jeweils eine Runde aus.'}
+          <p className="tag text-[11px] text-white/45">
+            <span className="text-gold-400">Lobby</span> / {status}
           </p>
+          <h1 className="display mt-2 text-6xl sm:text-7xl">{table.name}</h1>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-xl bg-black/30 px-3 py-2 tabular-nums text-lg tracking-[0.25em]" aria-label="Tisch-Code">
-            {table.code}
+        <button
+          onClick={copy}
+          className="group flex items-center gap-4 text-left"
+          data-cursor={copied ? 'Kopiert' : 'Kopieren'}
+          aria-label="Einladungslink kopieren"
+        >
+          <span>
+            <span className="tag block text-[10px] text-white/40">Einladen</span>
+            <span className="tag block text-3xl tracking-[0.25em] text-white">{table.code}</span>
           </span>
-          <button className="btn-secondary" onClick={copy}>
-            {copied ? (
-              <>
-                <Check className="h-4 w-4" /> Kopiert
-              </>
-            ) : (
-              'Einladungslink kopieren'
-            )}
-          </button>
-        </div>
-      </div>
+          <span className="grid size-10 place-items-center rounded-full border border-white/15 text-white/70 transition-colors group-hover:border-gold-400 group-hover:text-gold-300">
+            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+          </span>
+        </button>
+      </header>
 
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {[0, 1, 2, 3, 4].map((seat) => {
-          const m = members.find((x) => x.user_id && x.seat === seat);
-          const isMe = m?.user_id === me;
-          return (
-            <motion.div key={seat} layout className="flex flex-col gap-2">
-              <AnimatePresence mode="wait">
-                {m ? (
-                  <motion.div key={m.user_id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
-                    <VideoTile
-                      stream={isMe ? camera.stream : remotes[m.user_id]?.stream}
-                      videoOff={isMe && !camera.enabled}
-                      name={m.display_name}
-                      mirror={isMe}
-                      connecting={!isMe && online.includes(m.user_id) && remotes[m.user_id]?.status === 'connecting'}
-                      className="aspect-[4/3] w-full"
+      {/* Plätze */}
+      <section className="border-t border-white/[0.08] py-8">
+        <SectionLabel n="01">Plätze · im Uhrzeigersinn</SectionLabel>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          {[0, 1, 2, 3, 4].map((seat) => {
+            const m = members.find((x) => x.user_id && x.seat === seat);
+            const isMe = m?.user_id === me;
+            const isOnline = !!m && (isMe || online.includes(m.user_id));
+            return (
+              <motion.div key={seat} layout className="flex flex-col gap-2">
+                <AnimatePresence mode="wait">
+                  {m ? (
+                    <motion.div key={m.user_id} initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.94 }}>
+                      <VideoTile
+                        stream={isMe ? camera.stream : remotes[m.user_id]?.stream}
+                        videoOff={isMe && !camera.enabled}
+                        name={m.display_name}
+                        mirror={isMe}
+                        connecting={!isMe && online.includes(m.user_id) && remotes[m.user_id]?.status === 'connecting'}
+                        className="aspect-[4/3] w-full"
+                      >
+                        <div className="absolute bottom-2 left-2 flex max-w-[85%] items-center gap-2 rounded-md bg-felt-950/75 px-2 py-1">
+                          <span className={`size-1.5 shrink-0 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-white/30'}`} />
+                          <span className="truncate text-sm font-medium">{isMe ? `${m.display_name} (du)` : m.display_name}</span>
+                        </div>
+                      </VideoTile>
+                    </motion.div>
+                  ) : (
+                    <motion.button
+                      key="empty"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      onClick={() => onTakeSeat(seat)}
+                      disabled={busy}
+                      data-cursor="Setzen"
+                      className="group relative grid aspect-[4/3] w-full place-items-center rounded-xl border border-dashed border-white/15 transition-colors hover:border-gold-400/60"
                     >
-                      <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-gradient-to-t from-black/75 to-transparent px-2.5 pt-6 pb-2">
-                        <span
-                          className={`h-2 w-2 rounded-full ${isMe || online.includes(m.user_id) ? 'bg-emerald-400' : 'bg-white/30'}`}
-                          title={isMe || online.includes(m.user_id) ? 'Online' : 'Nicht verbunden'}
-                        />
-                        <span className="truncate text-sm font-semibold">{isMe ? `${m.display_name} (du)` : m.display_name}</span>
-                        {table.host_id === m.user_id && (
-                          <span className="ml-auto rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-semibold">Gastgeber</span>
-                        )}
-                      </div>
-                    </VideoTile>
-                  </motion.div>
-                ) : (
-                  <motion.button
-                    key="empty"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={() => onTakeSeat(seat)}
-                    disabled={busy}
-                    className="grid aspect-[4/3] w-full place-items-center rounded-2xl border-2 border-dashed border-white/15 text-sm text-white/45 transition hover:border-gold-400/60 hover:text-gold-300"
-                  >
-                    <span>
-                      Platz {seat + 1} frei
-                      <span className="block text-xs">Hierher setzen</span>
-                    </span>
-                  </motion.button>
-                )}
-              </AnimatePresence>
-              <span className="text-center text-xs text-white/40">Platz {seat + 1}</span>
-            </motion.div>
-          );
-        })}
-      </div>
-      <p className="mt-2 text-xs text-white/45">Gespielt wird im Uhrzeigersinn nach Platznummer.</p>
+                      <span className="tag text-[10px] text-white/35 transition-colors group-hover:text-gold-300">
+                        <span className="group-hover:hidden">Frei</span>
+                        <span className="hidden group-hover:inline">Hierher setzen</span>
+                      </span>
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+                <span className="tag flex gap-2 text-[10px] text-white/35">
+                  <span>{String(seat + 1).padStart(2, '0')}</span>
+                  {m && table.host_id === m.user_id && <span className="text-gold-400/80">Gastgeber</span>}
+                </span>
+              </motion.div>
+            );
+          })}
+        </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button className="btn-primary px-8 py-3 text-base" disabled={busy || count < 4 || count > 5} onClick={onStart}>
-          {hasPlayed ? 'Weiterspielen' : 'Spiel starten'}
-        </button>
-        {onBack && (
-          <button className="btn-secondary" onClick={onBack}>
-            Zurück zum Tisch
+        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <button className="btn-primary px-8 py-3 text-base" disabled={busy || count < 4 || count > 5} onClick={onStart}>
+            {hasPlayed ? 'Weiterspielen' : 'Spiel starten'} <ArrowRight className="size-4" />
           </button>
-        )}
-        <CameraButton camera={camera} />
-        <span className="flex-1" />
-        <button className="btn-ghost text-white/60" onClick={onLeave} disabled={busy}>
-          Tisch verlassen
-        </button>
-      </div>
-
-      <section className="panel mt-8 p-5">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="font-semibold">Hausregeln</h2>
-          {isHost && !editing && (
-            <button className="btn-ghost px-3 py-1.5 text-gold-300" onClick={() => setEditing(true)}>
-              Bearbeiten
+          {onBack && (
+            <button className={arrowLink} onClick={onBack}>
+              Zurück zum Tisch
             </button>
           )}
+          <CameraButton camera={camera} />
+          <span className="flex-1" />
+          <button className="tag text-[11px] text-white/40 transition-colors hover:text-red-300" onClick={onLeave} disabled={busy}>
+            Tisch verlassen
+          </button>
         </div>
+      </section>
+
+      {/* Regeln */}
+      <section className="border-t border-white/[0.08] py-8">
+        <SectionLabel
+          n="02"
+          action={
+            isHost && !editing ? (
+              <button className={arrowLink} onClick={() => setEditing(true)}>
+                Bearbeiten
+              </button>
+            ) : undefined
+          }
+        >
+          Hausregeln
+        </SectionLabel>
         {editing ? (
-          <div className="mt-4">
+          <div>
             <RulesForm value={draft} onChange={setDraft} />
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="mt-6 flex justify-end gap-3">
               <button
                 className="btn-ghost"
                 onClick={() => {
@@ -189,15 +201,16 @@ export function Lobby({
             </div>
           </div>
         ) : (
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {rulesSummary(settings).map((s) => (
-              <li key={s} className="rounded-lg bg-white/10 px-2.5 py-1 text-sm text-white/80">
+          <p className="max-w-3xl text-white/70">
+            {rulesSummary(settings).map((s, i) => (
+              <span key={s} className="whitespace-nowrap">
+                {i > 0 && <span className="px-2 text-white/25">/</span>}
                 {s}
-              </li>
+              </span>
             ))}
-          </ul>
+          </p>
         )}
-        {!isHost && <p className="mt-3 text-xs text-white/45">Nur der Gastgeber kann die Regeln ändern.</p>}
+        {!isHost && <p className="tag mt-3 text-[10px] text-white/35">Nur der Gastgeber kann die Regeln ändern</p>}
       </section>
     </div>
   );

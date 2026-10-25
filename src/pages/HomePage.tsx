@@ -2,7 +2,9 @@ import { DEFAULT_SETTINGS, normalizeSettings, type RuleSettings } from '@engine'
 import { AnimatePresence, motion } from 'motion/react';
 import { type FormEvent, lazy, Suspense, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, Plus } from 'lucide-react';
 import { RulesForm } from '../components/RulesForm';
+import { arrowLink, SectionLabel } from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
 import { TopBar } from '../components/TopBar';
 import { useAuth } from '../lib/auth';
@@ -95,7 +97,7 @@ export function HomePage() {
   return (
     <div className="felt min-h-full">
       <TopBar />
-      <section className="relative isolate overflow-hidden border-b border-white/[0.06]">
+      <section className="relative isolate overflow-hidden">
         {effects && (
           <div className="absolute inset-0 -z-10">
             <Suspense fallback={null}>
@@ -116,39 +118,30 @@ export function HomePage() {
           <p className="tag mt-3 max-w-md text-[11px] text-white/55">Eröffne einen Tisch und schick den Link an deine Runde.</p>
         </div>
       </section>
-      <main className="mx-auto max-w-5xl px-4 pt-2 pb-16">
-
-        <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_20rem]">
-          <motion.form
-            onSubmit={create}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-            className="panel p-6"
-          >
-            <h2 className="text-lg font-semibold">Neuer Tisch</h2>
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+      <main className="mx-auto max-w-5xl px-4 pb-20">
+        <section className="grid gap-12 border-t border-white/[0.08] py-10 lg:grid-cols-[1fr_17rem]">
+          <form onSubmit={create}>
+            <SectionLabel n="01">Neuer Tisch</SectionLabel>
+            <div className="flex items-end gap-4 border-b border-white/15 transition-colors focus-within:border-gold-400">
               <input
-                className="input"
-                placeholder="Name des Abends (optional)"
+                className="min-w-0 flex-1 bg-transparent py-3 text-2xl text-white outline-none placeholder:text-white/25"
+                placeholder="Name des Abends"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 maxLength={40}
-                aria-label="Name des Abends"
+                aria-label="Name des Abends (optional)"
               />
-              <button className="btn-primary shrink-0 px-6" disabled={busy}>
-                Tisch eröffnen
+              <button className="btn-primary mb-2 shrink-0" disabled={busy}>
+                Tisch eröffnen <ArrowRight className="size-4" />
               </button>
             </div>
             <button
               type="button"
-              className="mt-4 flex items-center gap-2 text-sm font-medium text-gold-300 hover:text-gold-400"
+              className={`${arrowLink} mt-4 flex items-center gap-2`}
               onClick={() => setShowRules((v) => !v)}
               aria-expanded={showRules}
             >
-              <motion.span animate={{ rotate: showRules ? 90 : 0 }} className="inline-block">
-                ▸
-              </motion.span>
+              <Plus className={`size-3.5 transition-transform ${showRules ? 'rotate-45' : ''}`} />
               Hausregeln anpassen
             </button>
             <AnimatePresence initial={false}>
@@ -159,80 +152,70 @@ export function HomePage() {
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="pt-4">
+                  <div className="pt-6">
                     <RulesForm value={rules} onChange={setRules} />
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
-          </motion.form>
+          </form>
 
-          <motion.form
-            onSubmit={join}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="panel h-fit p-6"
-          >
-            <h2 className="text-lg font-semibold">Tisch beitreten</h2>
-            <p className="mt-1 text-sm text-white/60">Code oder Einladungslink eingeben</p>
-            <input
-              className="input mt-4 text-center tabular-nums text-lg tracking-[0.3em] uppercase"
-              placeholder="ABC12"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              aria-label="Tisch-Code"
-            />
-            <button className="btn-secondary mt-3 w-full" disabled={!code.trim()}>
-              Beitreten
-            </button>
-            <div className="mt-5 border-t border-white/10 pt-4">
-              <Link to="/uebung" className="text-sm font-medium text-gold-300 hover:text-gold-400">
-                Alleine üben gegen Bots →
-              </Link>
+          <form onSubmit={join}>
+            <SectionLabel n="02">Beitreten</SectionLabel>
+            <div className="flex items-end gap-3 border-b border-white/15 transition-colors focus-within:border-gold-400">
+              <input
+                className="tag min-w-0 flex-1 bg-transparent py-3 text-2xl tracking-[0.3em] text-white outline-none placeholder:text-white/25"
+                placeholder="CODE"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                aria-label="Tisch-Code oder Einladungslink"
+              />
+              <button className="btn-ghost mb-2 p-2" disabled={!code.trim()} aria-label="Beitreten" data-cursor="Beitreten">
+                <ArrowRight className="size-5" />
+              </button>
             </div>
-          </motion.form>
-        </div>
-
-        <section className="mt-10">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-lg font-semibold">Deine Abende</h2>
-            <Link to="/statistik" className="text-sm font-medium text-gold-300 hover:text-gold-400">
-              Statistik ansehen →
+            <p className="mt-3 text-sm text-white/45">Code oder ganzen Einladungslink einfügen.</p>
+            <Link to="/uebung" className={`${arrowLink} mt-6 inline-flex items-center gap-2`}>
+              Alleine üben gegen Bots <ArrowRight className="size-3.5" />
             </Link>
-          </div>
+          </form>
+        </section>
+
+        <section className="border-t border-white/[0.08] py-10">
+          <SectionLabel
+            n="03"
+            action={
+              <Link to="/statistik" className={`${arrowLink} inline-flex items-center gap-2`}>
+                Statistik <ArrowRight className="size-3.5" />
+              </Link>
+            }
+          >
+            Deine Abende
+          </SectionLabel>
           {recent === null ? (
-            <p className="mt-4 text-white/50">Lädt …</p>
+            <p className="tag text-[11px] text-white/40">Lädt …</p>
           ) : recent.length === 0 ? (
-            <p className="mt-4 text-white/50">Noch keine Abende – eröffne den ersten Tisch!</p>
+            <p className="text-white/50">Noch keine Abende. Eröffne den ersten Tisch.</p>
           ) : (
-            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-              {recent.map((t, i) => (
-                <motion.li
-                  key={t.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.03 * i }}
-                >
+            <ul className="border-t border-white/[0.08]">
+              {recent.map((t) => (
+                <li key={t.id}>
                   <Link
                     to={`/t/${t.code}`}
-                    className="panel block p-4 transition hover:border-gold-400/50 hover:bg-felt-900/80"
+                    data-cursor="Öffnen"
+                    className="group grid grid-cols-[6.5rem_1fr_auto] items-baseline gap-4 border-b border-white/[0.08] py-4 transition-colors hover:bg-white/[0.03] sm:grid-cols-[7rem_1fr_1fr_auto]"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold">{t.name}</span>
-                      <span className="tabular-nums text-xs text-white/50">{t.code}</span>
-                    </div>
-                    <div className="mt-1 text-sm text-white/60">
-                      {new Date(t.created_at).toLocaleDateString('de-DE', {
-                        weekday: 'short',
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                      })}{' '}
-                      · {t.players.join(', ')}
-                    </div>
+                    <span className="tag text-[11px] text-white/40">
+                      {new Date(t.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                    </span>
+                    <span className="truncate text-lg font-medium transition-colors group-hover:text-gold-300">{t.name}</span>
+                    <span className="hidden truncate text-sm text-white/45 sm:block">{t.players.join(' · ')}</span>
+                    <span className="tag flex items-center gap-2 text-[11px] text-white/35">
+                      {t.code}
+                      <ArrowRight className="size-3.5 -translate-x-1 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+                    </span>
                   </Link>
-                </motion.li>
+                </li>
               ))}
             </ul>
           )}
