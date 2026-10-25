@@ -9,6 +9,20 @@ import { errorMessage, supabase } from '../lib/supabase';
 // three.js nur laden, wenn die 3D-Szene wirklich gezeigt wird
 const CardScene = lazy(() => import('../components/CardScene'));
 
+/** Häufige Supabase-Auth-Meldungen auf Deutsch */
+function translateAuthError(msg: string): string {
+  const m = msg.toLowerCase();
+  if (m.includes('invalid login credentials')) return 'E-Mail oder Passwort stimmt nicht.';
+  if (m.includes('already registered')) return 'Mit dieser E-Mail gibt es schon ein Konto.';
+  if (m.includes('email not confirmed')) return 'Bitte bestätige zuerst deine E-Mail-Adresse über den Link in der Mail.';
+  if (m.includes('rate limit')) {
+    return 'Gerade wurden zu viele Bestätigungsmails verschickt. Bitte versuch es in einer Stunde nochmal – oder sag dem Gastgeber Bescheid.';
+  }
+  if (m.includes('password should be at least')) return 'Das Passwort muss mindestens 6 Zeichen lang sein.';
+  if (m.includes('unable to validate email') || m.includes('invalid format')) return 'Diese E-Mail-Adresse sieht nicht gültig aus.';
+  return msg;
+}
+
 const HERO = ['H-10-0', 'C-Q-0', 'S-Q-0', 'D-A-0', 'C-J-0'];
 
 export function LoginPage() {
@@ -49,13 +63,7 @@ export function LoginPage() {
       }
     } catch (err) {
       const msg = await errorMessage(err);
-      setError(
-        msg === 'Invalid login credentials'
-          ? 'E-Mail oder Passwort stimmt nicht.'
-          : msg === 'User already registered'
-            ? 'Mit dieser E-Mail gibt es schon ein Konto.'
-            : msg,
-      );
+      setError(translateAuthError(msg));
     } finally {
       setBusy(false);
     }
