@@ -93,11 +93,11 @@ export function LoginPage() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="text-5xl font-semibold tracking-tight text-white"
+          className="display text-7xl text-white sm:text-9xl"
         >
           Doppelkopf
         </motion.h1>
-        <p className="-mt-3 text-white/70">Mit Freunden spielen – von überall, mit Kamera.</p>
+        <p className="tag -mt-2 text-[11px] text-white/55">Mit Freunden spielen · von überall · mit Kamera</p>
       </div>
 
       <motion.form

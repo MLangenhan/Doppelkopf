@@ -67,7 +67,7 @@ export function StatsPage() {
     <div className="felt min-h-full">
       <TopBar />
       <main className="mx-auto max-w-5xl px-4 pt-6 pb-16">
-        <h1 className="text-3xl font-semibold tracking-tight">Statistik</h1>
+        <h1 className="display text-6xl">Statistik</h1>
         <p className="mt-1 text-white/60">Über alle Abende hinweg.</p>
 
         <section className="panel mt-6 overflow-x-auto p-2 sm:p-4">

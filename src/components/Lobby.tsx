@@ -60,7 +60,7 @@ export function Lobby({
     <div className="mx-auto w-full max-w-6xl px-4 py-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{table.name}</h1>
+          <h1 className="display text-5xl sm:text-6xl">{table.name}</h1>
           <p className="mt-1 text-white/65">
             {count < 4
               ? `Noch ${4 - count} Spieler ${4 - count === 1 ? 'fehlt' : 'fehlen'} – teile den Link!`

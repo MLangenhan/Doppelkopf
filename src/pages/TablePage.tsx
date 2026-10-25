@@ -74,7 +74,7 @@ export function TablePage() {
   return (
     <div className="flex h-full flex-col">
       <TopBar>
-        <span className="truncate text-sm font-medium text-white/80">{table.name}</span>
+        <span className="tag truncate text-[11px] text-white/55">{table.name}</span>
         <span className="hidden rounded-md bg-black/30 px-2 py-0.5 tabular-nums text-xs tracking-widest text-white/60 sm:inline">
           {table.code}
         </span>

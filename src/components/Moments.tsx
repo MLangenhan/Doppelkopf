@@ -28,10 +28,10 @@ export function useMoments() {
   return { current, push };
 }
 
-const TONE: Record<NonNullable<Moment['tone']>, { text: string; glow: string; spark: string }> = {
-  gold: { text: 'from-gold-300 via-[#fff3cf] to-gold-400', glow: 'rgba(217,180,90,0.55)', spark: '#e8cd85' },
-  re: { text: 'from-[#9cc8ff] via-white to-re', glow: 'rgba(106,168,240,0.55)', spark: '#9cc8ff' },
-  kontra: { text: 'from-[#ffb49c] via-white to-kontra', glow: 'rgba(238,138,107,0.55)', spark: '#ffb49c' },
+const TONE: Record<NonNullable<Moment['tone']>, { glow: string; spark: string }> = {
+  gold: { glow: 'rgba(217,180,90,0.5)', spark: '#e8cd85' },
+  re: { glow: 'rgba(106,168,240,0.5)', spark: '#9cc8ff' },
+  kontra: { glow: 'rgba(238,138,107,0.5)', spark: '#ffb49c' },
 };
 
 const SPARKS = Array.from({ length: 14 }, (_, i) => {
@@ -67,17 +67,17 @@ export function MomentOverlay({ moment }: { moment: Shown | null }) {
             {/* Dunkler Schein, damit der Text auch über Karten lesbar ist */}
             <span aria-hidden className="absolute -inset-x-10 -inset-y-4 rounded-full bg-felt-950/75 blur-2xl" />
             <span
-              className={`relative bg-gradient-to-b bg-clip-text text-6xl font-bold tracking-tight text-transparent sm:text-7xl ${TONE[moment.tone ?? 'gold'].text}`}
-              style={{ filter: `drop-shadow(0 0 24px ${TONE[moment.tone ?? 'gold'].glow}) drop-shadow(0 4px 2px rgba(0,0,0,0.5))` }}
+              className={`display relative text-7xl sm:text-8xl ${moment.tone === 're' ? 'text-re' : moment.tone === 'kontra' ? 'text-kontra' : 'text-gold-300'}`}
+              style={{ textShadow: `0 0 32px ${TONE[moment.tone ?? 'gold'].glow}, 0 3px 0 rgba(0,0,0,0.45)` }}
             >
-              {moment.title}
+              {moment.title.replace(/!$/, '')}
             </span>
             {moment.sub && (
               <motion.span
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
-                className="relative mt-1 rounded-full bg-felt-950/80 px-3 py-1 text-sm font-semibold text-white/90"
+                className="tag relative mt-2 text-[11px] text-white/80"
               >
                 {moment.sub}
               </motion.span>

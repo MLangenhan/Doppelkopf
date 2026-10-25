@@ -57,11 +57,12 @@ export function TrickArea({
 }) {
   const cardH = cardWidth * (244.64 / 169.075);
   const matW = cardWidth * 4.4;
-  const matH = cardH * 2.25;
+  const matH = cardH * 2.05;
   const complete = winnerRel !== null;
 
   return (
-    <div className="relative grid place-items-center" style={{ width: matW, height: matH }}>
+    // Die Fläche selbst fängt keine Klicks ab – sonst blockiert sie Knöpfe, die darunter liegen
+    <div className="pointer-events-none relative grid place-items-center" style={{ width: matW, height: matH }}>
       {/* Filz */}
       <motion.div
         aria-hidden
@@ -88,9 +89,10 @@ export function TrickArea({
 
       {/* Karten */}
       <div
-        className={`absolute inset-0 ${onCollect ? 'cursor-pointer' : ''}`}
+        className={`absolute inset-0 ${onCollect ? 'pointer-events-auto cursor-pointer' : ''}`}
         onClick={onCollect}
         role={onCollect ? 'button' : undefined}
+        data-cursor={onCollect ? 'Nehmen' : undefined}
         aria-label={onCollect ? 'Stich nehmen' : undefined}
         aria-live="polite"
       >

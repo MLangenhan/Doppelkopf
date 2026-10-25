@@ -141,7 +141,7 @@ export function PracticePage() {
   return (
     <div className="flex h-full flex-col">
       <TopBar>
-        <span className="truncate text-sm font-medium text-white/80">Übungsspiel gegen Bots</span>
+        <span className="tag truncate text-[11px] text-white/55">Übungsspiel gegen Bots</span>
       </TopBar>
       <GameView
         game={game}

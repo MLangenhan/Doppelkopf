@@ -2,6 +2,7 @@ import type { Card } from '@engine';
 import { AnimatePresence, motion } from 'motion/react';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { PlayingCard } from './PlayingCard';
+import { TiltCard } from './TiltCard';
 
 const RATIO = 244.64 / 169.075;
 
@@ -89,6 +90,7 @@ export function Hand({
               type="button"
               aria-pressed={isSelected}
               disabled={!interactive}
+              data-cursor={mode === 'pick' ? (isSelected ? 'Abwählen' : 'Wählen') : isPlayable ? (isSelected ? 'Spielen' : 'Wählen') : undefined}
               onClick={() => click(card)}
               className={`absolute bottom-0 rounded-[6%/4.2%] outline-none focus-visible:ring-4 focus-visible:ring-gold-300 ${
                 interactive ? 'cursor-pointer' : 'cursor-default'
@@ -113,7 +115,9 @@ export function Hand({
                 filter: { duration: 0.2 },
               }}
             >
-              <PlayingCard card={card} width={cardW} className={isSelected ? 'ring-4 ring-gold-400' : ''} />
+              <TiltCard>
+                <PlayingCard card={card} width={cardW} className={isSelected ? 'ring-4 ring-gold-400' : ''} />
+              </TiltCard>
               {isNew && (
                 <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-gold-400 px-2 py-0.5 text-[10px] font-bold text-felt-950">
                   neu

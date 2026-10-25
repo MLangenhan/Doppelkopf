@@ -1,7 +1,7 @@
 # Doppelkopf
 
 Doppelkopf im Browser mit Freunden, mit Kamerabild aller Mitspieler.
-Frontend: React, Vite, Tailwind, Motion und die Schrift Geist (selbst gehostet, keine Anfragen an Google). Backend: Supabase (Postgres, Realtime, Edge Function).
+Frontend: React, Vite, Tailwind und Motion. Schriften: Big Shoulders Display für Überschriften, IBM Plex Mono für Labels, Geist für Text (alle selbst gehostet, keine Anfragen an Google). Backend: Supabase (Postgres, Realtime, Edge Function).
 
 **Live:** https://mlangenhan.github.io/Doppelkopf/
 
@@ -21,6 +21,7 @@ Frontend: React, Vite, Tailwind, Motion und die Schrift Geist (selbst gehostet, 
 - **Persönliche Einstellungen** (Zahnrad oben rechts): Spielbare Karten hervorheben lässt sich abschalten, um ohne Hilfe zu spielen.
 - **Stich nehmen**: Ein fertiger Stich bleibt liegen, bis der Gewinner ihn mit der Leertaste (oder per Klick) nimmt. Nach 10 Sekunden darf jeder wegräumen. Der letzte Stich ist immer klein sichtbar.
 - **Große Momente**: Ansagen, Soli, Hochzeit, Schweinchen, Doppelkopf, Fuchs und Karlchen erscheinen groß auf der Spielfläche, beim Sieg gibt es Konfetti.
+- **Eigener Cursor** (Punkt und Ring, zeigt „Spielen“ oder „Nehmen“) und **Karten mit 3D-Neigung** und Glanzlicht in der Hand. Beides nur mit Maus, abschaltbar über „Effekte“.
 - **Sounds** für Karten, Stiche, Ansagen, „Du bist dran“ und das Spielende – im Browser erzeugt (Web Audio), ohne Audiodateien. An/aus und Lautstärke in den Einstellungen.
 - **Kein Schummeln möglich**: Gemischt und gespielt wird ausschließlich in der Edge Function. Jeder Browser bekommt nur die eigene Hand (Row Level Security).
 

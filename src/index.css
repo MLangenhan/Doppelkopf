@@ -2,7 +2,9 @@
 
 @theme {
   --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  /* Wie im Portfolio: schmale Display-Schrift für Großes, Mono für Labels */
+  --font-display: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Ruhiges Grün-Anthrazit: 950 = tiefste Ebene, 800 = Flächen, 600 = Ränder/Hover */
   --color-felt-950: #0a1612;
@@ -68,6 +70,29 @@ body {
 @utility input {
   @apply w-full rounded-lg border border-white/10 bg-felt-950 px-3.5 py-2.5 text-white placeholder-white/35 outline-none
     transition focus:border-gold-400 focus:ring-2 focus:ring-gold-400/30;
+}
+
+/* Mono-Label in Großbuchstaben (Infozeilen, Status, kleine Beschriftungen) */
+@utility tag {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* Große, schmale Überschriften */
+@utility display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.9;
+}
+
+/* Eigener Cursor aktiv: Systemcursor ausblenden (Textfelder behalten den Strich) */
+html.has-cursor,
+html.has-cursor *:not(input):not(textarea) {
+  cursor: none !important;
 }
 
 @utility label {

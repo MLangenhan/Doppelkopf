@@ -4,6 +4,7 @@ import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-d
 import { AuthProvider, useAuth } from './lib/auth';
 import { usePrefs } from './lib/prefs';
 import { configureSound } from './lib/sound';
+import { Cursor } from './components/Cursor';
 import { ToastProvider } from './components/Toast';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
@@ -36,6 +37,7 @@ export function App() {
   return (
     <MotionConfig reducedMotion="user">
       <SoundSync />
+      <Cursor />
       <AuthProvider>
         <ToastProvider>
           {/* HashRouter, damit GitHub Pages bei Direktaufrufen keine 404 liefert */}

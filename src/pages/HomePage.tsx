@@ -109,11 +109,11 @@ export function HomePage() {
           <motion.h1
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-semibold tracking-tight text-white sm:text-5xl"
+            className="display text-6xl text-white sm:text-8xl"
           >
             Hallo {profile?.display_name ?? ''}
           </motion.h1>
-          <p className="mt-2 max-w-md text-white/65">Eröffne einen Tisch und schick den Link an deine Runde.</p>
+          <p className="tag mt-3 max-w-md text-[11px] text-white/55">Eröffne einen Tisch und schick den Link an deine Runde.</p>
         </div>
       </section>
       <main className="mx-auto max-w-5xl px-4 pt-2 pb-16">

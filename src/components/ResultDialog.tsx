@@ -42,7 +42,7 @@ export function ResultDialog({
       >
         {view.redeal ? (
           <>
-            <h2 id="result-title" className="text-2xl font-semibold tracking-tight">
+            <h2 id="result-title" className="display text-5xl">
               Neu geben
             </h2>
             <p className="mt-2 text-white/80">
@@ -81,15 +81,15 @@ function ResultBody({ view, name, myPos }: { view: PublicGameState; name: (pos: 
   return (
     <>
       <Confetti active={iWon} />
-      <p className="text-sm font-medium text-white/60">
+      <p className="tag text-[11px] text-white/50">
         {resultKindLabel(kind, view.solo)}
         {soloist !== null && ` von ${name(soloist)}`}
         {view.revealedKind === 'silentSolo' && ' – Überraschung!'}
       </p>
-      <h2 id="result-title" className="text-3xl font-semibold tracking-tight">
+      <h2 id="result-title" className="display text-6xl">
         {winner ? `${partyLabel(winner)} gewinnt` : 'Kein Gewinner'}
         {myParty && winner && (
-          <span className={`ml-3 align-middle text-base font-semibold ${iWon ? 'text-emerald-300' : 'text-red-300'}`}>
+          <span className={`tag ml-3 align-middle text-xs ${iWon ? 'text-emerald-300' : 'text-red-300'}`}>
             {iWon ? 'Gewonnen' : 'Verloren'}
           </span>
         )}

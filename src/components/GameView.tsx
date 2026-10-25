@@ -10,7 +10,7 @@ import {
   sortHand,
   sumAugen,
 } from '@engine';
-import { X } from 'lucide-react';
+import { ListOrdered, Video, VideoOff, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -327,7 +327,7 @@ export function GameView({
   // Seitenleiste nur auf sehr breiten Bildschirmen dauerhaft, sonst als Schublade – der Tisch braucht den Platz
   const wide = vp.w >= 1700;
 
-  const trickCardW = Math.round(Math.max(64, Math.min(104, Math.min(vp.w * 0.07, vp.h * 0.1))));
+  const trickCardW = Math.round(Math.max(60, Math.min(96, Math.min(vp.w * 0.065, vp.h * 0.085))));
   // Kameras in den vier Ecken, so groß wie es der Platz erlaubt
   const camW = Math.round(Math.max(180, Math.min(400, vp.w * 0.22, vp.h * 0.36)));
 
@@ -494,25 +494,54 @@ export function GameView({
 
         {/* Oben Mitte: Infoleiste und wer aussetzt */}
         <div className="flex min-w-0 flex-col items-center gap-3 self-start">
-          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-sm">
-            <span className="rounded-md bg-black/30 px-2 py-0.5 font-semibold">Spiel {game.number}</span>
-            <span className="font-medium text-white/90">{gameKindLabel(view, name)}</span>
+          {/* Eine schlanke Infozeile statt vieler Kästen */}
+          <div className="tag flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[11px] text-white/50">
+            <span className="text-white/80">Spiel {String(game.number).padStart(2, '0')}</span>
+            <span aria-hidden>/</span>
+            <span className="text-white/80">{gameKindLabel(view, name)}</span>
             {announcementText && (
-              <span className="rounded-md bg-gold-400/90 px-2 py-0.5 font-semibold text-felt-950">{announcementText}</span>
+              <>
+                <span aria-hidden>/</span>
+                <span className="text-gold-300">{announcementText}</span>
+              </>
             )}
             {view.armut?.returnedTrumps != null && view.kind === 'armut' && (
-              <span className="text-white/60">
-                {view.armut.returnedTrumps} {view.armut.returnedTrumps === 1 ? 'Trumpf' : 'Trümpfe'} zurück
-              </span>
+              <>
+                <span aria-hidden>/</span>
+                <span>
+                  {view.armut.returnedTrumps} {view.armut.returnedTrumps === 1 ? 'Trumpf' : 'Trümpfe'} zurück
+                </span>
+              </>
             )}
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-1">
+          <div className="flex items-center gap-1">
             {!wide && (
-              <button className="btn-ghost px-2.5 py-1" onClick={() => setSidebarOpen(true)}>
-                Punkte & Regeln
+              <button
+                className="btn-ghost p-2"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Punkte und Regeln"
+                data-cursor="Punkte"
+              >
+                <ListOrdered className="size-4" />
               </button>
             )}
-            <CameraButton camera={camera} compact />
+            {camera.state === 'on' ? (
+              <button
+                className={`btn-ghost p-2 ${camera.enabled ? '' : 'text-red-300'}`}
+                onClick={camera.toggle}
+                aria-pressed={camera.enabled}
+                aria-label={camera.enabled ? 'Kamera ausschalten' : 'Kamera einschalten'}
+                data-cursor={camera.enabled ? 'Kamera aus' : 'Kamera an'}
+              >
+                {camera.enabled ? <Video className="size-4" /> : <VideoOff className="size-4" />}
+              </button>
+            ) : camera.state === 'off' ? (
+              <button className="btn-ghost p-2 text-white/55" onClick={camera.start} aria-label="Kamera einschalten" data-cursor="Kamera an">
+                <VideoOff className="size-4" />
+              </button>
+            ) : (
+              <CameraButton camera={camera} compact />
+            )}
           </div>
           {view.phase === 'playing' && <LastTrick trick={view.collectPending ? view.previousTrick : view.lastTrick} name={name} />}
           {sittingOut.map((m) => (
@@ -524,7 +553,7 @@ export function GameView({
               videoOff={m.user_id === me && !camera.enabled}
               className="aspect-[4/3] w-40"
             >
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-2 pt-5 pb-1.5 text-xs font-semibold">
+              <div className="tag absolute bottom-1.5 left-1.5 rounded bg-felt-950/75 px-1.5 py-0.5 text-[10px]">
                 {m.display_name}
                 {m.user_id === me && ' (du)'} · setzt aus
               </div>
