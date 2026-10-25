@@ -7,6 +7,7 @@ export default defineConfig({
   // GitHub Pages liefert die Seite unter /Doppelkopf/ aus.
   base: process.env.GITHUB_PAGES ? '/Doppelkopf/' : '/',
   plugins: [react(), tailwindcss()],
+  build: { chunkSizeWarningLimit: 900 },
   resolve: {
     alias: {
       '@engine': fileURLToPath(new URL('./supabase/functions/_shared/engine/index.ts', import.meta.url)),
