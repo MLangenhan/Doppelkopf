@@ -1,0 +1,6 @@
+# Supabase-Projekt: fvheqqqqgwuqleifehar
+project_id = "doppelkopf"
+
+[functions.game]
+# Die Funktion prüft das Login selbst (funktioniert mit den neuen API-Keys).
+verify_jwt = false

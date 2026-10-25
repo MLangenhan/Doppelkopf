@@ -85,7 +85,7 @@ export function publicView(s: GameState): PublicGameState {
     handCounts: s.hands.map((h) => h.length),
     declTurn: s.declTurn,
     declarations,
-    kind: silent ? 'normal' : s.kind,
+    kind: s.kind === 'silentSolo' ? 'normal' : s.kind,
     solo: s.solo,
     soloist: silent && !finished ? null : s.soloist,
     hochzeit: s.hochzeit,
