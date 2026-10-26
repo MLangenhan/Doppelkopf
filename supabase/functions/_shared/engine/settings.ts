@@ -57,7 +57,7 @@ export const DEFAULT_SETTINGS: RuleSettings = {
     diamonds: true,
   },
   armut: true,
-  schweinchen: true,
+  schweinchen: false,
   schmeissen: {
     over80: true,
     fiveKings: true,

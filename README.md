@@ -10,7 +10,7 @@ Frontend: React, Vite, Tailwind und Motion. Schriften: Big Shoulders Display fü
 - **Klassische Regeln** mit Hausregeln, die pro Tisch eingestellt werden:
   - mit oder ohne Neunen
   - Dullen-Regel (erste, zweite oder zweite nur im letzten Stich)
-  - Sonderpunkte: Doppelkopf, Fuchs, Karlchen und Schweinchen, jeweils abschaltbar
+  - Sonderpunkte: Doppelkopf, Fuchs, Karlchen und Schweinchen, jeweils abschaltbar (Schweinchen ist standardmäßig aus)
   - Ansagen: Re/Kontra, keine 90/60/30, schwarz
   - Vorbehalte: Hochzeit, Armut (bei genau 3 Trümpfen), alle Soli einzeln wählbar, Schmeißen (über 80 Augen, 5 Könige, weniger als 3 Trümpfe, 5 Neunen)
   - stilles Solo
@@ -23,6 +23,7 @@ Frontend: React, Vite, Tailwind und Motion. Schriften: Big Shoulders Display fü
   - **Mittel**: denkt in Parteien (schmieren beim Partner, Fuchs retten, sichere Stiche), sagt mit starker Hand an und spielt mit sehr starker Hand Soli oder Armut.
   - **Schwer**: verteilt die unbekannten Karten passend zu allem Gesehenen (Fehlfarben, Kreuz-Damen, Ansagen) immer wieder neu, spielt jede mögliche Karte bis zum Spielende durch und nimmt die mit dem besten Ergebnis. Ansagen nach geschätzter Siegchance.
   - Stärkevergleich: `TURNIER=1 npx vitest run tests/bot-tournament.test.ts`
+- **Seitenleiste** (Symbol neben der Infozeile): Punkte, letzte Spiele und Hausregeln. Der Gastgeber kann die Regeln dort zwischen den Spielen anpassen, sie gelten ab dem nächsten Spiel.
 - **Persönliche Einstellungen** (Zahnrad oben rechts): Spielbare Karten hervorheben lässt sich abschalten, um ohne Hilfe zu spielen. Jeder Effekt (Zeiger, Neigung, Trumpf-Einschlag, große Momente, Auswertung, Konfetti, Atmosphäre, 3D-Karten) ist einzeln schaltbar.
 - **Karten sortieren**: Trumpf zuerst, Trumpf zuletzt, nach Farben oder eigene Reihenfolge – Karten einfach in der Hand an ihren Platz ziehen. Der Knopf neben der Infozeile schaltet die Sortierung durch.
 - **Verlassen**: Zurück zur Übersicht (der Platz bleibt) oder das laufende Spiel für alle abbrechen; ein abgebrochenes Spiel zählt nicht.

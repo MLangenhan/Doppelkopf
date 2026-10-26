@@ -5,6 +5,7 @@ import {
   type Declaration,
   faceOf,
   type GameAction,
+  type RuleSettings,
   isTrump,
   legalCards,
   SOLO_NAMES,
@@ -34,7 +35,7 @@ import { Hand } from './Hand';
 import { LastTrick } from './LastTrick';
 import { MomentOverlay, useMoments } from './Moments';
 import { ResultDialog } from './ResultDialog';
-import { rulesSummary } from './RulesForm';
+import { RulesForm, rulesSummary } from './RulesForm';
 import { RecentGames } from './RecentGames';
 import { SpaceHint } from './SpaceHint';
 import { ScoreSheet } from './ScoreSheet';
@@ -86,6 +87,7 @@ export function GameView({
   onShowLobby,
   onLeave,
   onAbort,
+  rules,
 }: {
   game: GameRow;
   hand: Card[];
@@ -104,6 +106,13 @@ export function GameView({
   onLeave?: () => void;
   /** Laufendes Spiel für alle abbrechen */
   onAbort?: () => Promise<void> | void;
+  /** Hausregeln in der Seitenleiste anpassen */
+  rules?: {
+    value: RuleSettings;
+    /** null = darf bearbeiten, sonst der Grund, warum nicht */
+    locked: string | null;
+    onSave: (s: RuleSettings) => Promise<void>;
+  };
 }) {
   const toast = useToast();
   const vp = useViewport();
@@ -401,8 +410,6 @@ export function GameView({
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
-  // Seitenleiste nur auf sehr breiten Bildschirmen dauerhaft, sonst als Schublade – der Tisch braucht den Platz
-  const wide = vp.w >= 1700;
   // Handy (hochkant oder sehr niedrig quer): eigenes, gestapeltes Layout
   const mobile = vp.w < 760 || vp.h < 480;
 
@@ -526,16 +533,7 @@ export function GameView({
         <h3 className="mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Letzte Spiele</h3>
         <RecentGames games={finishedGames} name={nameOfUser} />
       </section>
-      <section>
-        <h3 className="mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Hausregeln</h3>
-        <ul className="flex flex-wrap gap-1.5">
-          {rulesSummary(view.settings).map((s) => (
-            <li key={s} className="rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/75">
-              {s}
-            </li>
-          ))}
-        </ul>
-      </section>
+      <RulesPanel current={view.settings} rules={rules} />
       <div className="mt-auto flex flex-col gap-2">
         {onShowLobby && (
           <button className="btn-ghost" onClick={onShowLobby} disabled={!finished}>
@@ -570,11 +568,9 @@ export function GameView({
 
   const toolbar = (
     <div className="flex items-center gap-1">
-      {!wide && (
-        <button className="btn-ghost p-2" onClick={() => setSidebarOpen(true)} aria-label="Punkte und Regeln" data-cursor="Punkte">
-          <ListOrdered className="size-4" />
-        </button>
-      )}
+      <button className="btn-ghost p-2" onClick={() => setSidebarOpen(true)} aria-label="Punkte und Regeln" data-cursor="Punkte">
+        <ListOrdered className="size-4" />
+      </button>
       {camera.state === 'on' ? (
         <button
           className={`btn-ghost p-2 ${camera.enabled ? '' : 'text-red-300'}`}
@@ -768,9 +764,6 @@ export function GameView({
       </main>
       )}
 
-      {wide ? (
-        <aside className="w-72 shrink-0 border-l border-white/10 bg-felt-950">{sidebar}</aside>
-      ) : (
         <AnimatePresence>
           {sidebarOpen && (
             <>
@@ -782,7 +775,7 @@ export function GameView({
                 onClick={() => setSidebarOpen(false)}
               />
               <motion.aside
-                className="fixed inset-y-0 right-0 z-50 w-80 max-w-[90vw] border-l border-white/10 bg-felt-950/95"
+                className="fixed inset-y-0 right-0 z-50 w-[26rem] max-w-[92vw] border-l border-white/10 bg-felt-950/95"
                 initial={{ x: '100%' }}
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
@@ -796,7 +789,6 @@ export function GameView({
             </>
           )}
         </AnimatePresence>
-      )}
 
       <LeaveDialog
         open={leaveOpen}
@@ -828,5 +820,74 @@ export function GameView({
         </div>
       )}
     </div>
+  );
+}
+
+/** Hausregeln in der Seitenleiste: Übersicht, für den Gastgeber zwischen den Spielen bearbeitbar. */
+function RulesPanel({
+  current,
+  rules,
+}: {
+  current: RuleSettings;
+  rules?: { value: RuleSettings; locked: string | null; onSave: (s: RuleSettings) => Promise<void> };
+}) {
+  const [draft, setDraft] = useState<RuleSettings | null>(null);
+  const [saving, setSaving] = useState(false);
+  const shown = rules?.value ?? current;
+  const changed = JSON.stringify(shown) !== JSON.stringify(current);
+
+  return (
+    <section>
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-xs font-semibold tracking-wider text-white/50 uppercase">Hausregeln</h3>
+        {rules && !draft && (
+          <button
+            className="btn-ghost tag px-2 py-1 text-[10px]"
+            onClick={() => setDraft(rules.value)}
+            disabled={!!rules.locked}
+            title={rules.locked ?? undefined}
+          >
+            Anpassen
+          </button>
+        )}
+      </div>
+      {draft ? (
+        <div>
+          <RulesForm value={draft} onChange={setDraft} narrow />
+          <div className="mt-4 flex justify-end gap-2">
+            <button className="btn-ghost" onClick={() => setDraft(null)}>
+              Abbrechen
+            </button>
+            <button
+              className="btn-primary"
+              disabled={saving}
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  await rules!.onSave(draft);
+                  setDraft(null);
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              Speichern
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <ul className="flex flex-wrap gap-1.5">
+            {rulesSummary(shown).map((s) => (
+              <li key={s} className="rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/75">
+                {s}
+              </li>
+            ))}
+          </ul>
+          {changed && <p className="mt-2 text-xs text-gold-300">Gilt ab dem nächsten Spiel.</p>}
+          {rules?.locked && <p className="tag mt-2 text-[10px] text-white/35">{rules.locked}</p>}
+        </>
+      )}
+    </section>
   );
 }

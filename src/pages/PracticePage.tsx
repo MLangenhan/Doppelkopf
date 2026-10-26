@@ -59,7 +59,15 @@ function actor(s: GameState): number | null {
 export function PracticePage() {
   const { profile } = useAuth();
   const camera = useCamera();
-  const [settings] = useState(loadRules);
+  const [settings, setSettings] = useState(loadRules);
+  const saveRules = async (s: RuleSettings) => {
+    setSettings(s);
+    try {
+      localStorage.setItem('doko:lastRules', JSON.stringify(s));
+    } catch {
+      // ignorieren
+    }
+  };
   const [level, setLevelState] = useState<BotLevel>(loadLevel);
   const setLevel = (l: BotLevel) => {
     setLevelState(l);
@@ -196,6 +204,7 @@ export function PracticePage() {
         act={act}
         startGame={startGame}
         onLeave={() => navigate('/')}
+        rules={{ value: settings, locked: null, onSave: saveRules }}
       />
     </div>
   );

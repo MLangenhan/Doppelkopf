@@ -55,15 +55,18 @@ export function RulesForm({
   value,
   onChange,
   disabled,
+  narrow,
 }: {
   value: RuleSettings;
   onChange: (s: RuleSettings) => void;
   disabled?: boolean;
+  /** Immer einspaltig (Seitenleiste) */
+  narrow?: boolean;
 }) {
   const set = <K extends keyof RuleSettings>(key: K, v: RuleSettings[K]) => onChange({ ...value, [key]: v });
 
   return (
-    <div className="grid gap-5 sm:grid-cols-2">
+    <div className={`grid gap-5 ${narrow ? '' : 'sm:grid-cols-2'}`}>
       <Section title="Grundregeln">
         <Toggle
           label="Mit Neunen"

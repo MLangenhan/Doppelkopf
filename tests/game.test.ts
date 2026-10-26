@@ -250,7 +250,7 @@ describe('Öffentliche Sicht', () => {
   });
 
   it('Schweinchen wird erst beim Ausspielen sichtbar', () => {
-    let s = declareAll(newGame(dealWith([['D-A', 'D-A', 'C-Q'], ['C-Q'], [], []])));
+    let s = declareAll(newGame(dealWith([['D-A', 'D-A', 'C-Q'], ['C-Q'], [], []]), { schweinchen: true }));
     expect(s.schweinchen).toBe(0);
     expect(publicView(s).schweinchen).toBeNull();
     s = applyAction(s, 0, { type: 'play', card: s.hands[0].find((c) => c.startsWith('D-A'))! });

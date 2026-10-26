@@ -1,4 +1,4 @@
-import type { RuleSettings } from '@engine';
+import { normalizeSettings, type RuleSettings } from '@engine';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Atmosphere } from '../components/Atmosphere';
@@ -134,6 +134,16 @@ export function TablePage() {
           onShowLobby={() => setLobby(true)}
           onLeave={() => navigate('/')}
           onAbort={() => run(() => api.abortGame(t.game!.id))}
+          rules={{
+            value: normalizeSettings(table.settings),
+            locked: table.host_id !== t.me ? 'Nur der Gastgeber kann die Regeln ändern' : running ? 'Änderbar, sobald das Spiel vorbei ist' : null,
+            onSave: (s) =>
+              run(async () => {
+                await api.updateSettings(table.id, s);
+                await t.refresh();
+                toast('Regeln gespeichert – gelten ab dem nächsten Spiel', 'success');
+              }),
+          }}
         />
       )}
     </div>
