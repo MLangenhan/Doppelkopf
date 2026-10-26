@@ -610,6 +610,19 @@ export function GameView({
     </div>
   );
 
+  // Wer den Stich eröffnet (hat)
+  const leaderPos = view.phase === 'playing' && view.current ? view.current.leader : null;
+  const leaderLabel =
+    leaderPos === null
+      ? undefined
+      : shownTrick.plays.length === 0
+        ? leaderPos === myPos
+          ? 'Du spielst aus'
+          : `${name(leaderPos)} spielt aus`
+        : leaderPos === myPos
+          ? 'Du hast ausgespielt'
+          : `${name(leaderPos)} hat ausgespielt`;
+
   const trickArea = (
     <TrickArea
       trickKey={shownTrick.key}
@@ -618,6 +631,7 @@ export function GameView({
       winnerLabel={
         shownTrick.winner === null ? undefined : shownTrick.winner === myPos ? 'Dein Stich' : `Stich für ${name(shownTrick.winner)}`
       }
+      leaderLabel={leaderLabel}
       cardWidth={trickCardW}
       onCollect={iCollect ? collect : undefined}
       impact={impact}
@@ -680,7 +694,8 @@ export function GameView({
   ));
 
   return (
-    <div className="flex min-h-0 flex-1">
+    // overflow-hidden: einfliegende Karten und das Beben dürfen keine Scrollbalken erzeugen
+    <div className="flex min-h-0 flex-1 overflow-hidden">
       {mobile ? (
         // Handy: Kameras klein in einer Reihe, darunter der Stich, unten die Hand
         <main ref={tableRef} className="felt relative isolate flex min-w-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto px-2 pt-1 pb-2">
@@ -705,7 +720,8 @@ export function GameView({
               {sittingOutTiles}
             </div>
           )}
-          <div className="grid min-h-0 flex-1 place-items-center">{trickArea}</div>
+          {/* overflow-clip: einfliegende Karten lassen die Seite nicht scrollen */}
+          <div className="grid min-h-0 flex-1 place-items-center overflow-clip pt-5">{trickArea}</div>
           <div className="flex min-h-11 flex-col items-center justify-end gap-2">
             <AnimatePresence mode="wait">{panel}</AnimatePresence>
             {hint}
@@ -716,7 +732,7 @@ export function GameView({
       ) : (
       <main
         ref={tableRef}
-        className="felt relative isolate grid min-w-0 flex-1 gap-3 p-3"
+        className="felt relative isolate grid min-w-0 flex-1 gap-3 overflow-hidden p-3"
         style={{ gridTemplateColumns: `${camW}px minmax(0, 1fr) ${camW}px`, gridTemplateRows: 'auto minmax(0, 1fr) auto' }}
       >
         <Atmosphere />

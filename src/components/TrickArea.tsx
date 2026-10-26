@@ -86,6 +86,7 @@ export function TrickArea({
   plays,
   winnerRel,
   winnerLabel,
+  leaderLabel,
   cardWidth,
   onCollect,
   impact,
@@ -98,6 +99,8 @@ export function TrickArea({
   winnerRel: Rel | null;
   /** Beschriftung, sobald der Stich komplett ist, z. B. "Stich für Anna" */
   winnerLabel?: string;
+  /** Wer ausspielt bzw. ausgespielt hat, z. B. "Anna spielt aus" */
+  leaderLabel?: string;
   cardWidth: number;
   /** Wenn gesetzt, nimmt ein Klick auf den Stich ihn an sich */
   onCollect?: () => void;
@@ -137,6 +140,23 @@ export function TrickArea({
           ))}
         </div>
       </div>
+
+      {/* Wer ausspielt: oben über dem Stich */}
+      <AnimatePresence mode="wait">
+        {leaderLabel && (
+          <motion.div
+            key={leaderLabel}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.2 }}
+            className="tag absolute bottom-full left-1/2 mb-1.5 flex -translate-x-1/2 items-center gap-1.5 text-[10px] whitespace-nowrap text-white/55"
+          >
+            <span className="size-1.5 rounded-full bg-gold-400" aria-hidden />
+            {leaderLabel}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Druckwelle beim Trumpf-Einschlag */}
       <AnimatePresence>
@@ -200,6 +220,13 @@ export function TrickArea({
                   variants={cardVariants}
                 >
                   <PlayingCard card={card} width={cardWidth} className={custom.isWinner ? 'ring-[3px] ring-gold-400' : ''} />
+                  {/* Ausgespielte Karte: kleiner goldener Punkt oben */}
+                  {i === 0 && (
+                    <span
+                      aria-hidden
+                      className="absolute -top-1 left-1/2 z-10 size-2.5 -translate-x-1/2 rounded-full bg-gold-400 ring-2 ring-felt-900"
+                    />
+                  )}
                   <motion.div className="absolute inset-0" custom={custom} variants={backVariants} aria-hidden>
                     <PlayingCard back width={cardWidth} />
                   </motion.div>
