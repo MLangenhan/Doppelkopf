@@ -1,7 +1,7 @@
 # Aufruf: python3 assets/berliner-bild/cut.py  (braucht Pillow und numpy)
 # Schneidet die Bildkarten aus den Commons-Scans aus, richtet sie gerade und hellt das Papier auf.
 import math, os
-from PIL import Image, ImageOps
+from PIL import Image, ImageEnhance
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -54,13 +54,34 @@ for rank, path in SRC.items():
         rr = runs(mm.mean(axis=1) > 0.5, 50)[0]
         cw, ch = cc[1] - cc[0], rr[1] - rr[0]
         # Nur den Rand mit Schatten weg; die Karte ist schmaler als 1 : 1,4, also seitlich weiß auffüllen
-        ix, iy = cw * 0.02, ch * 0.012
+        ix, iy = cw * 0.03, ch * 0.012
         box = (cc[0] + ix, rr[0] + iy, cc[1] - ix, rr[1] - iy)
         inner = card.crop(tuple(int(round(v)) for v in box))
         # Papierton auf Weiß ziehen (hellstes Perzentil je Kanal)
         arr = np.asarray(inner).astype(float)
-        paper = np.percentile(arr.reshape(-1, 3), 97, axis=0)
-        inner = Image.fromarray(np.clip(arr * (255.0 / paper), 0, 255).astype(np.uint8))
+        # und den Druck kräftiger machen, damit er neben den reinen Farben der Zahlenkarten nicht blass wirkt
+        flat = arr.reshape(-1, 3)
+        paper = np.percentile(flat, 97, axis=0)
+        ink = np.percentile(flat, 1.5, axis=0)
+        arr = (arr - ink) / (paper - ink) * 255.0
+        inner = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
+        inner = ImageEnhance.Color(inner).enhance(1.35)
+        inner = ImageEnhance.Contrast(inner).enhance(1.06)
+        # Pinkes Druckrot zum reinen Rot der Zahlenkarten schieben
+        hsv = np.asarray(inner.convert('HSV')).copy()
+        h = hsv[..., 0].astype(int)
+        pink = (h >= 222) & (hsv[..., 1] > 60)
+        hsv[..., 0] = np.where(pink, np.minimum(h + 14, 255), h).astype(np.uint8)
+        hsv[..., 1] = np.where(pink, np.minimum(hsv[..., 1].astype(int) + 25, 255), hsv[..., 1]).astype(np.uint8)
+        inner = Image.fromarray(hsv, 'HSV').convert('RGB')
+        # Graue Papierkante am äußeren Rand wegnehmen (nur unbunte, helle Pixel)
+        arr = np.asarray(inner).astype(int)
+        band = np.zeros(arr.shape[:2], bool)
+        bx, by = int(arr.shape[1] * 0.05), int(arr.shape[0] * 0.03)
+        band[:, :bx] = band[:, -bx:] = band[:by, :] = band[-by:, :] = True
+        grey = (arr.max(axis=2) - arr.min(axis=2) < 40) & (arr.min(axis=2) > 120)
+        arr[band & grey] = 255
+        inner = Image.fromarray(arr.astype(np.uint8))
         fw = min(W, round(inner.width * H / inner.height * 1.04))  # höchstens 4 % breiter ziehen
         face = Image.new('RGB', (W, H), (255, 255, 255))
         face.paste(inner.resize((fw, H), Image.LANCZOS), ((W - fw) // 2, 0))
