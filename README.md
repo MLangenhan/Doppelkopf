@@ -18,7 +18,11 @@ Frontend: React, Vite, Tailwind und Motion. Schriften: Big Shoulders Display fü
 - **Kamera**: Alle sehen sich gegenseitig, direkt per WebRTC (peer-to-peer). Supabase Realtime dient nur zum Verbindungsaufbau. Tab-Wechsel und kurze Funklöcher überstehen die Verbindungen; beendet das Handy die Kamera, wird sie beim Zurückkehren automatisch neu geholt. Ob die Kamera an oder aus ist, merkt sich der Browser.
 - **Statistik** über alle Abende mit Aufschlüsselung je Spieler: Siegquote, Ø-Punkte, längste Siegesserie, bestes und schlechtestes Spiel, Punkteverlauf, Re/Kontra, Spielarten (Soli getrennt nach selbst gespielt und dagegen) und Partner. Dazu ein Punktezettel je Abend.
 - **Punkte-Aufschlüsselung**: Für die letzten Spiele sieht man, wie sich die Punkte zusammensetzen (Gewonnen, Ansagen, keine 90, Gegen die Alten, Fuchs, Doppelkopf, Karlchen …) – im Spiel unter „Punkte und Regeln“ und auf der Statistikseite.
-- **Übungsmodus** gegen drei Bots, ohne Konto und ohne Server.
+- **Übungsmodus** gegen drei Bots, ohne Konto und ohne Server, in drei Stärken (oben umschaltbar, wird gemerkt). Die Bots sehen nie fremde Karten, nur was ein Mensch am Platz auch wüsste:
+  - **Leicht**: spielt regelkonform, nimmt wertvolle Stiche mit, macht aber oft Fehler.
+  - **Mittel**: denkt in Parteien (schmieren beim Partner, Fuchs retten, sichere Stiche), sagt mit starker Hand an und spielt mit sehr starker Hand Soli oder Armut.
+  - **Schwer**: verteilt die unbekannten Karten passend zu allem Gesehenen (Fehlfarben, Kreuz-Damen, Ansagen) immer wieder neu, spielt jede mögliche Karte bis zum Spielende durch und nimmt die mit dem besten Ergebnis. Ansagen nach geschätzter Siegchance.
+  - Stärkevergleich: `TURNIER=1 npx vitest run tests/bot-tournament.test.ts`
 - **Persönliche Einstellungen** (Zahnrad oben rechts): Spielbare Karten hervorheben lässt sich abschalten, um ohne Hilfe zu spielen. Jeder Effekt (Zeiger, Neigung, Trumpf-Einschlag, große Momente, Auswertung, Konfetti, Atmosphäre, 3D-Karten) ist einzeln schaltbar.
 - **Karten sortieren**: Trumpf zuerst, Trumpf zuletzt, nach Farben oder eigene Reihenfolge – Karten einfach in der Hand an ihren Platz ziehen. Der Knopf neben der Infozeile schaltet die Sortierung durch.
 - **Verlassen**: Zurück zur Übersicht (der Platz bleibt) oder das laufende Spiel für alle abbrechen; ein abgebrochenes Spiel zählt nicht.
