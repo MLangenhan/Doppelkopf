@@ -10,9 +10,13 @@ export const CARD_RATIO = 336 / 240;
 /** Eckenradius passend zu den Kartenbildern (12 von 240 × 336) */
 export const CARD_RADIUS = 'rounded-[5%/3.57%]';
 
+// Bildkarten sind Scans im Berliner Bild (JPG), Zahlenkarten und Rückseite Vektorgrafiken
+const FACES = new Set(['J', 'Q', 'K']);
+const fileOf = (rank: string, suit: string) => `${BASE}${rank}${suit}.${FACES.has(rank) ? 'jpg' : 'svg'}`;
+
 /** Bild-URL einer Karte; ohne Karte die Rückseite */
 export function cardUrl(card: Card | null): string {
-  return card ? `${BASE}${RANK_FILE[rankOf(card)]}${suitOf(card)}.svg` : `${BASE}back.svg`;
+  return card ? fileOf(RANK_FILE[rankOf(card)], suitOf(card)) : `${BASE}back.svg`;
 }
 
 let preloaded = false;
@@ -20,7 +24,7 @@ let preloaded = false;
 export function preloadCards() {
   if (preloaded || typeof Image === 'undefined') return;
   preloaded = true;
-  const faces = Object.values(RANK_FILE).flatMap((r) => ['C', 'S', 'H', 'D'].map((s) => `${BASE}${r}${s}.svg`));
+  const faces = Object.values(RANK_FILE).flatMap((r) => ['C', 'S', 'H', 'D'].map((s) => fileOf(r, s)));
   for (const src of [...faces, `${BASE}back.svg`]) new Image().src = src;
 }
 
@@ -41,7 +45,7 @@ export const PlayingCard = forwardRef<HTMLDivElement, Props>(function PlayingCar
   return (
     <motion.div
       ref={ref}
-      className={`relative shrink-0 select-none ${CARD_RADIUS} bg-white shadow-card ${className}`}
+      className={`relative shrink-0 select-none overflow-hidden ${CARD_RADIUS} bg-white shadow-card ${className}`}
       style={{ width, height: width * CARD_RATIO, ...style }}
       aria-label={showBack ? 'Verdeckte Karte' : cardName(card!)}
       role="img"

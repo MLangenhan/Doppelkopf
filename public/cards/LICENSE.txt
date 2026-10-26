@@ -1,6 +1,12 @@
-Kartenbilder: "SVG vector playing cards" von Adrian Kennard (RevK)
-https://revk.uk/2018/06/svg-vector-playing-cards.html
-Lizenz: CC0 1.0 (Public Domain), https://creativecommons.org/publicdomain/zero/1.0/
+Zahlenkarten (A, 10, 9) und Rückseite:
+  "SVG vector playing cards" von Adrian Kennard (RevK)
+  https://revk.uk/2018/06/svg-vector-playing-cards.html
+  Lizenz: CC0 1.0 (Public Domain), https://creativecommons.org/publicdomain/zero/1.0/
+  Angepasst: Rückseite blau eingefärbt.
 
-Angepasst für Doppelkopf: Bube und Dame tragen die deutschen Eckbuchstaben B und D,
-die Rückseite ist blau eingefärbt.
+Bildkarten (Bube, Dame, König, *.jpg):
+  Ausgeschnitten aus den Scans "Berlinerbild_Buben.jpg", "Berlinerbild_Damen.jpg" und
+  "Berlinerbild_Koenige.jpg" von Wikimedia Commons (Kategorie "Berlin Pattern"),
+  https://commons.wikimedia.org/wiki/Category:Berlin_Pattern
+  Urheber und Lizenz: siehe die jeweilige Dateiseite auf Commons.
+  Originale und Schneide-Skript: assets/berliner-bild/

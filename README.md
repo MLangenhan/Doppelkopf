@@ -96,7 +96,8 @@ src/
   pages/                      Login, Start, Tisch, Statistik, Übung
   components/                 Tisch, Hand, Stich, Video, Dialoge
   lib/                        Supabase, Realtime-Sync, WebRTC, Bots, Statistik
-public/cards/                 Kartenbilder (eine SVG pro Karte)
+public/cards/                 Kartenbilder (Zahlen als SVG, Bildkarten als JPG)
+assets/berliner-bild/         Original-Scans der Bildkarten und Schneide-Skript
 tests/                        Vitest-Tests (Engine, Bots, Statistik); bot-tournament nur mit TURNIER=1
 ```
 
@@ -116,4 +117,4 @@ Im Solo zählt der Spielwert für den Solisten dreifach.
 
 ## Lizenzen
 
-Die Kartenbilder sind die [SVG vector playing cards](https://revk.uk/2018/06/svg-vector-playing-cards.html) von Adrian Kennard (RevK), Lizenz CC0 (siehe `public/cards/LICENSE.txt`). Angepasst: Bube und Dame tragen die deutschen Eckbuchstaben B und D, die Rückseite ist blau. Eine Datei pro Karte in `public/cards/` (`AH.svg` = Herz-Ass, `T` = Zehn, `back.svg` = Rückseite).
+Zahlenkarten und Rückseite sind die [SVG vector playing cards](https://revk.uk/2018/06/svg-vector-playing-cards.html) von Adrian Kennard (RevK), Lizenz CC0. Die Bildkarten (Bube, Dame, König) sind Scans im Berliner Bild von [Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:Berlin_Pattern) (Urheber und Lizenz siehe die Dateiseiten), ausgeschnitten mit `assets/berliner-bild/cut.py`. Details in `public/cards/LICENSE.txt`.
