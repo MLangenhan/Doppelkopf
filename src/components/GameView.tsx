@@ -32,6 +32,7 @@ import { AnnouncePanel, ArmutOfferPanel, ArmutReturnPanel, ReservationPanel } fr
 import { Atmosphere } from './Atmosphere';
 import { CameraButton, type CameraControls } from './CameraButton';
 import { Hand } from './Hand';
+import { preloadCards } from './PlayingCard';
 import { LastTrick } from './LastTrick';
 import { MomentOverlay, useMoments } from './Moments';
 import { ResultDialog } from './ResultDialog';
@@ -116,6 +117,7 @@ export function GameView({
 }) {
   const toast = useToast();
   const vp = useViewport();
+  useEffect(preloadCards, []);
   const view = game.state;
   const myPos = me ? game.players.indexOf(me) : -1;
   const viewPos = myPos >= 0 ? myPos : 0;

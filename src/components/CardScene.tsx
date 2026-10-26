@@ -2,12 +2,13 @@ import type { Card } from '@engine';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { renderCardCanvas } from '../lib/cardImages';
+import { CARD_RATIO } from './PlayingCard';
 
 // 3D-Szene für Login und Startseite: Karten schweben im Raum, Licht folgt der Maus.
 // Liegt immer HINTER dem Inhalt (die Seite legt ihren Text darüber) und wird nachgeladen.
 
 const CARD_W = 1.69;
-const CARD_H = 2.4465;
+const CARD_H = CARD_W * CARD_RATIO;
 
 const HERO_CARDS: Card[] = ['H-10-0', 'C-Q-0', 'S-Q-0', 'D-A-0', 'C-J-0', 'H-Q-0', 'D-10-0', 'S-A-0', 'H-K-0', 'C-A-0'];
 const BANNER_CARDS: Card[] = ['C-Q-0', 'H-10-0', 'D-A-0', 'S-Q-0', 'C-J-0', 'H-A-0', 'D-Q-0'];

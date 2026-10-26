@@ -1,10 +1,9 @@
 import { type Card, suitOf } from '@engine';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { PlayingCard } from './PlayingCard';
+import { CARD_RADIUS, CARD_RATIO, PlayingCard } from './PlayingCard';
 import { TiltCard } from './TiltCard';
 
-const RATIO = 244.64 / 169.075;
 /** Ab so viel Pixeln Bewegung wird aus dem Tippen ein Ziehen */
 const DRAG_THRESHOLD = 8;
 
@@ -88,7 +87,7 @@ export function Hand({
 
   const n = Math.max(cards.length, 1);
   const cardW = Math.max(48, Math.min(maxCardW, width / 6.2));
-  const cardH = cardW * RATIO;
+  const cardH = cardW * CARD_RATIO;
   const step = n > 1 ? Math.min(cardW * 0.98, (width - cardW) / (n - 1)) : 0;
   const total = step * (n - 1) + cardW;
   const offset = (width - total) / 2;
@@ -166,7 +165,7 @@ export function Hand({
               onPointerMove={move}
               onPointerUp={up}
               onPointerCancel={up}
-              className={`absolute bottom-0 rounded-[6%/4.2%] outline-none focus-visible:ring-4 focus-visible:ring-gold-300 ${
+              className={`absolute bottom-0 ${CARD_RADIUS} outline-none focus-visible:ring-4 focus-visible:ring-gold-300 ${
                 interactive ? 'cursor-pointer' : onReorder ? 'cursor-grab' : 'cursor-default'
               } ${dragging ? 'cursor-grabbing' : ''}`}
               style={{ zIndex: dragging ? 100 : slot, touchAction: onReorder ? 'pan-y' : undefined }}

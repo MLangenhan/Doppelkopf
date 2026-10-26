@@ -2,7 +2,7 @@ import type { Party } from '@engine';
 import { AnimatePresence, motion } from 'motion/react';
 import type { ReactNode } from 'react';
 import { Brackets } from './Cursor';
-import { PlayingCard } from './PlayingCard';
+import { CARD_RATIO, PlayingCard } from './PlayingCard';
 import { VideoTile } from './VideoTile';
 
 export function PartyBadge({ party, small }: { party: Party; small?: boolean }) {
@@ -132,7 +132,7 @@ export function Seat({
 
 /** Gewonnene Stiche als Stapel verdeckter Karten. Neue landen mit einem kleinen Fall. */
 function TrickPile({ count, side, v, cardW }: { count: number; side: 'left' | 'right'; v: 'above' | 'below'; cardW: number }) {
-  const cardH = cardW * (244.64 / 169.075);
+  const cardH = cardW * CARD_RATIO;
   return (
     <div
       className={`pointer-events-none absolute z-10 flex items-end gap-2 ${side === 'left' ? 'left-1' : 'right-1'} ${

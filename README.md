@@ -95,8 +95,9 @@ supabase/
 src/
   pages/                      Login, Start, Tisch, Statistik, Übung
   components/                 Tisch, Hand, Stich, Video, Dialoge
-  lib/                        Supabase, Realtime-Sync, WebRTC, Bots
-tests/                        Vitest-Tests der Engine
+  lib/                        Supabase, Realtime-Sync, WebRTC, Bots, Statistik
+public/cards/                 Kartenbilder (eine SVG pro Karte)
+tests/                        Vitest-Tests (Engine, Bots, Statistik); bot-tournament nur mit TURNIER=1
 ```
 
 ## Abrechnung
@@ -115,4 +116,4 @@ Im Solo zählt der Spielwert für den Solisten dreifach.
 
 ## Lizenzen
 
-Die Kartenbilder stammen aus [SVG-cards](https://github.com/htdebeer/SVG-cards) von David Bellot und Huub de Beer, Lizenz LGPL 2.1 (siehe `public/cards/LICENSE-svg-cards.txt`). Angepasst: Bube und Dame tragen die deutschen Eckbuchstaben B und D.
+Die Kartenbilder sind die [SVG vector playing cards](https://revk.uk/2018/06/svg-vector-playing-cards.html) von Adrian Kennard (RevK), Lizenz CC0 (siehe `public/cards/LICENSE.txt`). Angepasst: Bube und Dame tragen die deutschen Eckbuchstaben B und D, die Rückseite ist blau. Eine Datei pro Karte in `public/cards/` (`AH.svg` = Herz-Ass, `T` = Zehn, `back.svg` = Rückseite).

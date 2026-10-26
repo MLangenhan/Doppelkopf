@@ -1,7 +1,7 @@
 import type { Card } from '@engine';
 import { AnimatePresence, motion, type Variants } from 'motion/react';
 import type { ReactNode } from 'react';
-import { PlayingCard } from './PlayingCard';
+import { CARD_RATIO, PlayingCard } from './PlayingCard';
 
 /** Relative Sitzposition im Uhrzeigersinn: 0 = ich (unten links), 1 = oben links, 2 = oben rechts, 3 = unten rechts. */
 export type Rel = 0 | 1 | 2 | 3;
@@ -106,7 +106,7 @@ export function TrickArea({
   /** Overlays über der Fläche (z. B. große Momente) */
   children?: ReactNode;
 }) {
-  const cardH = cardWidth * (244.64 / 169.075);
+  const cardH = cardWidth * CARD_RATIO;
   const matW = cardWidth * 4.4;
   const matH = cardH * 2.05;
   const complete = winnerRel !== null;

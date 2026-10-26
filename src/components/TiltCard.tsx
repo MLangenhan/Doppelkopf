@@ -1,6 +1,7 @@
 import { motion, useMotionTemplate, useMotionValue, useReducedMotion, useSpring } from 'motion/react';
 import { type ReactNode, useState } from 'react';
 import { useFx } from '../lib/prefs';
+import { CARD_RADIUS } from './PlayingCard';
 
 /**
  * Karte, die sich zur Maus neigt, mit einem Glanzlicht, das über die Oberfläche wandert.
@@ -48,7 +49,7 @@ export function TiltCard({ children, max = 14 }: { children: ReactNode; max?: nu
       {children}
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute inset-0 rounded-[6%/4.2%] mix-blend-overlay"
+        className={`pointer-events-none absolute inset-0 ${CARD_RADIUS} mix-blend-overlay`}
         style={{ background, opacity: glare }}
       />
     </motion.div>
