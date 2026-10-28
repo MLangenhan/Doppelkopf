@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type AnnounceLevel, type Card, type GameState, scoreGame } from '@engine';
+import { type AnnounceLevel, augenTargets, type Card, type GameState, scoreGame } from '@engine';
 import { newGame, settings } from './helpers';
 
 /**
@@ -185,5 +185,15 @@ describe('Sonderpunkte', () => {
     // Re gewinnt (1), Kontra hat einen Doppelkopf (1) → 0
     expect(r.winner).toBe('re');
     expect(r.reValue).toBe(0);
+  });
+});
+
+describe('Siegmarken (augenTargets)', () => {
+  it('ohne Ansage 121/120, mit Absagen verschoben', () => {
+    expect(augenTargets({ re: null, kontra: null })).toEqual({ re: 121, kontra: 120 });
+    expect(augenTargets({ re: null, kontra: 120 })).toEqual({ re: 120, kontra: 121 });
+    expect(augenTargets({ re: 90, kontra: null })).toEqual({ re: 151, kontra: 90 });
+    expect(augenTargets({ re: 120, kontra: 60 })).toEqual({ re: 60, kontra: 181 });
+    expect(augenTargets({ re: 0, kontra: null })).toEqual({ re: null, kontra: null });
   });
 });

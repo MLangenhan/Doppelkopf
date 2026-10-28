@@ -36,6 +36,28 @@ export function isSoloScoring(s: GameState): boolean {
   return s.kind === 'solo' || s.kind === 'silentSolo' || (s.kind === 'hochzeit' && !!s.hochzeit?.alone);
 }
 
+/**
+ * Wie viele Augen eine Partei zum Sieg braucht (null = Schwarz: dann zählen Stiche).
+ * Ohne Ansage: Re 121, Kontra 120. Eigene Absage "keine 90" heißt 151 usw.,
+ * eine Absage des Gegners senkt die eigene Hürde (gegen "keine 90" reichen 90).
+ */
+export function augenTargets(ann: Record<Party, AnnounceLevel | null>): Record<Party, number | null> {
+  const absage = (p: Party) => {
+    const l = ann[p];
+    return l !== null && l < 120 ? l : null;
+  };
+  const target = (party: Party): number | null => {
+    const own = absage(party);
+    const opp = absage(other(party));
+    if (own !== null) return own === 0 ? null : 240 - own + 1;
+    if (opp !== null) return opp === 0 ? null : opp;
+    const onlyKontra = ann.kontra !== null && ann.re === null;
+    if (party === 're') return onlyKontra ? 120 : 121;
+    return onlyKontra ? 121 : 120;
+  };
+  return { re: target('re'), kontra: target('kontra') };
+}
+
 function meetsTarget(
   party: Party,
   augen: Record<Party, number>,
@@ -43,17 +65,10 @@ function meetsTarget(
   totalTricks: number,
   ann: Record<Party, AnnounceLevel | null>,
 ): boolean {
-  const absage = (p: Party) => {
-    const l = ann[p];
-    return l !== null && l < 120 ? l : null;
-  };
-  const own = absage(party);
-  const opp = absage(other(party));
-  if (own !== null) return own === 0 ? tricks[party] === totalTricks : augen[party] >= 240 - own + 1;
-  if (opp !== null) return opp === 0 ? tricks[party] >= 1 : augen[party] >= opp;
-  const onlyKontra = ann.kontra !== null && ann.re === null;
-  if (party === 're') return augen.re >= (onlyKontra ? 120 : 121);
-  return augen.kontra >= (onlyKontra ? 121 : 120);
+  const t = augenTargets(ann)[party];
+  if (t !== null) return augen[party] >= t;
+  // Schwarz: wer schwarz angesagt hat, braucht alle Stiche, der Gegner einen
+  return ann[party] === 0 ? tricks[party] === totalTricks : tricks[party] >= 1;
 }
 
 export function scoreGame(s: GameState): GameResult {

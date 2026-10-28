@@ -1,9 +1,9 @@
-import type { Party, PublicGameState } from '@engine';
+import { augenTargets, type Party, type PublicGameState } from '@engine';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { useFx } from '../lib/prefs';
 import { sound } from '../lib/sound';
-import { partyLabel, resultKindLabel, SCHMEISSEN_LABEL } from '../lib/gameText';
+import { levelLabel, partyLabel, resultKindLabel, SCHMEISSEN_LABEL } from '../lib/gameText';
 import type { SchmeissenReason } from '@engine';
 import { Confetti } from './Moments';
 import { SpaceHint } from './SpaceHint';
@@ -117,7 +117,14 @@ function ResultBody({
   const winner = r.winner;
   const myParty: Party | null = myPos >= 0 ? (r.reTeam.includes(myPos) ? 're' : 'kontra') : null;
   const iWon = myParty !== null && winner === myParty;
-  const { re, kontra, revealed } = useAugenReveal(r.augen, winner, myParty, skip);
+  const targets = augenTargets(view.announcements);
+  const { re, kontra, revealed } = useAugenReveal(r.augen, winner, myParty, skip, targets);
+  // Siegmarke für Re (bei Schwarz-Ansagen zählen Stiche, dann bleibt die Marke bei 121)
+  const mark = targets.re ?? 121;
+  const markLabel = mark === 121 ? '121' : `Re braucht ${mark}`;
+  const absagen = (['re', 'kontra'] as const)
+    .filter((p) => view.announcements[p] !== null && view.announcements[p]! < 120)
+    .map((p) => ({ party: p, level: view.announcements[p]!, need: targets[p] }));
   useEffect(() => {
     if (revealed) onRevealed();
   }, [revealed, onRevealed]);
@@ -170,20 +177,33 @@ function ResultBody({
         ))}
       </div>
 
-      {/* Re wächst von links, Kontra von rechts, die Marke steht bei 121 */}
+      {/* Re wächst von links, Kontra von rechts; die Marke steht dort, wo Re gewinnt (121, mit Absagen mehr oder weniger) */}
       <div className="relative mt-4 h-3 rounded-full bg-white/[0.06]" aria-hidden>
         <div className="absolute inset-y-0 left-0 rounded-l-full bg-re" style={{ width: `${(re / 240) * 100}%` }} />
         <div className="absolute inset-y-0 right-0 rounded-r-full bg-kontra" style={{ width: `${(kontra / 240) * 100}%` }} />
         <motion.div
           className="absolute -inset-y-1.5 w-0.5 rounded bg-white/70"
-          style={{ left: `${(121 / 240) * 100}%` }}
+          style={{ left: `${(mark / 240) * 100}%` }}
           animate={revealed ? { backgroundColor: '#e8cd85', scaleY: [1, 1.8, 1], boxShadow: '0 0 14px rgba(232,205,133,0.9)' } : {}}
           transition={{ duration: 0.5 }}
         />
-        <span className="tag absolute -top-5 -translate-x-1/2 text-[9px] text-white/45" style={{ left: `${(121 / 240) * 100}%` }}>
-          121
+        <span className="tag absolute -top-5 -translate-x-1/2 text-[9px] whitespace-nowrap text-white/45" style={{ left: `${(mark / 240) * 100}%` }}>
+          {markLabel}
         </span>
       </div>
+
+      {/* Warum: Absagen verschieben die Siegmarke */}
+      {revealed && absagen.length > 0 && (
+        <p className="mt-4 text-sm text-white/65">
+          {absagen.map(({ party, level, need }) => (
+            <span key={party} className="block">
+              {partyLabel(party)} hat „{levelLabel(level, party)}“ angesagt und brauchte{' '}
+              {need === null ? (level === 0 ? 'alle Stiche' : 'einen Stich') : `${need} Augen`}
+              {need !== null && ` – geholt: ${r.augen[party]}`}.
+            </span>
+          ))}
+        </p>
+      )}
 
       {revealed && r.lines.length > 0 && (
         <ul className="mt-5 space-y-1 text-sm">
@@ -229,7 +249,13 @@ function ResultBody({
  * Spannende Auswertung: Die Augen zählen hoch, der Gewinner steht erst fest, wenn seine
  * Partei die Siegmarke überschreitet (bzw. am Ende). Ohne Effekte sofort das Ergebnis.
  */
-function useAugenReveal(augen: Record<Party, number>, winner: Party | null, myParty: Party | null, skip: boolean) {
+function useAugenReveal(
+  augen: Record<Party, number>,
+  winner: Party | null,
+  myParty: Party | null,
+  skip: boolean,
+  targets: Record<Party, number | null>,
+) {
   const effects = useFx('reveal');
   const [p, setP] = useState(effects ? 0 : 1);
   if (skip && p < 1) setP(1);
@@ -249,8 +275,8 @@ function useAugenReveal(augen: Record<Party, number>, winner: Party | null, myPa
   const ease = 1 - Math.pow(1 - p, 3);
   const re = Math.round(augen.re * ease);
   const kontra = Math.round(augen.kontra * ease);
-  const needed = winner === 're' ? 121 : 120;
-  const crossed = winner !== null && augen[winner] >= needed && (winner === 're' ? re : kontra) >= needed;
+  const needed = winner ? targets[winner] : null;
+  const crossed = winner !== null && needed !== null && augen[winner] >= needed && (winner === 're' ? re : kontra) >= needed;
   const revealed = p >= 1 || crossed;
 
   const fired = useRef(false);

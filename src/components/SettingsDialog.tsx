@@ -4,6 +4,14 @@ import { useEffect } from 'react';
 import { FX_LABELS, type FxKey, HAND_SORT_LABELS, type HandSort, setAllFx, setFx, usePrefs } from '../lib/prefs';
 import { sound } from '../lib/sound';
 
+const SHORTCUTS: [string[], string][] = [
+  [['←', '→'], 'Karte wählen'],
+  [['Leertaste'], 'Gewählte Karte ausspielen, eigenen Stich nehmen, Auswertung überspringen bzw. nächstes Spiel'],
+  [['Enter', '↑'], 'Gewählte Karte ausspielen (bei der Armut: Karte auswählen)'],
+  [['Esc', '↓'], 'Auswahl aufheben, Dialoge schließen'],
+  [['Tab'], 'Zu Knöpfen wie Ansage oder Vorbehalt springen'],
+];
+
 export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [prefs, setPref] = usePrefs();
   const reduced = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -130,6 +138,22 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
                 hint={FX_LABELS[k].hint}
               />
             ))}
+
+            <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Tastatur</h3>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 px-2 text-sm">
+              {SHORTCUTS.map(([keys, what]) => (
+                <div key={what} className="contents">
+                  <dt className="flex gap-1">
+                    {keys.map((k) => (
+                      <kbd key={k} className="tag rounded border border-white/20 px-1.5 py-0.5 text-[10px] text-white/80">
+                        {k}
+                      </kbd>
+                    ))}
+                  </dt>
+                  <dd className="text-white/65">{what}</dd>
+                </div>
+              ))}
+            </dl>
           </motion.div>
         </motion.div>
       )}

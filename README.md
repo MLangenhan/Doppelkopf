@@ -28,7 +28,7 @@ Frontend: React, Vite, Tailwind und Motion. Schriften: Big Shoulders Display fü
 - **Karten sortieren**: Trumpf zuerst, Trumpf zuletzt, nach Farben oder eigene Reihenfolge – Karten einfach in der Hand an ihren Platz ziehen. Der Knopf neben der Infozeile schaltet die Sortierung durch.
 - **Verlassen**: Zurück zur Übersicht (der Platz bleibt) oder das laufende Spiel für alle abbrechen; ein abgebrochenes Spiel zählt nicht.
 - **Handy**: eigenes Layout mit kleinen Kameras oben, Stich in der Mitte und Hand unten.
-- **Leertaste**: Eine angehobene Karte spielt man mit der Leertaste aus, ein eigener Stich wird damit genommen. Hilfetexte gibt es keine – nur wer 5 Sekunden nichts tut, bekommt einen kleinen Leertasten-Hinweis.
+- **Tastatur**: ← → wählt eine Karte, Leertaste, Enter oder ↑ spielt sie aus, Esc hebt die Wahl auf (Übersicht in den Einstellungen). Eine angehobene Karte spielt man mit der Leertaste aus, ein eigener Stich wird damit genommen. Hilfetexte gibt es keine – nur wer 5 Sekunden nichts tut, bekommt einen kleinen Leertasten-Hinweis.
 - **Stich nehmen**: Ein fertiger Stich bleibt liegen, bis der Gewinner ihn mit der Leertaste (oder per Klick) nimmt. Nach 10 Sekunden darf jeder wegräumen. Der letzte Stich ist immer klein sichtbar.
 - **Trumpf-Einschlag**: Dulle, Kreuz-Dame und Schweinchen knallen mit Beben, Druckwelle und Sound auf den Tisch.
 - **Stichstapel**: Gewonnene Stiche drehen sich um, fliegen zum Gewinner und liegen als sichtbarer Kartenstapel mit Zähler neben seiner Kamera.

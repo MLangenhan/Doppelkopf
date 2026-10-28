@@ -518,6 +518,8 @@ export function GameView({
     <SpaceHint active resetKey={`c:${shownTrick.key}`} label="Stich nehmen" touchLabel="Stich antippen zum Nehmen" />
   ) : myTurnToPlay && selectedCard ? (
     <SpaceHint active resetKey={`p:${selectedCard}`} label="Karte ausspielen" touchLabel="Nochmal antippen zum Ausspielen" />
+  ) : myTurnToPlay ? (
+    <SpaceHint active resetKey={`w:${trickCount}`} keys={['←', '→']} label="Karte wählen" touchLabel="Karte antippen" />
   ) : null;
 
   const announcementText = (['re', 'kontra'] as const)

@@ -8,7 +8,20 @@ const touch = () => typeof window !== 'undefined' && window.matchMedia('(hover: 
  * Dezenter Leertasten-Hinweis, der erst nach 5 Sekunden Untätigkeit erscheint.
  * Auf Touch-Geräten (ohne Tastatur) steht dort stattdessen, was man antippen kann.
  */
-export function SpaceHint({ active, resetKey, label, touchLabel }: { active: boolean; resetKey: string; label: string; touchLabel: string }) {
+export function SpaceHint({
+  active,
+  resetKey,
+  label,
+  touchLabel,
+  keys = ['Leertaste'],
+}: {
+  active: boolean;
+  resetKey: string;
+  label: string;
+  touchLabel: string;
+  /** Angezeigte Tasten */
+  keys?: string[];
+}) {
   const [shown, setShown] = useState<string | null>(null);
   useEffect(() => {
     setShown(null);
@@ -33,7 +46,11 @@ export function SpaceHint({ active, resetKey, label, touchLabel }: { active: boo
             touchLabel
           ) : (
             <>
-              <kbd className="rounded border border-white/25 px-1.5 py-0.5 text-white/75">Leertaste</kbd>
+              {keys.map((k) => (
+                <kbd key={k} className="rounded border border-white/25 px-1.5 py-0.5 text-white/75">
+                  {k}
+                </kbd>
+              ))}
               {label}
             </>
           )}

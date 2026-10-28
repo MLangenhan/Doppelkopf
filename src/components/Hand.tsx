@@ -70,16 +70,50 @@ export function Hand({
   const latest = useRef({ selected, onPlay, onSelect });
   latest.current = { selected, onPlay, onSelect };
   useEffect(() => latest.current.onSelect?.(selected), [selected]);
-  // Leertaste spielt die angehobene Karte aus
+  // Tastatur: ← → wählt eine Karte, Leertaste/Enter/↑ spielt sie (bzw. wählt sie bei der Armut), Esc/↓ hebt die Wahl auf
+  const [cursor, setCursor] = useState<Card | null>(null);
+  if (cursor && (mode !== 'pick' || !cards.includes(cursor))) setCursor(null);
+  const keys = useRef({ cards, playable, mode, cursor, onPick });
+  keys.current = { cards, playable, mode, cursor, onPick };
   useEffect(() => {
-    if (mode !== 'play') return;
+    if (mode === 'view') return;
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
-      const card = latest.current.selected;
-      if (e.code !== 'Space' || e.repeat || !card || el?.closest('input, textarea, select, [contenteditable]')) return;
-      e.preventDefault();
-      setSelected(null);
-      latest.current.onPlay?.(card);
+      if (e.repeat && e.code !== 'ArrowLeft' && e.code !== 'ArrowRight') return;
+      if (el?.closest('input, textarea, select, [contenteditable], [role=dialog]')) return;
+      const k = keys.current;
+      const pick = k.mode === 'pick';
+      const list = pick ? k.cards : k.cards.filter((c) => k.playable?.has(c));
+      const current = pick ? k.cursor : latest.current.selected;
+      const set = pick ? setCursor : setSelected;
+      // Andere Knöpfe (Ansage, Vorbehalt …) behalten Leertaste und Enter für sich
+      const onOtherButton = !!el?.closest('button, a') && !el.closest('[data-hand]');
+
+      if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+        if (!list.length) return;
+        e.preventDefault();
+        const i = current ? list.indexOf(current) : -1;
+        const dir = e.code === 'ArrowRight' ? 1 : -1;
+        set(i < 0 ? list[dir > 0 ? 0 : list.length - 1] : list[(i + dir + list.length) % list.length]);
+        return;
+      }
+      if (e.code === 'Escape' || e.code === 'ArrowDown') {
+        if (current) {
+          e.preventDefault();
+          set(null);
+        }
+        return;
+      }
+      if (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'ArrowUp') {
+        if (!current || (onOtherButton && e.code !== 'ArrowUp')) return;
+        e.preventDefault();
+        if (pick) {
+          k.onPick?.(current);
+        } else {
+          setSelected(null);
+          latest.current.onPlay?.(current);
+        }
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -142,7 +176,7 @@ export function Hand({
   };
 
   return (
-    <div ref={ref} className="relative w-full" style={{ height: cardH + 34 }}>
+    <div ref={ref} data-hand className="relative w-full" style={{ height: cardH + 34 }}>
       <AnimatePresence>
         {cards.map((card, i) => {
           const isPlayable = mode === 'play' && !!playable?.has(card);
@@ -173,7 +207,7 @@ export function Hand({
               animate={{
                 opacity: 1,
                 x,
-                y: dragging ? -22 : isSelected ? -30 : 0,
+                y: dragging ? -22 : isSelected ? -30 : cursor === card ? -12 : 0,
                 rotate: dragging ? (drag.dx > 0 ? 4 : -4) : 0,
                 scale: dragging ? 1.05 : 1,
                 filter: dimmed ? 'brightness(0.55) saturate(0.6)' : 'brightness(1) saturate(1)',
@@ -191,7 +225,11 @@ export function Hand({
               }}
             >
               <TiltCard>
-                <PlayingCard card={card} width={cardW} className={isSelected ? 'ring-4 ring-gold-400' : ''} />
+                <PlayingCard
+                  card={card}
+                  width={cardW}
+                  className={isSelected ? 'ring-4 ring-gold-400' : cursor === card ? 'ring-4 ring-white/80' : ''}
+                />
               </TiltCard>
               {isNew && (
                 <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-gold-400 px-2 py-0.5 text-[10px] font-bold text-felt-950">
