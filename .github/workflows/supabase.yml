@@ -40,4 +40,5 @@ jobs:
         # Neuere CLI-Versionen zielen sonst auf eine lokale Datenbank
         run: supabase db push --remote
       - name: Edge Function deployen
-        run: supabase functions deploy game --project-ref "$PROJECT_REF" --use-api
+        # --yes: im CI gibt es niemanden, der die Rückfrage bestätigt
+        run: supabase functions deploy game --remote="$PROJECT_REF" --use-api --yes
