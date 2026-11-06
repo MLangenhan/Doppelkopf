@@ -26,6 +26,10 @@ jobs:
             echo "::error::Bitte SUPABASE_ACCESS_TOKEN und SUPABASE_DB_PASSWORD als Repository-Secrets anlegen (siehe README)."
             exit 1
           fi
+          case "$SUPABASE_ACCESS_TOKEN" in
+            sbp_*) ;;
+            *) echo "::error::SUPABASE_ACCESS_TOKEN muss ein persönlicher Access Token sein (beginnt mit sbp_), kein Projekt-Key."; exit 1 ;;
+          esac
       - uses: actions/checkout@v5
       - uses: supabase/setup-cli@v1
         with:
@@ -33,6 +37,7 @@ jobs:
       - name: Projekt verknüpfen
         run: supabase link --project-ref "$PROJECT_REF"
       - name: Datenbank-Migrationen
-        run: supabase db push
+        # Neuere CLI-Versionen zielen sonst auf eine lokale Datenbank
+        run: supabase db push --remote
       - name: Edge Function deployen
         run: supabase functions deploy game --project-ref "$PROJECT_REF" --use-api
