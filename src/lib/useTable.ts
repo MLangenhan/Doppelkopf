@@ -216,5 +216,11 @@ export function useTable(code: string) {
 
   const hand = game ? (hands[game.id]?.cards ?? []) : [];
 
-  return { me, table, members, game, hand, results, finished, error, loading, act, startGame, refresh };
+  /** Nur den Spielstand nachladen (z. B. nach einem Bot-Zug, falls Realtime hängt) */
+  const reloadGame = useCallback(async () => {
+    const t = tableRef.current;
+    if (t) await Promise.all([loadGame(t.id), loadResults(t.id)]);
+  }, [loadGame, loadResults]);
+
+  return { me, table, members, game, hand, results, finished, error, loading, act, startGame, refresh, reloadGame };
 }

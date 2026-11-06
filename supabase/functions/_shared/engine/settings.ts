@@ -22,6 +22,9 @@ export const SOLO_NAMES: Record<SoloType, string> = {
  */
 export type DulleRule = 'first' | 'second' | 'secondInLastTrick';
 
+/** Stärke der Bots, die freie Plätze am Tisch auffüllen */
+export type BotLevel = 'easy' | 'medium' | 'hard';
+
 export interface RuleSettings {
   withNines: boolean;
   dulleRule: DulleRule;
@@ -38,6 +41,8 @@ export interface RuleSettings {
     fewTrumps: boolean;
     fiveNines: boolean;
   };
+  /** Bots für freie Plätze (weniger als 4 Spieler am Tisch) */
+  botLevel: BotLevel;
 }
 
 export const DEFAULT_SETTINGS: RuleSettings = {
@@ -64,6 +69,7 @@ export const DEFAULT_SETTINGS: RuleSettings = {
     fewTrumps: true,
     fiveNines: false,
   },
+  botLevel: 'medium',
 };
 
 /** Füllt fehlende Felder mit Standardwerten auf (z. B. bei alten Tischen oder Teil-Eingaben). */
@@ -89,5 +95,6 @@ export function normalizeSettings(input: unknown): RuleSettings {
       fewTrumps: bool(schm.fewTrumps, d.schmeissen.fewTrumps),
       fiveNines: bool(schm.fiveNines, d.schmeissen.fiveNines),
     },
+    botLevel: s.botLevel === 'easy' || s.botLevel === 'hard' ? s.botLevel : 'medium',
   };
 }

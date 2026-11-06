@@ -2,6 +2,7 @@ import { MotionConfig } from 'motion/react';
 import { useEffect } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
+import { useGamepad } from './lib/gamepad';
 import { usePrefs } from './lib/prefs';
 import { configureSound } from './lib/sound';
 import { Cursor } from './components/Cursor';
@@ -11,6 +12,11 @@ import { LoginPage } from './pages/LoginPage';
 import { PracticePage } from './pages/PracticePage';
 import { StatsPage } from './pages/StatsPage';
 import { TablePage } from './pages/TablePage';
+
+function GamepadSupport() {
+  useGamepad();
+  return null;
+}
 
 /** Überträgt die Sound-Einstellungen an die Audio-Engine */
 function SoundSync() {
@@ -37,6 +43,7 @@ export function App() {
   return (
     <MotionConfig reducedMotion="user">
       <SoundSync />
+      <GamepadSupport />
       <Cursor />
       <AuthProvider>
         <ToastProvider>

@@ -94,7 +94,7 @@ export function ResultDialog({
             </button>
           </div>
         </div>
-        {!canStart && <p className="mt-2 text-right text-xs text-white/50">Es werden 4 oder 5 Spieler am Tisch gebraucht.</p>}
+        {!canStart && <p className="mt-2 text-right text-xs text-white/50">Es dürfen höchstens 5 Spieler am Tisch sitzen.</p>}
       </motion.div>
     </motion.div>
   );

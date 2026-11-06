@@ -1,4 +1,4 @@
-import { normalizeSettings, type RuleSettings } from '@engine';
+import { BOT_LEVEL_LABELS, normalizeSettings, type RuleSettings } from '@engine';
 import { ArrowRight, Check, Copy } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
@@ -59,7 +59,7 @@ export function Lobby({
 
   const status =
     count < 4
-      ? `Noch ${4 - count} Spieler ${4 - count === 1 ? 'fehlt' : 'fehlen'}`
+      ? `${4 - count} ${4 - count === 1 ? 'Bot füllt' : 'Bots füllen'} auf (${BOT_LEVEL_LABELS[settings.botLevel]}) – oder auf Freunde warten`
       : count === 4
         ? 'Alle da – es kann losgehen'
         : 'Zu fünft – der Geber setzt jeweils aus';
@@ -145,8 +145,8 @@ export function Lobby({
         </div>
 
         <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-          <button className="btn-primary px-8 py-3 text-base" disabled={busy || count < 4 || count > 5} onClick={onStart}>
-            {hasPlayed ? 'Weiterspielen' : 'Spiel starten'} <ArrowRight className="size-4" />
+          <button className="btn-primary px-8 py-3 text-base" disabled={busy || count < 1 || count > 5} onClick={onStart}>
+            {hasPlayed ? 'Weiterspielen' : count < 4 ? 'Mit Bots starten' : 'Spiel starten'} <ArrowRight className="size-4" />
           </button>
           {onBack && (
             <button className={arrowLink} onClick={onBack}>

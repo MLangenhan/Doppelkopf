@@ -1,27 +1,18 @@
+import { augenOf, type Card, createDeck, faceOf, rankOf } from './cards.ts';
 import {
   allowedDeclarations,
   announceError,
-  augenOf,
-  type Card,
-  cardPower,
-  createDeck,
   type Declaration,
-  effectiveSuit,
-  faceOf,
   type GameAction,
   type GameState,
-  isTrump,
-  knownParties,
-  legalCards,
   type Party,
-  rankOf,
-  scoreGame,
-  type SoloType,
   type Trick,
-  type TrickContext,
   trickContext,
-  trickWinnerIndex,
-} from '@engine';
+} from './game.ts';
+import { cardPower, effectiveSuit, isTrump, legalCards, type TrickContext, trickWinnerIndex } from './rules.ts';
+import { scoreGame } from './scoring.ts';
+import type { BotLevel, SoloType } from './settings.ts';
+import { knownParties } from './view.ts';
 
 // Bots für den Übungsmodus. Sie sehen nur, was ein Mensch an ihrem Platz auch sähe:
 // die eigene Hand, gespielte Karten, Ansagen und Kartenzahlen – nie die Hände der anderen.
@@ -32,9 +23,38 @@ import {
 // - Schwer:  wie Mittel, entscheidet jede Karte aber per Simulation: viele mögliche
 //            Verteilungen der unbekannten Karten werden zu Ende gespielt und gewertet.
 
-export type BotLevel = 'easy' | 'medium' | 'hard';
+
 
 export const BOT_LEVEL_LABELS: Record<BotLevel, string> = { easy: 'Leicht', medium: 'Mittel', hard: 'Schwer' };
+
+// Bots an echten Tischen: feste IDs (keine Konten), Namen für die Anzeige
+export const BOT_IDS = [
+  '00000000-0000-4000-8000-0000000000b1',
+  '00000000-0000-4000-8000-0000000000b2',
+  '00000000-0000-4000-8000-0000000000b3',
+];
+export const BOT_NAMES: Record<string, string> = {
+  [BOT_IDS[0]]: 'Anton',
+  [BOT_IDS[1]]: 'Berta',
+  [BOT_IDS[2]]: 'Carl',
+};
+export const isBot = (userId: string) => BOT_IDS.includes(userId);
+
+/** Wer muss gerade handeln (Position 0–3)? null = niemand (Spielende). */
+export function actorOf(s: Pick<GameState, 'phase' | 'declTurn' | 'armut' | 'turn'>): number | null {
+  switch (s.phase) {
+    case 'reservations':
+      return s.declTurn;
+    case 'armutOffer':
+      return s.armut?.offerTurn ?? null;
+    case 'armutReturn':
+      return s.armut?.rich ?? null;
+    case 'playing':
+      return s.turn;
+    default:
+      return null;
+  }
+}
 
 export interface BotOptions {
   /** Zufall (für reproduzierbare Tests) */
@@ -225,6 +245,19 @@ function knowledge(s: GameState, pos: number): Knowledge {
   }
   const mine = new Set(s.hands[pos]);
   const unknown = createDeck(s.settings.withNines).filter((c) => !played.has(c) && !mine.has(c));
+  // Normalspiel: Wer keinen Trumpf mehr hat und keine Kreuz-Dame gezeigt hat, kann nicht Re sein
+  if (s.kind === 'normal' || s.kind === 'silentSolo') {
+    const showedQueen = new Set<number>();
+    for (const t of allTricks(s)) t.cards.forEach((c, i) => faceOf(c) === 'C-Q' && showedQueen.add((t.leader + i) % 4));
+    for (let p = 0; p < 4; p++) {
+      if (p !== pos && parties[p] === null && voids[p].has('T') && !showedQueen.has(p)) parties[p] = 'kontra';
+    }
+    // Ich bin Re und die andere Kreuz-Dame ist gezeigt: Rest ist Kontra (knownParties deckt das ab);
+    // ich bin Kontra und zwei Kontra stehen fest: der Rest ist Re
+    if (parties[pos] === 'kontra' && parties.filter((x) => x === 'kontra').length === 2) {
+      for (let p = 0; p < 4; p++) if (parties[p] === null) parties[p] = 're';
+    }
+  }
   return { ctx, parties, unknown, voids, led };
 }
 
@@ -350,6 +383,14 @@ function heuristicPlay(x: PlayInput): Card {
     return x.threats.some((t) => beats(t, cards));
   };
   const winners = legal.filter((c) => beats(c, trick));
+  // Hohe Trümpfe (Dulle, Damen) nur für Stiche, die es wert sind – und nicht blind gegen
+  // jemanden, der vielleicht der eigene Partner ist
+  const unknownWinner = x.party(winner) === null;
+  const spend = (c: Card) =>
+    (!isHigh(c) && !(isTrump(c, ctx) && augenOf(c) >= 10 && unknownWinner && value < 10)) ||
+    opponentWins ||
+    value >= (unknownWinner ? 20 : 12) ||
+    hand.length <= 2;
 
   if (partnerWins && (lastToPlay || !canBeBeaten(trick[winIdx]))) {
     // Schmieren: dem Partner Augen geben, gern den Fuchs in Sicherheit bringen
@@ -363,15 +404,15 @@ function heuristicPlay(x: PlayInput): Card {
     const byPower = [...winners].sort((a, b) => power(a) - power(b));
     if (lastToPlay) {
       // Als Letzter: mit der billigsten Siegkarte nehmen, wenn es sich lohnt
-      const pick = cheapest(byPower.filter((c) => !isKarl(c) || x.lastTrick)) ?? byPower[0];
-      if (value + augenOf(pick) >= cost(pick) || opponentWins || value >= 10) return pick;
+      const pick = cheapest(byPower.filter((c) => (!isKarl(c) || x.lastTrick) && spend(c)));
+      if (pick && (value + augenOf(pick) >= cost(pick) || opponentWins || value >= 10)) return pick;
     } else {
-      const safe = byPower.filter((c) => !canBeBeaten(c) && !isFox(c));
+      const safe = byPower.filter((c) => !canBeBeaten(c) && !isFox(c) && spend(c));
       const worth = value >= 10 || opponentWins || hand.length <= 3;
       if (safe.length && worth) return safe[0];
-      if (safe.length && !isHigh(safe[0])) return safe[0];
+      if (safe.length && !isHigh(safe[0]) && !unknownWinner) return safe[0];
       // Viele Augen im Stich: auch ohne Garantie mit einer günstigen Karte versuchen
-      const cheapWin = byPower.find((c) => !isFox(c) && !isHigh(c) && !isKarl(c));
+      const cheapWin = byPower.find((c) => !isFox(c) && !isHigh(c) && !isKarl(c) && spend(c));
       if (value >= 10 && cheapWin) return cheapWin;
     }
   }

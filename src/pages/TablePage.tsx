@@ -9,6 +9,7 @@ import { TopBar } from '../components/TopBar';
 import { getPrefs } from '../lib/prefs';
 import { api } from '../lib/supabase';
 import { useTable } from '../lib/useTable';
+import { useBotDriver } from '../lib/useBotDriver';
 import { useCamera, useVideoMesh } from '../lib/video';
 
 export function TablePage() {
@@ -18,6 +19,7 @@ export function TablePage() {
   const t = useTable(code);
   const camera = useCamera();
   const { remotes, online } = useVideoMesh(t.table?.id, t.me, camera.stream);
+  useBotDriver(t.game, t.me, online, t.reloadGame);
   const [busy, setBusy] = useState(false);
   const [lobby, setLobby] = useState(false);
 

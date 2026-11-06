@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GameView } from '../components/GameView';
 import { TopBar } from '../components/TopBar';
 import { useAuth } from '../lib/auth';
-import { BOT_LEVEL_LABELS, type BotLevel, botAction } from '../lib/bots';
+import { actorOf, BOT_LEVEL_LABELS, type BotLevel, botAction } from '@engine';
 import type { GameRow, Member, ResultRow } from '../lib/supabase';
 import { useCamera } from '../lib/video';
 
@@ -37,22 +37,6 @@ function loadLevel(): BotLevel {
     // ignorieren
   }
   return 'medium';
-}
-
-/** Wer muss gerade handeln? */
-function actor(s: GameState): number | null {
-  switch (s.phase) {
-    case 'reservations':
-      return s.declTurn;
-    case 'armutOffer':
-      return s.armut?.offerTurn ?? null;
-    case 'armutReturn':
-      return s.armut?.rich ?? null;
-    case 'playing':
-      return s.turn;
-    default:
-      return null;
-  }
 }
 
 /** Übungsspiel gegen drei Bots – läuft komplett im Browser, ohne Server. */
@@ -116,7 +100,7 @@ export function PracticePage() {
 
   // Bots spielen mit kleiner Pause, damit man folgen kann
   useEffect(() => {
-    const who = actor(state);
+    const who = actorOf(state);
     if (who === null || who === 0) return;
     // Bots lassen den fertigen Stich kurz liegen, bevor sie ihn nehmen
     // "Schwer" rechnet selbst ein paar hundert Millisekunden, deshalb kürzer warten
@@ -204,7 +188,7 @@ export function PracticePage() {
         act={act}
         startGame={startGame}
         onLeave={() => navigate('/')}
-        rules={{ value: settings, locked: null, onSave: saveRules }}
+        rules={{ value: settings, locked: null, onSave: saveRules, bots: false }}
       />
     </div>
   );

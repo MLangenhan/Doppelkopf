@@ -5,6 +5,8 @@ import {
   type Declaration,
   faceOf,
   type GameAction,
+  BOT_NAMES,
+  isBot,
   type RuleSettings,
   isTrump,
   legalCards,
@@ -113,6 +115,8 @@ export function GameView({
     /** null = darf bearbeiten, sonst der Grund, warum nicht */
     locked: string | null;
     onSave: (s: RuleSettings) => Promise<void>;
+    /** Bot-Stärke mit anbieten (an echten Tischen) */
+    bots?: boolean;
   };
 }) {
   const toast = useToast();
@@ -123,7 +127,8 @@ export function GameView({
   const viewPos = myPos >= 0 ? myPos : 0;
   const rel = (pos: number) => ((pos - viewPos + 4) % 4) as Rel;
   const posAt = (r: Rel) => (viewPos + r) % 4;
-  const nameOfUser = (uid: string) => members.find((m) => m.user_id === uid)?.display_name ?? 'Ehemalig';
+  const nameOfUser = (uid: string) =>
+    members.find((m) => m.user_id === uid)?.display_name ?? (isBot(uid) ? `${BOT_NAMES[uid]} (Bot)` : 'Ehemalig');
   const name = (pos: number) => nameOfUser(game.players[pos]);
   const streamOf = (uid: string) => (uid === me ? camera.stream : remotes[uid]?.stream);
 
@@ -412,6 +417,20 @@ export function GameView({
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
+  // Tasten: S = Sortierung wechseln, P = Punkte und Regeln
+  const shortcuts = useRef({ cycleSort: () => {}, toggleSidebar: () => {} });
+  shortcuts.current = { cycleSort, toggleSidebar: () => setSidebarOpen((o) => !o) };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || el?.closest?.('input, textarea, select, [contenteditable]')) return;
+      if (e.code === 'KeyS' && myPos >= 0) shortcuts.current.cycleSort();
+      else if (e.code === 'KeyP') shortcuts.current.toggleSidebar();
+      else if (e.code === 'Escape') setSidebarOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [myPos]);
   // Handy (hochkant oder sehr niedrig quer): eigenes, gestapeltes Layout
   const mobile = vp.w < 760 || vp.h < 480;
 
@@ -460,7 +479,7 @@ export function GameView({
         cardsLeft={view.phase === 'finished' ? undefined : view.handCounts[pos]}
         status={seatStatus(pos)}
         callouts={calloutsFor(pos)}
-        online={isMe || online.includes(uid)}
+        online={isMe || isBot(uid) || online.includes(uid)}
         connecting={!isMe && online.includes(uid) && remotes[uid]?.status === 'connecting'}
         pile={compact ? undefined : { ...PILE[r], cardW: Math.round(trickCardW * 0.62) }}
         compact={compact}
@@ -825,7 +844,7 @@ export function GameView({
             name={name}
             myPos={myPos}
             busy={busy}
-            canStart={members.length >= 4 && members.length <= 5}
+            canStart={members.length >= 1 && members.length <= 5}
             onClose={() => setDismissed(game.id)}
             onNext={() => run(startGame)}
           />
@@ -849,7 +868,7 @@ function RulesPanel({
   rules,
 }: {
   current: RuleSettings;
-  rules?: { value: RuleSettings; locked: string | null; onSave: (s: RuleSettings) => Promise<void> };
+  rules?: { value: RuleSettings; locked: string | null; onSave: (s: RuleSettings) => Promise<void>; bots?: boolean };
 }) {
   const [draft, setDraft] = useState<RuleSettings | null>(null);
   const [saving, setSaving] = useState(false);
@@ -873,7 +892,7 @@ function RulesPanel({
       </div>
       {draft ? (
         <div>
-          <RulesForm value={draft} onChange={setDraft} narrow />
+          <RulesForm value={draft} onChange={setDraft} narrow bots={rules?.bots ?? true} />
           <div className="mt-4 flex justify-end gap-2">
             <button className="btn-ghost" onClick={() => setDraft(null)}>
               Abbrechen

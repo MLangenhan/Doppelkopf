@@ -2,7 +2,7 @@
 // Stellschrauben: N (Deals), SAMPLES, DUELS=hard:medium,…, NO_ANN=1, NO_RES=1
 import { applyAction, createGame, type GameState } from '@engine';
 import { it } from 'vitest';
-import { type BotLevel, botAction } from '../src/lib/bots';
+import { type BotLevel, botAction } from '@engine';
 import { botGame } from './botGame';
 import { seeded, settings } from './helpers';
 

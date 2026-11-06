@@ -1,4 +1,4 @@
-import { type DulleRule, type RuleSettings, SOLO_NAMES, SOLO_TYPES } from '@engine';
+import { BOT_LEVEL_LABELS, type BotLevel, type DulleRule, type RuleSettings, SOLO_NAMES, SOLO_TYPES } from '@engine';
 import type { ReactNode } from 'react';
 
 function Toggle({
@@ -56,12 +56,15 @@ export function RulesForm({
   onChange,
   disabled,
   narrow,
+  bots = true,
 }: {
   value: RuleSettings;
   onChange: (s: RuleSettings) => void;
   disabled?: boolean;
   /** Immer einspaltig (Seitenleiste) */
   narrow?: boolean;
+  /** Auswahl der Bot-Stärke anzeigen (an echten Tischen) */
+  bots?: boolean;
 }) {
   const set = <K extends keyof RuleSettings>(key: K, v: RuleSettings[K]) => onChange({ ...value, [key]: v });
 
@@ -100,6 +103,26 @@ export function RulesForm({
             ))}
           </select>
         </div>
+        {bots && (
+          <div className="px-2 pt-2">
+            <label className="label" htmlFor="bots">
+              Bots für freie Plätze
+            </label>
+            <select
+              id="bots"
+              className="input py-2"
+              value={value.botLevel}
+              disabled={disabled}
+              onChange={(e) => set('botLevel', e.target.value as BotLevel)}
+            >
+              {(Object.keys(BOT_LEVEL_LABELS) as BotLevel[]).map((l) => (
+                <option key={l} value={l}>
+                  {BOT_LEVEL_LABELS[l]}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </Section>
 
       <Section title="Sonderpunkte">

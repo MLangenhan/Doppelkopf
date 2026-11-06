@@ -1,5 +1,5 @@
 import { applyAction, createGame, type GameState } from '@engine';
-import { type BotLevel, type BotOptions, botAction } from '../src/lib/bots';
+import { type BotLevel, type BotOptions, botAction } from '@engine';
 import { seeded, settings } from './helpers';
 
 /** Spielt ein komplettes Spiel nur mit Bots und gibt die Punkte je Platz zurück. */

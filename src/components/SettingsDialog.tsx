@@ -10,6 +10,17 @@ const SHORTCUTS: [string[], string][] = [
   [['Enter', '↑'], 'Gewählte Karte ausspielen (bei der Armut: Karte auswählen)'],
   [['Esc', '↓'], 'Auswahl aufheben, Dialoge schließen'],
   [['Tab'], 'Zu Knöpfen wie Ansage oder Vorbehalt springen'],
+  [['S'], 'Sortierung der Hand wechseln'],
+  [['P'], 'Punkte und Regeln ein- und ausblenden'],
+];
+
+const PAD: [string[], string][] = [
+  [['←', '→'], 'Karte wählen (Steuerkreuz oder linker Stick)'],
+  [['↑', '↓'], 'Zum vorigen / nächsten Knopf (Ansage, Vorbehalt, Dialoge)'],
+  [['A'], 'Markierten Knopf drücken, sonst wie Leertaste: ausspielen, Stich nehmen, weiter'],
+  [['B'], 'Zurück: Auswahl aufheben, Dialog schließen'],
+  [['LB', 'RB'], 'Sortierung wechseln'],
+  [['Start'], 'Punkte und Regeln'],
 ];
 
 export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -140,24 +151,35 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
             ))}
 
             <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Tastatur</h3>
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 px-2 text-sm">
-              {SHORTCUTS.map(([keys, what]) => (
-                <div key={what} className="contents">
-                  <dt className="flex gap-1">
-                    {keys.map((k) => (
-                      <kbd key={k} className="tag rounded border border-white/20 px-1.5 py-0.5 text-[10px] text-white/80">
-                        {k}
-                      </kbd>
-                    ))}
-                  </dt>
-                  <dd className="text-white/65">{what}</dd>
-                </div>
-              ))}
-            </dl>
+            <KeyList items={SHORTCUTS} />
+            <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Controller</h3>
+            <p className="mb-2 px-2 text-xs text-white/50">
+              Xbox-, PlayStation- oder Switch-Controller per USB oder Bluetooth. Der Browser erkennt ihn nach dem ersten Knopfdruck.
+            </p>
+            <KeyList items={PAD} />
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+function KeyList({ items }: { items: [string[], string][] }) {
+  return (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 px-2 text-sm">
+      {items.map(([keys, what]) => (
+        <div key={what} className="contents">
+          <dt className="flex gap-1">
+            {keys.map((k) => (
+              <kbd key={k} className="tag rounded border border-white/20 px-1.5 py-0.5 text-[10px] text-white/80">
+                {k}
+              </kbd>
+            ))}
+          </dt>
+          <dd className="text-white/65">{what}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

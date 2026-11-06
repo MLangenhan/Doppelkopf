@@ -14,7 +14,7 @@ Frontend: React, Vite, Tailwind und Motion. Schriften: Big Shoulders Display fü
   - Ansagen: Re/Kontra, keine 90/60/30, schwarz
   - Vorbehalte: Hochzeit, Armut (bei genau 3 Trümpfen), alle Soli einzeln wählbar, Schmeißen (über 80 Augen, 5 Könige, weniger als 3 Trümpfe, 5 Neunen)
   - stilles Solo
-- **4 oder 5 Spieler**: Zu fünft setzt der Geber aus und schaut per Kamera zu.
+- **1 bis 5 Spieler**: Fehlen Mitspieler, füllen Bots die freien Plätze auf (Stärke in den Hausregeln). Die Bots ziehen auf dem Server und sehen nur ihre eigenen Karten. Zu fünft setzt der Geber aus und schaut per Kamera zu.
 - **Kamera**: Alle sehen sich gegenseitig, direkt per WebRTC (peer-to-peer). Supabase Realtime dient nur zum Verbindungsaufbau. Tab-Wechsel und kurze Funklöcher überstehen die Verbindungen; beendet das Handy die Kamera, wird sie beim Zurückkehren automatisch neu geholt. Ob die Kamera an oder aus ist, merkt sich der Browser.
 - **Statistik** über alle Abende mit Aufschlüsselung je Spieler: Siegquote, Ø-Punkte, längste Siegesserie, bestes und schlechtestes Spiel, Punkteverlauf, Re/Kontra, Spielarten (Soli getrennt nach selbst gespielt und dagegen) und Partner. Dazu ein Punktezettel je Abend.
 - **Punkte-Aufschlüsselung**: Für die letzten Spiele sieht man, wie sich die Punkte zusammensetzen (Gewonnen, Ansagen, keine 90, Gegen die Alten, Fuchs, Doppelkopf, Karlchen …) – im Spiel unter „Punkte und Regeln“ und auf der Statistikseite.
@@ -28,6 +28,7 @@ Frontend: React, Vite, Tailwind und Motion. Schriften: Big Shoulders Display fü
 - **Karten sortieren**: Trumpf zuerst, Trumpf zuletzt, nach Farben oder eigene Reihenfolge – Karten einfach in der Hand an ihren Platz ziehen. Der Knopf neben der Infozeile schaltet die Sortierung durch.
 - **Verlassen**: Zurück zur Übersicht (der Platz bleibt) oder das laufende Spiel für alle abbrechen; ein abgebrochenes Spiel zählt nicht.
 - **Handy**: eigenes Layout mit kleinen Kameras oben, Stich in der Mitte und Hand unten.
+- **Controller**: Xbox-, PlayStation- oder Switch-Controller (Gamepad-API). Steuerkreuz ← → wählt Karten, ↑ ↓ springt zwischen Knöpfen, A drückt bzw. spielt aus, B geht zurück, LB/RB sortiert, Start zeigt Punkte und Regeln.
 - **Tastatur**: ← → wählt eine Karte, Leertaste, Enter oder ↑ spielt sie aus, Esc hebt die Wahl auf (Übersicht in den Einstellungen). Eine angehobene Karte spielt man mit der Leertaste aus, ein eigener Stich wird damit genommen. Hilfetexte gibt es keine – nur wer 5 Sekunden nichts tut, bekommt einen kleinen Leertasten-Hinweis.
 - **Stich nehmen**: Ein fertiger Stich bleibt liegen, bis der Gewinner ihn mit der Leertaste (oder per Klick) nimmt. Nach 10 Sekunden darf jeder wegräumen. Der letzte Stich ist immer klein sichtbar.
 - **Trumpf-Einschlag**: Dulle, Kreuz-Dame und Schweinchen knallen mit Beben, Druckwelle und Sound auf den Tisch.

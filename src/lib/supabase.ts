@@ -85,6 +85,7 @@ export const api = {
   startGame: (tableId: string) => callGame({ type: 'start', tableId }),
   act: (gameId: string, action: GameAction) => callGame({ type: 'action', gameId, action }),
   abortGame: (gameId: string) => callGame({ type: 'abort', gameId }),
+  botStep: (gameId: string) => callGame({ type: 'botStep', gameId }),
 
   async createTable(settings: RuleSettings, name: string): Promise<TableRow> {
     const { data, error } = await supabase.rpc('create_table', { p_settings: settings, p_name: name });
