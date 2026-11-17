@@ -95,10 +95,19 @@ export function Seat({
                 exit={{ opacity: 0 }}
                 className={`absolute flex flex-col items-end gap-1 ${compact ? 'top-1 right-1' : 'top-2 right-2'}`}
               >
+                {/* Ansagen gut sichtbar: Re blau, Kontra rot, Absagen gold – mit kurzem Aufploppen */}
                 {callouts.map((c) => (
-                  <span key={c} className="tag rounded bg-gold-400 px-1.5 py-0.5 text-[10px] text-felt-950">
+                  <motion.span
+                    key={c}
+                    initial={{ scale: 1.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 380, damping: 16 }}
+                    className={`tag rounded-md font-bold text-felt-950 shadow-lg ${
+                      compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs'
+                    } ${c === 'Re' ? 'bg-re' : c === 'Kontra' ? 'bg-kontra' : 'bg-gold-400'}`}
+                  >
                     {c}
-                  </span>
+                  </motion.span>
                 ))}
               </motion.div>
             )}

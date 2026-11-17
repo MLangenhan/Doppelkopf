@@ -25,7 +25,8 @@ import {
   partyLabel,
   trumpMode,
 } from '../lib/gameText';
-import { arrangeHand } from '../lib/handSort';
+import { useCardOrder } from '../lib/cardOrder';
+import { arrangeHand, defaultFaceOrder, orderFromHand, updateFaceOrder } from '../lib/handSort';
 import { HAND_SORT_LABELS, type HandSort, useFx, usePrefs } from '../lib/prefs';
 import { sound } from '../lib/sound';
 import type { GameRow, Member, ResultRow } from '../lib/supabase';
@@ -34,7 +35,7 @@ import { AnnouncePanel, ArmutOfferPanel, ArmutReturnPanel, ReservationPanel } fr
 import { Atmosphere } from './Atmosphere';
 import { CameraButton, type CameraControls } from './CameraButton';
 import { Hand } from './Hand';
-import { preloadCards } from './PlayingCard';
+import { CARD_RATIO, preloadCards } from './PlayingCard';
 import { LastTrick } from './LastTrick';
 import { MomentOverlay, useMoments } from './Moments';
 import { ResultDialog } from './ResultDialog';
@@ -48,21 +49,16 @@ import { type Rel, TrickArea, type TrickPlay } from './TrickArea';
 import { VideoTile } from './VideoTile';
 import { LeaveDialog } from './LeaveDialog';
 
-const orderKey = (gameId: string) => `doko:order:${gameId}`;
-function loadOrder(gameId: string): { game: string; cards: Card[] } | null {
-  try {
-    const raw = sessionStorage.getItem(orderKey(gameId));
-    return raw ? { game: gameId, cards: JSON.parse(raw) as Card[] } : null;
-  } catch {
-    return null;
-  }
-}
-function saveOrder(gameId: string, cards: Card[]) {
-  try {
-    sessionStorage.setItem(orderKey(gameId), JSON.stringify(cards));
-  } catch {
-    // egal, dann gilt die Reihenfolge nur bis zum Neuladen
-  }
+/** Größe eines Elements (für Layout, das sich nach dem freien Platz richtet) */
+function useElementSize(el: HTMLElement | null) {
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setSize({ w: e.contentRect.width, h: e.contentRect.height }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [el]);
+  return size;
 }
 
 function useViewport() {
@@ -152,24 +148,22 @@ export function GameView({
 
   const ctx = { mode: trumpMode(view), schweinchen: hasSchweinchen(view, hand) };
   const [prefs, setPref] = usePrefs();
-  // Eigene Reihenfolge je Spiel, übersteht auch ein Neuladen der Seite
-  const [customOrder, setCustomOrder] = useState<{ game: string; cards: Card[] } | null>(() => loadOrder(game.id));
-  const custom = customOrder?.game === game.id ? customOrder.cards : null;
+  // Eigene Reihenfolge: eine Rangfolge der Kartenarten für alle Spiele, im Profil gespeichert
+  const [faceOrder, saveFaceOrder] = useCardOrder();
   const shownHand = useMemo(
-    () => arrangeHand(hand.filter((c) => c !== pending), ctx, prefs.handSort, custom),
-    [hand, pending, ctx.mode, ctx.schweinchen, prefs.handSort, custom], // eslint-disable-line react-hooks/exhaustive-deps
+    () => arrangeHand(hand.filter((c) => c !== pending), ctx, prefs.handSort, faceOrder),
+    [hand, pending, ctx.mode, ctx.schweinchen, prefs.handSort, faceOrder], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const reorder = (cards: Card[]) => {
-    setCustomOrder({ game: game.id, cards });
-    saveOrder(game.id, cards);
+    // Ausgangspunkt ist die gerade gezeigte Ordnung, damit ein Wechsel von einer Vorlage nahtlos ist
+    const base = prefs.handSort === 'custom' && faceOrder ? faceOrder : orderFromHand(faceOrder ?? defaultFaceOrder(), shownHand);
+    saveFaceOrder(updateFaceOrder(base, shownHand, cards));
     if (prefs.handSort !== 'custom') setPref('handSort', 'custom');
   };
   const cycleSort = () => {
     const keys = Object.keys(HAND_SORT_LABELS) as HandSort[];
     const next = keys[(keys.indexOf(prefs.handSort) + 1) % keys.length];
-    // Eigene Reihenfolge ohne gemerkte Ordnung startet von der aktuellen Anzeige
-    if (next === 'custom' && !custom) reorder(shownHand);
-    else setPref('handSort', next);
+    setPref('handSort', next);
   };
 
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -303,7 +297,12 @@ export function GameView({
     }
     for (let i = 0; i < Math.min(3, now.played - prev.played); i++) sound.card(i * 0.12);
     if (prev.trickDone && prev.trickKey !== now.trickKey) sound.collect();
-    if (now.ann > prev.ann) sound.announce();
+    if (now.ann > prev.ann) {
+      // Neue Ansagen: Fanfare und vorlesen ("Re!", "Keine 90!")
+      const fresh = view.announcementLog.slice(prev.ann);
+      sound.announce(fresh[fresh.length - 1]?.party ?? null);
+      for (const a of fresh) sound.say(`${levelLabel(a.level, a.party)}!`);
+    }
     if (now.turn && !prev.turn) sound.turn();
   });
   // ---- Trumpf-Einschlag: Dulle, Kreuz-Dame oder Schweinchen knallen auf den Tisch ----
@@ -434,9 +433,13 @@ export function GameView({
   // Handy (hochkant oder sehr niedrig quer): eigenes, gestapeltes Layout
   const mobile = vp.w < 760 || vp.h < 480;
 
+  // Der Tisch füllt den freien Platz in der Mitte: Breite reicht für 5 Karten, Höhe für 2,2 Karten plus Beschriftung
+  const [trickCell, setTrickCell] = useState<HTMLDivElement | null>(null);
+  const cell = useElementSize(trickCell);
+  const fit = cell ? Math.min(cell.w / 5.1, (cell.h - 26) / (CARD_RATIO * 2.2)) : Infinity;
   const trickCardW = mobile
-    ? Math.round(Math.max(40, Math.min(72, (vp.w - 24) / 4.6, (vp.h - 500) / 3)))
-    : Math.round(Math.max(60, Math.min(96, Math.min(vp.w * 0.065, vp.h * 0.085))));
+    ? Math.round(Math.max(40, Math.min(72, (vp.w - 24) / 5.1, fit)))
+    : Math.round(Math.max(56, Math.min(116, vp.w * 0.075, fit)));
   // Kameras in den vier Ecken, so groß wie es der Platz erlaubt
   const camW = Math.round(Math.max(180, Math.min(400, vp.w * 0.22, vp.h * 0.36)));
 
@@ -742,7 +745,9 @@ export function GameView({
             </div>
           )}
           {/* overflow-clip: einfliegende Karten lassen die Seite nicht scrollen */}
-          <div className="grid min-h-0 flex-1 place-items-center overflow-clip pt-5">{trickArea}</div>
+          <div ref={setTrickCell} className="grid min-h-0 flex-1 place-items-center overflow-clip pt-5">
+            {trickArea}
+          </div>
           <div className="flex min-h-11 flex-col items-center justify-end gap-2">
             <AnimatePresence mode="wait">{panel}</AnimatePresence>
             {hint}
@@ -759,10 +764,10 @@ export function GameView({
         <Atmosphere />
 
         {/* Oben links: Spieler links von mir */}
-        <div className="self-start">{seatFor(1)}</div>
+        <div className="relative z-10 self-start">{seatFor(1)}</div>
 
         {/* Oben Mitte: Infoleiste und wer aussetzt */}
-        <div className="flex min-w-0 flex-col items-center gap-3 self-start">
+        <div className="relative z-10 flex min-w-0 flex-col items-center gap-3 self-start">
           {infoLine}
           {toolbar}
           {lastTrick}
@@ -770,13 +775,16 @@ export function GameView({
         </div>
 
         {/* Oben rechts: gegenüber */}
-        <div className="self-start">{seatFor(2)}</div>
+        <div className="relative z-10 self-start">{seatFor(2)}</div>
 
         {/* Mitte: der Stich */}
-        <div className="col-span-3 grid min-h-0 place-items-center">{trickArea}</div>
+        {/* z-0: Die Tischmitte liegt hinter Hand und Aktionen – aufgeklappte Vorbehalte verschwinden nie dahinter */}
+        <div ref={setTrickCell} className="relative z-0 col-span-3 grid min-h-0 place-items-center">
+          {trickArea}
+        </div>
 
         {/* Unten links: ich */}
-        <div className="self-end">
+        <div className="relative z-10 self-end">
           {myPos >= 0 ? (
             seatFor(0)
           ) : (
@@ -787,7 +795,7 @@ export function GameView({
         </div>
 
         {/* Unten Mitte: Hand, Aktionen, Ansagen */}
-        <div className="flex min-w-0 items-end gap-3 self-end">
+        <div className="relative z-20 flex min-w-0 items-end gap-3 self-end">
           <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
             <div className="flex min-h-11 flex-col items-center justify-end gap-2">
               <AnimatePresence mode="wait">{panel}</AnimatePresence>
@@ -799,7 +807,7 @@ export function GameView({
         </div>
 
         {/* Unten rechts: Spieler rechts von mir */}
-        <div className="self-end">{seatFor(3)}</div>
+        <div className="relative z-10 self-end">{seatFor(3)}</div>
       </main>
       )}
 

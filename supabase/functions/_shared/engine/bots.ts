@@ -81,8 +81,16 @@ export function botAction(s: GameState, pos: number, level: BotLevel = 'medium',
   if (s.phase === 'armutOffer' && s.armut?.offerTurn === pos) {
     const n = NORMAL_CTX;
     const trumps = hand.filter((c) => isTrump(c, n));
+    // Mitnehmen heißt: mit drei geschenkten (meist schwachen) Trümpfen gegen drei Gegner bestehen.
+    // Das lohnt sich nur mit einer wirklich starken Hand.
     const top = trumps.filter((c) => ['H-10', 'C-Q', 'S-Q'].includes(faceOf(c))).length;
-    const accept = level === 'easy' ? trumps.length >= 7 : trumps.length >= 6 && top >= 2;
+    const aces = hand.filter((c) => !isTrump(c, n) && rankOf(c) === 'A').length;
+    // Achtung: Wer Armut hat, hält nur 3 Trümpfe – die anderen haben im Schnitt 7 (von 10 Karten).
+    const size = hand.length;
+    const accept =
+      level === 'easy'
+        ? trumps.length >= size * 0.9
+        : (trumps.length >= size * 0.8 && top >= 2) || (trumps.length >= size * 0.7 && top >= 3 && aces >= 1);
     return { type: 'armutAnswer', accept };
   }
 
@@ -305,6 +313,8 @@ interface PlayInput {
   ruffRisk: (suit: string) => boolean;
   fuchs: boolean;
   karlchen: boolean;
+  /** Ich spiele ein Solo (oder stilles Solo / Hochzeit allein) */
+  soloist?: boolean;
 }
 
 function mediumCard(s: GameState, pos: number): Card {
@@ -330,6 +340,8 @@ function mediumCard(s: GameState, pos: number): Card {
     },
     fuchs: s.settings.fuchs && s.schweinchen === null && s.kind !== 'solo',
     karlchen: s.settings.karlchen && s.kind !== 'solo',
+    // Hochzeit vor der Partnersuche zählt nicht (da ist die Braut nur vorläufig allein)
+    soloist: s.reTeam.length === 1 && s.reTeam[0] === pos && (s.kind !== 'hochzeit' || !!s.hochzeit?.alone),
   };
   return heuristicPlay(input);
 }
@@ -356,7 +368,13 @@ function heuristicPlay(x: PlayInput): Card {
     if (aces.length) return aces[0];
     const trumps = legal.filter((c) => isTrump(c, ctx) && !isFox(c) && !isKarl(c));
     const fehl = legal.filter((c) => !isTrump(c, ctx));
-    // Re (und Solist) zieht Trumpf, Kontra spielt lieber Fehl an
+    // Solist: mit den höchsten Trümpfen die Gegner leer ziehen, solange sie nicht überstochen werden können
+    if (x.soloist && trumps.length) {
+      const top = [...trumps].sort((a, b) => power(b) - power(a))[0];
+      const beatable = x.threats.some((t) => isTrump(t, ctx) && power(t) > power(top));
+      if (!beatable || trumps.length >= hand.length - 1) return top;
+    }
+    // Re zieht Trumpf, Kontra spielt lieber Fehl an
     if (trumps.length && (me === 're' || !fehl.length)) return [...trumps].sort((a, b) => power(a) - power(b))[0];
     if (fehl.length) {
       // Keine Zehn oder blanken König in eine Farbe, deren Ass noch draußen ist
@@ -403,9 +421,12 @@ function heuristicPlay(x: PlayInput): Card {
   if (winners.length && !partnerWins) {
     const byPower = [...winners].sort((a, b) => power(a) - power(b));
     if (lastToPlay) {
-      // Als Letzter: mit der billigsten Siegkarte nehmen, wenn es sich lohnt
-      const pick = cheapest(byPower.filter((c) => (!isKarl(c) || x.lastTrick) && spend(c)));
-      if (pick && (value + augenOf(pick) >= cost(pick) || opponentWins || value >= 10)) return pick;
+      // Als Letzter ist der Stich sicher: den Fuchs heimbringen, sonst die schwächste Karte, die reicht
+      // (Karo-König statt Karo-Dame – die eigenen Augen bleiben ohnehin bei uns)
+      const fox = byPower.find(isFox);
+      if (fox) return fox;
+      const pick = byPower.find((c) => (!isKarl(c) || x.lastTrick) && spend(c));
+      if (pick && (value + augenOf(pick) >= 4 || opponentWins || !isTrump(pick, ctx))) return pick;
     } else {
       const safe = byPower.filter((c) => !canBeBeaten(c) && !isFox(c) && spend(c));
       const worth = value >= 10 || opponentWins || hand.length <= 3;
@@ -447,14 +468,12 @@ function hardCard(s: GameState, pos: number, rng: () => number, opts: BotOptions
     rounds++;
   }
   if (!rounds) return mediumCard(s, pos);
-  // Bei Gleichstand die Heuristik entscheiden lassen
+  // Die Heuristik ist Vorwissen: Die Simulation muss sie klar schlagen (0,15 Punkte im Schnitt),
+  // sonst entscheidet Rauschen – z. B. Buttern auf einen Stich, dessen Gewinner man gar nicht kennt
   const fallback = mediumCard(s, pos);
+  const score = (c: Card) => total.get(c)! / rounds + (faceOf(c) === faceOf(fallback) ? 0.15 : 0);
   let best = options[0];
-  for (const c of options) {
-    const v = total.get(c)! + (faceOf(c) === faceOf(fallback) ? 0.01 : 0);
-    const b = total.get(best)! + (faceOf(best) === faceOf(fallback) ? 0.01 : 0);
-    if (v > b) best = c;
-  }
+  for (const c of options) if (score(c) > score(best)) best = c;
   return best;
 }
 
@@ -595,6 +614,7 @@ function playOut(s: GameState, pos: number, world: World, first: Card | null) {
         ruffRisk: (suit) => suit !== 'T' && later.some((q) => !hands[q].some((c) => effectiveSuit(c, ctx) === suit)),
         fuchs,
         karlchen,
+        soloist: !hz && team.length === 1 && team[0] === p,
       });
     }
     hand.splice(hand.indexOf(card), 1);

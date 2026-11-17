@@ -6,6 +6,7 @@ let master: GainNode | null = null;
 let noise: AudioBuffer | null = null;
 let enabled = true;
 let volume = 0.6;
+let voice = true;
 
 function audio(): AudioContext | null {
   if (!enabled || typeof window === 'undefined' || !('AudioContext' in window)) return null;
@@ -34,9 +35,10 @@ if (typeof window !== 'undefined') {
   window.addEventListener('keydown', unlock);
 }
 
-export function configureSound(on: boolean, vol: number) {
+export function configureSound(on: boolean, vol: number, speak = true) {
   enabled = on;
   volume = vol;
+  voice = speak;
   if (master && ctx) master.gain.setTargetAtTime(on ? vol : 0, ctx.currentTime, 0.02);
 }
 
@@ -142,14 +144,32 @@ export const sound = {
     tone(c, at + 0.11, 987.77, 0.08, 0.35, 'sine');
   },
 
-  /** Ansage (Re, Kontra, keine 90 …) */
-  announce() {
+  /** Ansage (Re, Kontra, keine 90 …): kräftiger Fanfarenstoß, Re hell, Kontra tiefer */
+  announce(party: 're' | 'kontra' | null = null) {
     const c = audio();
     if (!c) return;
     const at = c.currentTime;
-    tone(c, at, 523.25, 0.12, 0.35);
-    tone(c, at + 0.08, 783.99, 0.12, 0.45);
-    tone(c, at + 0.16, 1046.5, 0.08, 0.5, 'sine');
+    const base = party === 'kontra' ? 392 : 523.25;
+    // Zwei Schläge, dann ein gehaltener Dur-Akkord – deutlich hörbar, auch über Gespräch
+    thump(c, at, 0.6, 140, 60);
+    tone(c, at, base, 0.22, 0.18, 'sawtooth');
+    tone(c, at + 0.14, base, 0.22, 0.16, 'sawtooth');
+    for (const [f, g] of [[1, 0.2], [1.25, 0.16], [1.5, 0.16], [2, 0.1]] as const) {
+      tone(c, at + 0.3, base * f, g, 0.75, f === 2 ? 'sine' : 'triangle');
+    }
+  },
+
+  /** Ansage vorlesen (Sprachausgabe des Browsers), z. B. "Re!" */
+  say(text: string) {
+    if (!enabled || !voice || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'de-DE';
+    u.volume = Math.min(1, volume * 1.6);
+    u.rate = 1.05;
+    u.pitch = 1;
+    const de = window.speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith('de'));
+    if (de) u.voice = de;
+    window.speechSynthesis.speak(u);
   },
 
   win() {

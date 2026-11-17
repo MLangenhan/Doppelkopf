@@ -2,6 +2,8 @@ import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect } from 'react';
 import { FX_LABELS, type FxKey, HAND_SORT_LABELS, type HandSort, setAllFx, setFx, usePrefs } from '../lib/prefs';
+import { useCardOrder } from '../lib/cardOrder';
+import { defaultFaceOrder } from '../lib/handSort';
 import { sound } from '../lib/sound';
 
 const SHORTCUTS: [string[], string][] = [
@@ -25,6 +27,7 @@ const PAD: [string[], string][] = [
 
 export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [prefs, setPref] = usePrefs();
+  const [faceOrder, saveFaceOrder] = useCardOrder();
   const reduced = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   useEffect(() => {
@@ -103,6 +106,19 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
               </div>
             )}
 
+            {prefs.sound && (
+              <Toggle
+                checked={prefs.voice}
+                onChange={(v) => {
+                  setPref('voice', v);
+                  // kurz warten, bis die Einstellung bei der Sprachausgabe angekommen ist
+                  if (v) setTimeout(() => sound.say('Re!'), 60);
+                }}
+                label="Ansagen vorlesen"
+                hint="„Re!“, „Kontra!“, „Keine 90!“ – mit der Sprachausgabe des Browsers, zusätzlich zur Fanfare."
+              />
+            )}
+
             <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Kartenhand</h3>
             <div className="grid grid-cols-2 gap-1.5 px-2" role="radiogroup" aria-label="Sortierung">
               {(Object.keys(HAND_SORT_LABELS) as HandSort[]).map((k) => (
@@ -121,8 +137,14 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
               ))}
             </div>
             <p className="px-2 pt-1.5 text-xs text-white/50">
-              Bei „Eigene Reihenfolge“ ziehst du Karten in der Hand einfach an ihren Platz.
+              Zieh Karten in der Hand an ihren Platz – daraus wird deine eigene Reihenfolge. Sie gilt in jedem Spiel und
+              wird mit deinem Konto gespeichert.
             </p>
+            {faceOrder && (
+              <button type="button" className="btn-ghost tag mx-2 mt-1 px-2 py-1 text-[10px]" onClick={() => saveFaceOrder(defaultFaceOrder())}>
+                Eigene Reihenfolge zurücksetzen
+              </button>
+            )}
 
             <div className="mt-5 mb-2 flex items-center justify-between">
               <h3 className="text-xs font-semibold tracking-wider text-white/50 uppercase">Effekte</h3>

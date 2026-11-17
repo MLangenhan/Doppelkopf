@@ -37,6 +37,8 @@ export interface Prefs {
   sound: boolean;
   /** Lautstärke 0–1 */
   volume: number;
+  /** Ansagen vorlesen ("Re!", "Keine 90!") */
+  voice: boolean;
   /** Kamera beim Betreten eines Tisches einschalten */
   camera: boolean;
 }
@@ -50,6 +52,7 @@ const DEFAULTS: Prefs = {
   handSort: 'trumpFirst',
   sound: true,
   volume: 0.6,
+  voice: true,
   camera: true,
 };
 const KEY = 'doko:prefs';

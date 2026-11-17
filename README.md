@@ -25,7 +25,7 @@ Frontend: React, Vite, Tailwind und Motion. Schriften: Big Shoulders Display fü
   - Stärkevergleich: `TURNIER=1 npx vitest run tests/bot-tournament.test.ts`
 - **Seitenleiste** (Symbol neben der Infozeile): Punkte, letzte Spiele und Hausregeln. Der Gastgeber kann die Regeln dort zwischen den Spielen anpassen, sie gelten ab dem nächsten Spiel.
 - **Persönliche Einstellungen** (Zahnrad oben rechts): Spielbare Karten hervorheben lässt sich abschalten, um ohne Hilfe zu spielen. Jeder Effekt (Zeiger, Neigung, Trumpf-Einschlag, große Momente, Auswertung, Konfetti, Atmosphäre, 3D-Karten) ist einzeln schaltbar.
-- **Karten sortieren**: Trumpf zuerst, Trumpf zuletzt, nach Farben oder eigene Reihenfolge – Karten einfach in der Hand an ihren Platz ziehen. Der Knopf neben der Infozeile schaltet die Sortierung durch.
+- **Karten sortieren**: Trumpf zuerst, Trumpf zuletzt, nach Farben oder eigene Reihenfolge – Karten einfach in der Hand an ihren Platz ziehen. Die eigene Reihenfolge ist eine Rangfolge aller Kartenarten, gilt in jedem Spiel und wird im Profil gespeichert. Der Knopf neben der Infozeile schaltet die Sortierung durch.
 - **Verlassen**: Zurück zur Übersicht (der Platz bleibt) oder das laufende Spiel für alle abbrechen; ein abgebrochenes Spiel zählt nicht.
 - **Handy**: eigenes Layout mit kleinen Kameras oben, Stich in der Mitte und Hand unten.
 - **Controller**: Xbox-, PlayStation- oder Switch-Controller (Gamepad-API). Steuerkreuz ← → wählt Karten, ↑ ↓ springt zwischen Knöpfen, A drückt bzw. spielt aus, B geht zurück, LB/RB sortiert, Start zeigt Punkte und Regeln.
@@ -34,6 +34,7 @@ Frontend: React, Vite, Tailwind und Motion. Schriften: Big Shoulders Display fü
 - **Trumpf-Einschlag**: Dulle, Kreuz-Dame und Schweinchen knallen mit Beben, Druckwelle und Sound auf den Tisch.
 - **Stichstapel**: Gewonnene Stiche drehen sich um, fliegen zum Gewinner und liegen als sichtbarer Kartenstapel mit Zähler neben seiner Kamera.
 - **Augen-Auswertung**: Am Ende zählen die Augen hoch, der Sieger steht erst fest, wenn er die 121er-Marke überquert. Leertaste überspringt, ein zweites Mal gibt das nächste Spiel.
+- **Ansagen** sind gut zu hören und zu sehen: eigene Fanfare (Re hell, Kontra tiefer), Sprachausgabe („Re!“, „Keine 90!“, abschaltbar) und farbige Schilder an den Kameras.
 - **Große Momente**: Ansagen, Soli, Hochzeit, Schweinchen, Doppelkopf, Fuchs und Karlchen erscheinen groß auf der Spielfläche, beim Sieg gibt es Konfetti.
 - **Eigener Cursor** als Farbzeichen (wird über einer Karte zu deren Farbe, über dem Stich zur Hand) und **Karten mit 3D-Neigung** und Glanzlicht in der Hand. Beides nur mit Maus und einzeln abschaltbar.
 - **Sounds** für Karten, Stiche, Ansagen, „Du bist dran“ und das Spielende – im Browser erzeugt (Web Audio), ohne Audiodateien. An/aus und Lautstärke in den Einstellungen.

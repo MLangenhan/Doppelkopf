@@ -110,8 +110,8 @@ export function TrickArea({
   children?: ReactNode;
 }) {
   const cardH = cardWidth * CARD_RATIO;
-  const matW = cardWidth * 4.4;
-  const matH = cardH * 2.05;
+  const matW = cardWidth * 5;
+  const matH = cardH * 2.2;
   const complete = winnerRel !== null;
 
   return (
