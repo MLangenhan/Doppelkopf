@@ -37,8 +37,9 @@ jobs:
       - name: Projekt verknüpfen
         run: supabase link --project-ref "$PROJECT_REF"
       - name: Datenbank-Migrationen
-        # Neuere CLI-Versionen zielen sonst auf eine lokale Datenbank
-        run: supabase db push --remote
+        # --remote: neuere CLI-Versionen zielen sonst auf eine lokale Datenbank
+        # --yes: im CI gibt es niemanden, der die Rückfrage bestätigt
+        run: supabase db push --remote --yes
       - name: Edge Function deployen
         # --yes: im CI gibt es niemanden, der die Rückfrage bestätigt
         run: supabase functions deploy game --remote="$PROJECT_REF" --use-api --yes
