@@ -5,6 +5,7 @@ import {
   type Declaration,
   faceOf,
   type GameAction,
+  BOT_IDS,
   BOT_NAMES,
   isBot,
   type RuleSettings,
@@ -69,6 +70,9 @@ function useElementSize(el: HTMLElement | null) {
 
 /** Bots an echten Tischen (feste IDs) und im Übungsmodus ("bot-1" …) */
 const isBotSeat = (uid: string) => isBot(uid) || uid.startsWith('bot-');
+/** Welcher Bot (0 Anton, 1 Berta, 2 Carl) – fürs feste Standard-GIF */
+const botIndex = (uid: string, fallback: number) =>
+  uid.startsWith('bot-') ? Number(uid.slice(4)) - 1 : BOT_IDS.includes(uid) ? BOT_IDS.indexOf(uid) : fallback;
 
 function useViewport() {
   const [size, setSize] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
@@ -510,7 +514,7 @@ export function GameView({
         connecting={!isMe && online.includes(uid) && remotes[uid]?.status === 'connecting'}
         pile={compact ? undefined : { ...PILE[r], cardW: Math.round(trickCardW * 0.62) }}
         compact={compact}
-        media={cats && isBotSeat(uid) ? <BotCat mood={moodOf(view, pos, announcer)} seed={r} /> : undefined}
+        media={cats && isBotSeat(uid) ? <BotCat mood={moodOf(view, pos, announcer)} bot={botIndex(uid, r)} /> : undefined}
         reaction={reactions?.shown[uid]}
       />
     );
