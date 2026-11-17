@@ -10,6 +10,7 @@ import { getPrefs } from '../lib/prefs';
 import { api } from '../lib/supabase';
 import { useTable } from '../lib/useTable';
 import { useBotDriver } from '../lib/useBotDriver';
+import { useReactions } from '../lib/reactions';
 import { useCamera, useVideoMesh } from '../lib/video';
 
 export function TablePage() {
@@ -20,6 +21,7 @@ export function TablePage() {
   const camera = useCamera();
   const { remotes, online } = useVideoMesh(t.table?.id, t.me, camera.stream);
   useBotDriver(t.game, t.me, online, t.reloadGame);
+  const reactions = useReactions(t.table?.id ?? null, t.me);
   const [busy, setBusy] = useState(false);
   const [lobby, setLobby] = useState(false);
 
@@ -135,6 +137,7 @@ export function TablePage() {
           startGame={t.startGame}
           onShowLobby={() => setLobby(true)}
           onLeave={() => navigate('/')}
+          reactions={reactions}
           onAbort={() => run(() => api.abortGame(t.game!.id))}
           rules={{
             value: normalizeSettings(table.settings),

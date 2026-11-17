@@ -1,10 +1,10 @@
 import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { FX_LABELS, type FxKey, HAND_SORT_LABELS, type HandSort, setAllFx, setFx, usePrefs } from '../lib/prefs';
 import { useCardOrder } from '../lib/cardOrder';
 import { defaultFaceOrder } from '../lib/handSort';
-import { sound } from '../lib/sound';
+import { germanVoices, sound } from '../lib/sound';
 
 const SHORTCUTS: [string[], string][] = [
   [['←', '→'], 'Karte wählen'],
@@ -14,6 +14,7 @@ const SHORTCUTS: [string[], string][] = [
   [['Tab'], 'Zu Knöpfen wie Ansage oder Vorbehalt springen'],
   [['S'], 'Sortierung der Hand wechseln'],
   [['P'], 'Punkte und Regeln ein- und ausblenden'],
+  [['1', '2', '3', '4'], 'Reaktion: Applaus, Autsch, Glück gehabt, Hmm'],
 ];
 
 const PAD: [string[], string][] = [
@@ -28,6 +29,15 @@ const PAD: [string[], string][] = [
 export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [prefs, setPref] = usePrefs();
   const [faceOrder, saveFaceOrder] = useCardOrder();
+  // Stimmen lädt der Browser erst nach und nach
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>(() => germanVoices());
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    const update = () => setVoices(germanVoices());
+    window.speechSynthesis.addEventListener('voiceschanged', update);
+    update();
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', update);
+  }, []);
   const reduced = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   useEffect(() => {
@@ -117,6 +127,32 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
                 label="Ansagen vorlesen"
                 hint="„Re!“, „Kontra!“, „Keine 90!“ – mit der Sprachausgabe des Browsers, zusätzlich zur Fanfare."
               />
+            )}
+            {prefs.sound && prefs.voice && (
+              <div className="flex items-center gap-3 px-2 pt-1 pb-2">
+                <label htmlFor="voice" className="text-sm text-white/70">
+                  Stimme
+                </label>
+                <select
+                  id="voice"
+                  className="input flex-1 py-1.5 text-sm"
+                  value={prefs.voiceName}
+                  onChange={(e) => {
+                    setPref('voiceName', e.target.value);
+                    setTimeout(() => sound.say('Re!'), 60);
+                  }}
+                >
+                  <option value="">Automatisch{voices[0] ? ` (${voices[0].name})` : ''}</option>
+                  {voices.map((v) => (
+                    <option key={v.name} value={v.name}>
+                      {v.name}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" className="btn-secondary px-3 py-1.5" onClick={() => sound.say('Kontra!')}>
+                  Anhören
+                </button>
+              </div>
             )}
 
             <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Kartenhand</h3>

@@ -3,9 +3,10 @@ import { useCallback, useSyncExternalStore } from 'react';
 // Persönliche Anzeige-Einstellungen. Liegen nur im Browser (localStorage), nicht am Tisch.
 
 /** Einzeln schaltbare Effekte */
-export type FxKey = 'scene' | 'atmosphere' | 'cursor' | 'tilt' | 'impact' | 'moments' | 'confetti' | 'reveal';
+export type FxKey = 'scene' | 'atmosphere' | 'cursor' | 'tilt' | 'impact' | 'moments' | 'confetti' | 'reveal' | 'cats';
 
 export const FX_LABELS: Record<FxKey, { label: string; hint: string }> = {
+  cats: { label: 'Katzen für Bots', hint: 'Die Kameras der Bots zeigen Katzen-GIFs (GIPHY), die auf das Spiel reagieren.' },
   cursor: { label: 'Farbzeichen-Zeiger', hint: 'Der Mauszeiger wird zum ♠ und nimmt über Karten deren Farbe an.' },
   tilt: { label: 'Karten neigen', hint: 'Karten in der Hand kippen zur Maus und glänzen.' },
   impact: { label: 'Trumpf-Einschlag', hint: 'Dulle, Kreuz-Dame und Schweinchen lassen den Tisch beben.' },
@@ -39,6 +40,8 @@ export interface Prefs {
   volume: number;
   /** Ansagen vorlesen ("Re!", "Keine 90!") */
   voice: boolean;
+  /** Gewählte Stimme der Sprachausgabe (Name aus dem Browser), leer = automatisch die beste deutsche */
+  voiceName: string;
   /** Kamera beim Betreten eines Tisches einschalten */
   camera: boolean;
 }
@@ -53,6 +56,7 @@ const DEFAULTS: Prefs = {
   sound: true,
   volume: 0.6,
   voice: true,
+  voiceName: '',
   camera: true,
 };
 const KEY = 'doko:prefs';

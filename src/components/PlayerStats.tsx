@@ -1,4 +1,6 @@
+import { Medal } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
+import { BADGE_KEYS, BADGES, type BadgeKey } from '../lib/achievements';
 import { resultKindLabel } from '../lib/gameText';
 import { playerDetail, type Tally } from '../lib/stats';
 import type { ResultRow } from '../lib/supabase';
@@ -8,7 +10,18 @@ const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 const date = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
 
 /** Aufschlüsselung eines Spielers: Kennzahlen, Verlauf, Parteien, Spielarten, Partner. */
-export function PlayerStats({ results, userId, name }: { results: ResultRow[]; userId: string; name: (id: string) => string }) {
+export function PlayerStats({
+  results,
+  userId,
+  name,
+  badges,
+}: {
+  results: ResultRow[];
+  userId: string;
+  name: (id: string) => string;
+  /** Abzeichen über alle geladenen Spiele */
+  badges?: Record<BadgeKey, number>;
+}) {
   const d = useMemo(() => playerDetail(results, userId), [results, userId]);
   if (d.total.games === 0) return <p className="py-4 text-sm text-white/50">Noch keine Spiele.</p>;
 
@@ -25,6 +38,25 @@ export function PlayerStats({ results, userId, name }: { results: ResultRow[]; u
           sub={`${resultKindLabel(d.best!.kind, d.best!.solo)}, ${date(d.best!.created_at)}`}
         />
       </dl>
+
+      {badges && BADGE_KEYS.some((k) => badges[k] > 0) && (
+        <section>
+          <h4 className="tag mb-2 text-[10px] text-white/45">Abzeichen</h4>
+          <ul className="flex flex-wrap gap-1.5">
+            {BADGE_KEYS.filter((k) => badges[k] > 0).map((k) => (
+              <li
+                key={k}
+                title={BADGES[k].hint}
+                className="inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 px-2.5 py-1 text-xs text-gold-200 ring-1 ring-gold-400/40"
+              >
+                <Medal className="size-3.5" aria-hidden />
+                {BADGES[k].label}
+                <span className="tabular-nums text-white/70">×{badges[k]}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {d.timeline.length > 1 && (
         <section>

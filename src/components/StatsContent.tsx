@@ -6,6 +6,7 @@ import { PlayerStats } from './PlayerStats';
 import { SectionLabel } from './SectionLabel';
 import { useAuth } from '../lib/auth';
 import { RecentGames } from './RecentGames';
+import { countBadges, eveningTitles } from '../lib/achievements';
 import { type GameRow, type ResultRow, supabase, type TableRow } from '../lib/supabase';
 
 interface PlayerStats {
@@ -38,7 +39,7 @@ export function StatsContent({ inDialog }: { inDialog?: boolean }) {
       const [{ data: s }, { data: r }, { data: g }] = await Promise.all([
         supabase.from('player_stats').select('*').gt('games', 0).order('points', { ascending: false }),
         supabase.from('game_results').select('*').order('created_at', { ascending: false }).limit(5000),
-        supabase.from('games').select('*').eq('status', 'finished').order('finished_at', { ascending: false }).limit(20),
+        supabase.from('games').select('*').eq('status', 'finished').order('finished_at', { ascending: false }).limit(400),
       ]);
       setRecent((g ?? []) as GameRow[]);
       setStats((s ?? []) as PlayerStats[]);
@@ -52,6 +53,7 @@ export function StatsContent({ inDialog }: { inDialog?: boolean }) {
     })();
   }, []);
 
+  const badgeCounts = useMemo(() => countBadges(recent), [recent]);
   const names = useMemo(() => new Map((stats ?? []).map((s) => [s.user_id, s.display_name])), [stats]);
 
   const evenings = useMemo(() => {
@@ -66,10 +68,14 @@ export function StatsContent({ inDialog }: { inDialog?: boolean }) {
     return tables
       .map((t) => {
         const totals = [...(byTable.get(t.id) ?? new Map()).entries()].sort((a, b) => b[1] - a[1]);
-        return { table: t, totals, games: gamesPerTable.get(t.id)?.size ?? 0 };
+        const titles = eveningTitles(
+          results.filter((r) => r.table_id === t.id),
+          recent.filter((g) => g.table_id === t.id),
+        );
+        return { table: t, totals, titles, games: gamesPerTable.get(t.id)?.size ?? 0 };
       })
       .sort((a, b) => b.table.created_at.localeCompare(a.table.created_at));
-  }, [results, tables]);
+  }, [results, tables, recent]);
 
   return (
     <>
@@ -138,7 +144,12 @@ export function StatsContent({ inDialog }: { inDialog?: boolean }) {
                       transition={{ duration: 0.25 }}
                       className="overflow-hidden"
                     >
-                      <PlayerStats results={results} userId={s.user_id} name={(id) => names.get(id) ?? '?'} />
+                      <PlayerStats
+                        results={results}
+                        userId={s.user_id}
+                        name={(id) => names.get(id) ?? '?'}
+                        badges={badgeCounts.get(s.user_id)}
+                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -166,7 +177,7 @@ export function StatsContent({ inDialog }: { inDialog?: boolean }) {
           <p className="text-white/50">Noch keine Abende.</p>
         ) : (
           <ul className="border-t border-white/[0.08]">
-            {evenings.map(({ table, totals, games }) => (
+            {evenings.map(({ table, totals, titles, games }) => (
               <li key={table.id}>
                 <Link
                   to={`/t/${table.code}`}
@@ -185,6 +196,15 @@ export function StatsContent({ inDialog }: { inDialog?: boolean }) {
                         </span>
                       ))}
                     </div>
+                    {titles.length > 0 && (
+                      <div className="tag mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-white/40">
+                        {titles.map((t) => (
+                          <span key={t.title} title={t.hint}>
+                            <span className="text-gold-400/80">{t.title}</span> {t.holders.map((u) => names.get(u) ?? '?').join(' & ')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <span className="tag col-start-2 text-[11px] text-white/35 sm:col-start-auto">{games} Spiele</span>
                 </Link>

@@ -7,6 +7,7 @@ let noise: AudioBuffer | null = null;
 let enabled = true;
 let volume = 0.6;
 let voice = true;
+let voiceName = '';
 
 function audio(): AudioContext | null {
   if (!enabled || typeof window === 'undefined' || !('AudioContext' in window)) return null;
@@ -35,10 +36,11 @@ if (typeof window !== 'undefined') {
   window.addEventListener('keydown', unlock);
 }
 
-export function configureSound(on: boolean, vol: number, speak = true) {
+export function configureSound(on: boolean, vol: number, speak = true, speakWith = '') {
   enabled = on;
   volume = vol;
   voice = speak;
+  voiceName = speakWith;
   if (master && ctx) master.gain.setTargetAtTime(on ? vol : 0, ctx.currentTime, 0.02);
 }
 
@@ -91,6 +93,20 @@ function tone(c: AudioContext, at: number, freq: number, gain: number, dur: numb
   osc.connect(g).connect(master!);
   osc.start(at);
   osc.stop(at + dur + 0.05);
+}
+
+/**
+ * Deutsche Stimmen des Browsers, die natürlich klingenden zuerst: "Natural"/"Online" (Edge, Windows 11),
+ * dann "Google" (Chrome), dann die eingebauten Systemstimmen.
+ */
+export function germanVoices(): SpeechSynthesisVoice[] {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return [];
+  const rank = (v: SpeechSynthesisVoice) =>
+    /natural|neural|online/i.test(v.name) ? 0 : /google/i.test(v.name) ? 1 : v.localService ? 3 : 2;
+  return window.speechSynthesis
+    .getVoices()
+    .filter((v) => v.lang.toLowerCase().startsWith('de'))
+    .sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
 }
 
 export const sound = {
@@ -167,9 +183,41 @@ export const sound = {
     u.volume = Math.min(1, volume * 1.6);
     u.rate = 1.05;
     u.pitch = 1;
-    const de = window.speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith('de'));
-    if (de) u.voice = de;
+    const chosen = germanVoices().find((v) => v.name === voiceName) ?? germanVoices()[0];
+    if (chosen) u.voice = chosen;
+    window.speechSynthesis.cancel();
     window.speechSynthesis.speak(u);
+  },
+
+  /** Reaktionen am Tisch */
+  reaction(kind: 'applaus' | 'autsch' | 'glueck' | 'hmm') {
+    const c = audio();
+    if (!c) return;
+    const at = c.currentTime;
+    if (kind === 'applaus') {
+      // Viele kurze Klatscher, zufällig verteilt
+      for (let i = 0; i < 22; i++) {
+        noiseBurst(c, at + rand(0, 0.9), { filter: 'bandpass', freq: rand(1200, 2600), q: 1.2, gain: rand(0.15, 0.35), attack: 0.002, decay: 0.05 });
+      }
+    } else if (kind === 'autsch') {
+      tone(c, at, 660, 0.14, 0.12, 'square');
+      const osc = c.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(620, at + 0.1);
+      osc.frequency.exponentialRampToValueAtTime(180, at + 0.5);
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.0001, at + 0.1);
+      g.gain.exponentialRampToValueAtTime(0.16, at + 0.12);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + 0.55);
+      osc.connect(g).connect(master!);
+      osc.start(at + 0.1);
+      osc.stop(at + 0.6);
+    } else if (kind === 'glueck') {
+      [783.99, 987.77, 1174.66, 1567.98].forEach((f, i) => tone(c, at + i * 0.06, f, 0.08, 0.35, 'sine'));
+    } else {
+      tone(c, at, 196, 0.12, 0.5, 'triangle');
+      tone(c, at + 0.25, 174.61, 0.1, 0.5, 'triangle');
+    }
   },
 
   win() {

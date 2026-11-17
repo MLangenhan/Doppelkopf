@@ -13,7 +13,7 @@ import {
   SOLO_NAMES,
   sumAugen,
 } from '@engine';
-import { ArrowDownUp, ListOrdered, LogOut, Video, VideoOff, X } from 'lucide-react';
+import { Crown, ArrowDownUp, ListOrdered, LogOut, Video, VideoOff, X } from 'lucide-react';
 import { AnimatePresence, motion, useAnimate } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -25,7 +25,11 @@ import {
   partyLabel,
   trumpMode,
 } from '../lib/gameText';
+import { eveningTitles } from '../lib/achievements';
+import { moodOf } from '../lib/botMood';
 import { useCardOrder } from '../lib/cardOrder';
+import { giphyEnabled } from '../lib/giphy';
+import { REACTION_KINDS, type ReactionKind, type ShownReaction } from '../lib/reactions';
 import { arrangeHand, defaultFaceOrder, orderFromHand, updateFaceOrder } from '../lib/handSort';
 import { HAND_SORT_LABELS, type HandSort, useFx, usePrefs } from '../lib/prefs';
 import { sound } from '../lib/sound';
@@ -47,6 +51,8 @@ import { Seat } from './Seat';
 import { useToast } from './Toast';
 import { type Rel, TrickArea, type TrickPlay } from './TrickArea';
 import { VideoTile } from './VideoTile';
+import { BotCat } from './BotCat';
+import { ReactionPicker } from './Reactions';
 import { LeaveDialog } from './LeaveDialog';
 
 /** Größe eines Elements (für Layout, das sich nach dem freien Platz richtet) */
@@ -60,6 +66,9 @@ function useElementSize(el: HTMLElement | null) {
   }, [el]);
   return size;
 }
+
+/** Bots an echten Tischen (feste IDs) und im Übungsmodus ("bot-1" …) */
+const isBotSeat = (uid: string) => isBot(uid) || uid.startsWith('bot-');
 
 function useViewport() {
   const [size, setSize] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
@@ -87,6 +96,7 @@ export function GameView({
   onLeave,
   onAbort,
   rules,
+  reactions,
 }: {
   game: GameRow;
   hand: Card[];
@@ -105,6 +115,8 @@ export function GameView({
   onLeave?: () => void;
   /** Laufendes Spiel für alle abbrechen */
   onAbort?: () => Promise<void> | void;
+  /** Reaktionen am Tisch (Applaus, Autsch …) */
+  reactions?: { shown: Record<string, ShownReaction>; send: (k: ReactionKind) => void };
   /** Hausregeln in der Seitenleiste anpassen */
   rules?: {
     value: RuleSettings;
@@ -268,6 +280,15 @@ export function GameView({
     (view.phase === 'reservations' && view.declTurn === myPos) ||
     (view.phase === 'armutOffer' && view.armut?.offerTurn === myPos) ||
     (view.phase === 'armutReturn' && view.armut?.rich === myPos);
+  // Wer gerade angesagt hat (für die Katzen der Bots), verschwindet nach ein paar Sekunden
+  const [announcer, setAnnouncer] = useState<number | null>(null);
+  useEffect(() => {
+    if (announcer === null) return;
+    const t = setTimeout(() => setAnnouncer(null), 3500);
+    return () => clearTimeout(t);
+  }, [announcer]);
+  const cats = useFx('cats') && giphyEnabled;
+
   const soundState = useRef<{
     game: string;
     played: number;
@@ -302,6 +323,7 @@ export function GameView({
       const fresh = view.announcementLog.slice(prev.ann);
       sound.announce(fresh[fresh.length - 1]?.party ?? null);
       for (const a of fresh) sound.say(`${levelLabel(a.level, a.party)}!`);
+      setAnnouncer(fresh[fresh.length - 1]?.pos ?? null);
     }
     if (now.turn && !prev.turn) sound.turn();
   });
@@ -417,13 +439,15 @@ export function GameView({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
   // Tasten: S = Sortierung wechseln, P = Punkte und Regeln
-  const shortcuts = useRef({ cycleSort: () => {}, toggleSidebar: () => {} });
-  shortcuts.current = { cycleSort, toggleSidebar: () => setSidebarOpen((o) => !o) };
+  const shortcuts = useRef({ cycleSort: () => {}, toggleSidebar: () => {}, react: (_k: ReactionKind) => {} });
+  shortcuts.current = { cycleSort, toggleSidebar: () => setSidebarOpen((o) => !o), react: (k) => reactions?.send(k) };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || el?.closest?.('input, textarea, select, [contenteditable]')) return;
-      if (e.code === 'KeyS' && myPos >= 0) shortcuts.current.cycleSort();
+      const digit = /^Digit([1-4])$/.exec(e.code);
+      if (digit && myPos >= 0) shortcuts.current.react(REACTION_KINDS[Number(digit[1]) - 1]);
+      else if (e.code === 'KeyS' && myPos >= 0) shortcuts.current.cycleSort();
       else if (e.code === 'KeyP') shortcuts.current.toggleSidebar();
       else if (e.code === 'Escape') setSidebarOpen(false);
     };
@@ -486,6 +510,8 @@ export function GameView({
         connecting={!isMe && online.includes(uid) && remotes[uid]?.status === 'connecting'}
         pile={compact ? undefined : { ...PILE[r], cardW: Math.round(trickCardW * 0.62) }}
         compact={compact}
+        media={cats && isBotSeat(uid) ? <BotCat mood={moodOf(view, pos, announcer)} seed={r} /> : undefined}
+        reaction={reactions?.shown[uid]}
       />
     );
   };
@@ -549,6 +575,7 @@ export function GameView({
     .map((p) => `${partyLabel(p)}${view.announcements[p] !== 120 ? `: ${levelLabel(view.announcements[p]!, p)}` : ''}`)
     .join(' · ');
 
+  const titles = useMemo(() => eveningTitles(results, finishedGames), [results, finishedGames]);
   const sidebar = (
     <div className="flex h-full flex-col gap-5 overflow-y-auto p-4">
       <section>
@@ -559,6 +586,22 @@ export function GameView({
         <h3 className="mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Letzte Spiele</h3>
         <RecentGames games={finishedGames} name={nameOfUser} />
       </section>
+      {titles.length > 0 && (
+        <section>
+          <h3 className="mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Titel des Abends</h3>
+          <ul className="space-y-1.5 text-sm">
+            {titles.map((t) => (
+              <li key={t.title} className="flex items-center justify-between gap-3" title={t.hint}>
+                <span className="flex items-center gap-2 text-white/70">
+                  <Crown className="size-3.5 text-gold-400" aria-hidden />
+                  {t.title}
+                </span>
+                <span className="truncate text-right font-medium">{t.holders.map(nameOfUser).join(' & ')}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <RulesPanel current={view.settings} rules={rules} />
       <div className="mt-auto flex flex-col gap-2">
         {onShowLobby && (
@@ -626,6 +669,7 @@ export function GameView({
           <span className="tag hidden text-[10px] text-white/55 sm:inline">{HAND_SORT_LABELS[prefs.handSort]}</span>
         </button>
       )}
+      {reactions && myPos >= 0 && <ReactionPicker onReact={reactions.send} />}
       {onLeave && (
         <button className="btn-ghost p-2" onClick={() => setLeaveOpen(true)} aria-label="Spiel verlassen" data-cursor="Verlassen">
           <LogOut className="size-4" />

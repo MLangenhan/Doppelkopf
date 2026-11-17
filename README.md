@@ -34,7 +34,10 @@ Frontend: React, Vite, Tailwind und Motion. Schriften: Big Shoulders Display fü
 - **Trumpf-Einschlag**: Dulle, Kreuz-Dame und Schweinchen knallen mit Beben, Druckwelle und Sound auf den Tisch.
 - **Stichstapel**: Gewonnene Stiche drehen sich um, fliegen zum Gewinner und liegen als sichtbarer Kartenstapel mit Zähler neben seiner Kamera.
 - **Augen-Auswertung**: Am Ende zählen die Augen hoch, der Sieger steht erst fest, wenn er die 121er-Marke überquert. Leertaste überspringt, ein zweites Mal gibt das nächste Spiel.
-- **Ansagen** sind gut zu hören und zu sehen: eigene Fanfare (Re hell, Kontra tiefer), Sprachausgabe („Re!“, „Keine 90!“, abschaltbar) und farbige Schilder an den Kameras.
+- **Ansagen** sind gut zu hören und zu sehen: eigene Fanfare (Re hell, Kontra tiefer), Sprachausgabe („Re!“, „Keine 90!“, Stimme wählbar, abschaltbar) und farbige Schilder an den Kameras.
+- **Katzen für Bots**: Die Kameras der Bots zeigen Katzen-GIFs von GIPHY, passend zur Lage (wartet, überlegt, spielt aus, gewinnt, verliert, Fuchs weg, sagt an, spielt Solo). Braucht `VITE_GIPHY_API_KEY` in `.env`.
+- **Reaktionen**: Applaus, Autsch, Glück gehabt, Hmm – per Knopf oder Taste 1–4, erscheinen groß über der eigenen Kamera bei allen am Tisch.
+- **Abzeichen und Titel**: Fuchsjäger, Karlchen-Held, Doppelkopf, Schwarz gespielt, Gegen die Alten, Solo-König – in der Auswertung, in der Statistik je Spieler; dazu Titel des Abends (König, Pechvogel, Fuchsjäger, Solo-König, Ansager vom Dienst).
 - **Große Momente**: Ansagen, Soli, Hochzeit, Schweinchen, Doppelkopf, Fuchs und Karlchen erscheinen groß auf der Spielfläche, beim Sieg gibt es Konfetti.
 - **Eigener Cursor** als Farbzeichen (wird über einer Karte zu deren Farbe, über dem Stich zur Hand) und **Karten mit 3D-Neigung** und Glanzlicht in der Hand. Beides nur mit Maus und einzeln abschaltbar.
 - **Sounds** für Karten, Stiche, Ansagen, „Du bist dran“ und das Spielende – im Browser erzeugt (Web Audio), ohne Audiodateien. An/aus und Lautstärke in den Einstellungen.

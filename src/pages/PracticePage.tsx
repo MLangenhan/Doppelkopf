@@ -15,6 +15,7 @@ import { TopBar } from '../components/TopBar';
 import { useAuth } from '../lib/auth';
 import { actorOf, BOT_LEVEL_LABELS, type BotLevel, botAction } from '@engine';
 import type { GameRow, Member, ResultRow } from '../lib/supabase';
+import { useReactions } from '../lib/reactions';
 import { useCamera } from '../lib/video';
 
 const PLAYERS = ['me', 'bot-1', 'bot-2', 'bot-3'];
@@ -146,6 +147,7 @@ export function PracticePage() {
   }, []);
 
   const navigate = useNavigate();
+  const reactions = useReactions(null, 'me');
   const startGame = useCallback(async () => {
     const s = stateRef.current;
     // Bei Neugeben bleibt der Geber, sonst rückt er weiter
@@ -188,6 +190,7 @@ export function PracticePage() {
         act={act}
         startGame={startGame}
         onLeave={() => navigate('/')}
+        reactions={reactions}
         rules={{ value: settings, locked: null, onSave: saveRules, bots: false }}
       />
     </div>

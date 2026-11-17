@@ -2,7 +2,9 @@ import type { Party } from '@engine';
 import { AnimatePresence, motion } from 'motion/react';
 import type { ReactNode } from 'react';
 import { Brackets } from './Cursor';
+import type { ShownReaction } from '../lib/reactions';
 import { CARD_RATIO, PlayingCard } from './PlayingCard';
+import { ReactionBubble } from './Reactions';
 import { VideoTile } from './VideoTile';
 
 export function PartyBadge({ party, small }: { party: Party; small?: boolean }) {
@@ -34,6 +36,8 @@ export function Seat({
   videoOff,
   pile,
   compact,
+  media,
+  reaction,
   className = '',
 }: {
   name: string;
@@ -54,6 +58,10 @@ export function Seat({
   pile?: { side: 'left' | 'right'; v: 'above' | 'below'; cardW: number };
   /** Kleine Kachel fürs Handy */
   compact?: boolean;
+  /** Statt Kamerabild (z. B. Katze eines Bots) */
+  media?: ReactNode;
+  /** Gerade gesendete Reaktion (Applaus, Autsch …) */
+  reaction?: ShownReaction;
   className?: string;
 }) {
   const facts = [
@@ -75,6 +83,7 @@ export function Seat({
           small={compact}
           className={`aspect-[4/3] w-full transition-[box-shadow] duration-300 ${isTurn ? 'shadow-[0_0_0_1px_rgba(217,180,90,0.6)]' : ''}`}
         >
+          {media}
           <div
             className={`absolute flex max-w-[92%] items-center rounded-md bg-felt-950/75 ${
               compact ? 'bottom-1 left-1 gap-1 px-1 py-0.5' : 'bottom-2 left-2 gap-2 px-2 py-1'
@@ -113,6 +122,7 @@ export function Seat({
             )}
           </AnimatePresence>
         </VideoTile>
+        <ReactionBubble reaction={reaction} compact={compact} />
         {/* Wer dran ist: goldene Eckwinkel, die sich um die Kachel ziehen */}
         <AnimatePresence>
           {isTurn && (

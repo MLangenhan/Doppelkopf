@@ -5,6 +5,8 @@ import { useFx } from '../lib/prefs';
 import { sound } from '../lib/sound';
 import { levelLabel, partyLabel, resultKindLabel, SCHMEISSEN_LABEL } from '../lib/gameText';
 import type { SchmeissenReason } from '@engine';
+import { Medal } from 'lucide-react';
+import { BADGES, badgesOfGame } from '../lib/achievements';
 import { Confetti } from './Moments';
 import { SpaceHint } from './SpaceHint';
 import { PartyBadge } from './Seat';
@@ -118,6 +120,7 @@ function ResultBody({
   const myParty: Party | null = myPos >= 0 ? (r.reTeam.includes(myPos) ? 're' : 'kontra') : null;
   const iWon = myParty !== null && winner === myParty;
   const targets = augenTargets(view.announcements);
+  const badges = badgesOfGame(view);
   const { re, kontra, revealed } = useAugenReveal(r.augen, winner, myParty, skip, targets);
   // Siegmarke für Re (bei Schwarz-Ansagen zählen Stiche, dann bleibt die Marke bei 121)
   const mark = targets.re ?? 121;
@@ -223,6 +226,27 @@ function ResultBody({
             </motion.li>
           ))}
         </ul>
+      )}
+
+      {revealed && badges.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 + r.lines.length * 0.06 }}
+          className="mt-4 flex flex-wrap gap-1.5"
+          aria-label="Abzeichen in diesem Spiel"
+        >
+          {badges.map(({ pos, key }, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 px-2.5 py-1 text-xs text-gold-200 ring-1 ring-gold-400/40"
+              title={BADGES[key].hint}
+            >
+              <Medal className="size-3.5" aria-hidden />
+              {BADGES[key].label} · {name(pos)}
+            </span>
+          ))}
+        </motion.div>
       )}
 
       <div className={`mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 ${revealed ? '' : 'invisible'}`}>
