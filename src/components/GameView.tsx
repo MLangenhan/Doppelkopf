@@ -53,6 +53,7 @@ import { useToast } from './Toast';
 import { type Rel, TrickArea, type TrickPlay } from './TrickArea';
 import { VideoTile } from './VideoTile';
 import { BotCat } from './BotCat';
+import { CardGuide } from './CardGuide';
 import { ReactionPicker } from './Reactions';
 import { LeaveDialog } from './LeaveDialog';
 
@@ -853,6 +854,13 @@ export function GameView({
 
         {/* Unten rechts: Spieler rechts von mir */}
         <div className="relative z-10 self-end">{seatFor(3)}</div>
+
+        {/* Kartenübersicht (Einstellung): rechts zwischen den beiden Kameras */}
+        {prefs.cardGuide && (
+          <div className="pointer-events-none absolute top-1/2 right-3 z-10 -translate-y-1/2" style={{ width: camW }}>
+            <CardGuide width={camW} withNines={view.settings.withNines} />
+          </div>
+        )}
       </main>
       )}
 

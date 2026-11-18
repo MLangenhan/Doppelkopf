@@ -30,6 +30,8 @@ export const HAND_SORT_LABELS: Record<HandSort, string> = {
 export interface Prefs {
   /** Spielbare Karten hervorheben, nicht spielbare abdunkeln. Aus = "schwarz spielen" ohne Hilfe. */
   highlightPlayable: boolean;
+  /** Spickzettel mit Trumpf-Reihenfolge und Augen rechts zwischen den Kameras */
+  cardGuide: boolean;
   /** Einzelne Effekte */
   fx: Record<FxKey, boolean>;
   /** Kartenreihenfolge in der Hand */
@@ -51,6 +53,7 @@ const fxAll = (on: boolean) => Object.fromEntries(ALL_FX.map((k) => [k, on])) as
 
 const DEFAULTS: Prefs = {
   highlightPlayable: true,
+  cardGuide: false,
   fx: fxAll(true),
   handSort: 'trumpFirst',
   sound: true,

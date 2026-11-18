@@ -85,6 +85,12 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
               label="Spielbare Karten hervorheben"
               hint="Ausgeschaltet spielst du ohne Hilfe: Alle Karten sehen gleich aus. Wer nicht bedient, bekommt einen Hinweis und muss eine andere Karte wählen."
             />
+            <Toggle
+              checked={prefs.cardGuide}
+              onChange={(v) => setPref('cardGuide', v)}
+              label="Kartenübersicht anzeigen"
+              hint="Rechts zwischen den Kameras: Trumpf-Reihenfolge von hoch nach niedrig und die Augen jeder Karte (Normalspiel). Nur auf größeren Bildschirmen."
+            />
 
             <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Ton</h3>
             <Toggle
