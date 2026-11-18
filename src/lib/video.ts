@@ -140,6 +140,10 @@ interface Peer {
   senders: RTCRtpSender[];
   /** Timer: nach kurzem Verbindungsabbruch ICE neu starten */
   iceTimer?: ReturnType<typeof setTimeout>;
+  /** Signale strikt nacheinander verarbeiten (Firefox verwirft sonst Kandidaten, die zu früh kommen) */
+  queue: Promise<void>;
+  /** ICE-Kandidaten, die vor der Gegenseite-Beschreibung ankamen */
+  pending: RTCIceCandidateInit[];
 }
 
 /** So lange bleibt eine Verbindung bestehen, wenn jemand kurz aus der Anwesenheit fällt (Tab-Wechsel, Funkloch). */
@@ -213,7 +217,17 @@ export function useVideoMesh(tableId: string | undefined, me: string | null, loc
 
     const createPeer = (userId: string, session: string): Peer => {
       const pc = new RTCPeerConnection({ iceServers: iceServers() });
-      const p: Peer = { userId, session, pc, polite: me > userId, makingOffer: false, ignoreOffer: false, senders: [] };
+      const p: Peer = {
+        userId,
+        session,
+        pc,
+        polite: me > userId,
+        makingOffer: false,
+        ignoreOffer: false,
+        senders: [],
+        queue: Promise.resolve(),
+        pending: [],
+      };
       peerMap.set(userId, p);
       setRemote(userId, { status: 'connecting', stream: null });
 
@@ -263,21 +277,28 @@ export function useVideoMesh(tableId: string | undefined, me: string | null, loc
       return createPeer(userId, session);
     };
 
-    const onSignal = async (sig: Signal) => {
-      if (sig.to !== me || sig.toSession !== mySession || sig.from === me) return;
-      const p = ensurePeer(sig.from, sig.fromSession);
+    const handleSignal = async (p: Peer, sig: Signal) => {
       const pc = p.pc;
+      if (pc.signalingState === 'closed') return;
       try {
         if (sig.description) {
           const collision = sig.description.type === 'offer' && (p.makingOffer || pc.signalingState !== 'stable');
           p.ignoreOffer = !p.polite && collision;
           if (p.ignoreOffer) return;
+          // Höflich nachgeben: eigenes Angebot ausdrücklich zurücknehmen (Firefox mag das implizite Zurücknehmen nicht immer)
+          if (collision && pc.signalingState === 'have-local-offer') await pc.setLocalDescription({ type: 'rollback' });
           await pc.setRemoteDescription(sig.description);
+          // Zu früh gekommene Kandidaten jetzt nachreichen
+          for (const c of p.pending.splice(0)) await pc.addIceCandidate(c).catch(() => {});
           if (sig.description.type === 'offer') {
             await pc.setLocalDescription();
             send({ to: sig.from, toSession: sig.fromSession, description: pc.localDescription!.toJSON() });
           }
         } else if (sig.candidate) {
+          if (!pc.remoteDescription) {
+            p.pending.push(sig.candidate);
+            return;
+          }
           try {
             await pc.addIceCandidate(sig.candidate);
           } catch (e) {
@@ -287,6 +308,12 @@ export function useVideoMesh(tableId: string | undefined, me: string | null, loc
       } catch (e) {
         console.warn('Signal-Fehler', e);
       }
+    };
+
+    const onSignal = (sig: Signal) => {
+      if (sig.to !== me || sig.toSession !== mySession || sig.from === me) return;
+      const p = ensurePeer(sig.from, sig.fromSession);
+      p.queue = p.queue.then(() => handleSignal(p, sig));
     };
 
     const channel = supabase.channel(`rtc:${tableId}`, {
