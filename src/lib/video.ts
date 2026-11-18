@@ -185,6 +185,8 @@ export function useVideoMesh(tableId: string | undefined, me: string | null, loc
   useEffect(() => {
     if (!tableId || !me) return;
     const mySession = sessionId.current;
+    // Wann diese Sitzung begonnen hat: Bei mehreren Sitzungen einer Person gewinnt die neueste
+    const startedAt = Date.now();
     const peerMap = peers.current;
 
     const send = (payload: Omit<Signal, 'from' | 'fromSession'>) => {
@@ -295,10 +297,20 @@ export function useVideoMesh(tableId: string | undefined, me: string | null, loc
     channel
       .on('broadcast', { event: 'signal' }, ({ payload }) => onSignal(payload as Signal))
       .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState<{ user: string; session: string }>();
+        const state = channel.presenceState<{ user: string; session: string; at?: number }>();
         const present = new Map<string, string>();
+        const joinedAt = new Map<string, number>();
         for (const metas of Object.values(state)) {
-          for (const m of metas) if (m.user !== me) present.set(m.user, m.session);
+          for (const m of metas) {
+            if (m.user === me) continue;
+            // Mehrere Sitzungen derselben Person (zweiter Tab, Handy + PC, alter Tab nach Neuladen):
+            // immer die neueste nehmen, sonst geht die Verbindungsanfrage an eine verwaiste Sitzung
+            const at = m.at ?? 0;
+            if (!present.has(m.user) || at > (joinedAt.get(m.user) ?? -1)) {
+              present.set(m.user, m.session);
+              joinedAt.set(m.user, at);
+            }
+          }
         }
         setOnline([...present.keys()]);
         // Neue Peers: der "unhöfliche" (kleinere ID) startet die Verbindung, damit nicht beide gleichzeitig anbieten
@@ -319,13 +331,13 @@ export function useVideoMesh(tableId: string | undefined, me: string | null, loc
         }
       })
       .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') await channel.track({ user: me, session: mySession });
+        if (status === 'SUBSCRIBED') await channel.track({ user: me, session: mySession, at: startedAt });
       });
 
     // Zurück im Tab: Anwesenheit auffrischen und hängende Verbindungen neu anstoßen
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
-      void channel.track({ user: me, session: mySession });
+      void channel.track({ user: me, session: mySession, at: startedAt });
       for (const p of peerMap.values()) {
         if (p.pc.connectionState === 'failed' || p.pc.connectionState === 'disconnected') p.pc.restartIce();
       }
