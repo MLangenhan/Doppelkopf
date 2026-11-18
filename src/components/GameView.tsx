@@ -136,7 +136,16 @@ export function GameView({
   useEffect(preloadCards, []);
   const view = game.state;
   const myPos = me ? game.players.indexOf(me) : -1;
-  const viewPos = myPos >= 0 ? myPos : 0;
+  // Wer aussetzt (zu fünft), sieht den Tisch von seinem Platz aus: unten links sitzt, wer nach ihm im Uhrzeigersinn kommt.
+  // So rotiert die Ansicht mit dem Geber mit, und alle vier Spieler sind mit Kamera zu sehen.
+  const mySeat = me ? members.find((m) => m.user_id === me)?.seat : undefined;
+  const nextAfterMe =
+    mySeat === undefined
+      ? 0
+      : game.seats
+          .map((seat, pos) => ({ pos, d: (seat - mySeat + 5) % 5 || 5 }))
+          .sort((a, b) => a.d - b.d)[0]?.pos ?? 0;
+  const viewPos = myPos >= 0 ? myPos : nextAfterMe;
   const rel = (pos: number) => ((pos - viewPos + 4) % 4) as Rel;
   const posAt = (r: Rel) => (viewPos + r) % 4;
   const nameOfUser = (uid: string) =>
@@ -776,11 +785,7 @@ export function GameView({
             {seatFor(1, true)}
             {seatFor(2, true)}
             {seatFor(3, true)}
-            {myPos >= 0 ? (
-              seatFor(0, true)
-            ) : (
-              <div className="panel grid aspect-[4/3] place-items-center p-1 text-center text-[10px] text-white/70">Du schaust zu</div>
-            )}
+            {seatFor(0, true)}
           </div>
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 flex-1">{infoLine}</div>
@@ -831,16 +836,8 @@ export function GameView({
           {trickArea}
         </div>
 
-        {/* Unten links: ich */}
-        <div className="relative z-10 self-end">
-          {myPos >= 0 ? (
-            seatFor(0)
-          ) : (
-            <div className="panel grid aspect-[4/3] place-items-center p-4 text-center text-sm text-white/70">
-              Du setzt diese Runde aus und schaust zu.
-            </div>
-          )}
-        </div>
+        {/* Unten links: ich – oder, wenn ich aussetze, wer nach mir sitzt */}
+        <div className="relative z-10 self-end">{seatFor(0)}</div>
 
         {/* Unten Mitte: Hand, Aktionen, Ansagen */}
         <div className="relative z-20 flex min-w-0 items-end gap-3 self-end">
