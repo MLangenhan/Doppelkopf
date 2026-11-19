@@ -125,7 +125,7 @@ export function AchievementBadge({ achievementKey, size = 56, locked = false }: 
 
   return (
     <div
-      className={`relative shrink-0 ${locked ? 'opacity-35 grayscale' : ''} ${fancy && !locked ? 'achievement-glow' : ''}`}
+      className={`relative shrink-0 ${locked ? 'medal-locked' : ''} ${fancy && !locked ? 'achievement-glow' : ''}`}
       style={{ width: size, height: size, ['--glow' as string]: rarity === 'mythic' ? '#a855f7' : '#7dd3fc' }}
       title={a.name}
     >

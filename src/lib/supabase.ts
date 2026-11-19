@@ -1,3 +1,4 @@
+import type { FrameKey } from './cosmetics';
 import { createClient } from '@supabase/supabase-js';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import type { GameAction, PublicGameState, RuleSettings } from '@engine';
@@ -35,15 +36,37 @@ export interface Member {
   /** Vitrine: bis zu 3 Erfolge und ein Titel (wenn angezeigt) */
   showcase?: string[];
   title?: string | null;
+  frame?: FrameKey | null;
+  avatar?: string | null;
+  avatar_color?: string | null;
 }
 
 /** Was jemand von seinen Erfolgen zeigt: nur, was er freigegeben hat */
-export function displayOf(p: { showcase?: string[] | null; title?: string | null; show_badges?: boolean; show_title?: boolean } | null | undefined) {
+export function displayOf(
+  p:
+    | {
+        showcase?: string[] | null;
+        title?: string | null;
+        show_badges?: boolean;
+        show_title?: boolean;
+        frame?: string | null;
+        avatar?: string | null;
+        avatar_color?: string | null;
+      }
+    | null
+    | undefined,
+) {
   return {
     showcase: p && p.show_badges !== false ? (p.showcase ?? []).slice(0, 3) : [],
     title: p && p.show_title !== false ? (p.title ?? null) : null,
+    frame: (p?.frame ?? null) as FrameKey | null,
+    avatar: p?.avatar ?? null,
+    avatar_color: p?.avatar_color ?? null,
   };
 }
+
+/** Profilfelder, die fürs Namensschild gebraucht werden */
+export const NAMETAG_COLS = 'showcase, title, show_badges, show_title, frame, avatar, avatar_color';
 
 export interface GameRow {
   id: string;

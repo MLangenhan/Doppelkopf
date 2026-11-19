@@ -149,3 +149,21 @@ html.gamepad :focus {
   box-shadow: 0 0 12px rgba(125, 211, 252, 0.55), inset 0 0 0 1px rgba(186, 230, 253, 0.55);
   text-shadow: 0 0 8px rgba(125, 211, 252, 0.95);
 }
+
+/* Holografischer Rahmen: wandernder Regenbogen-Verlauf */
+@keyframes frame-holo {
+  to { background-position: 200% 0; }
+}
+.frame-holo {
+  background: linear-gradient(90deg, #7dd3fc, #f0abfc, #fde68a, #86efac, #7dd3fc);
+  background-size: 200% 100%;
+  animation: frame-holo 4s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .frame-holo { animation: none; }
+}
+
+/* Gesperrte Medaille: dunkle, geprägte Silhouette statt einfach grau */
+.medal-locked {
+  filter: grayscale(1) brightness(0.32) contrast(1.4) drop-shadow(0 1px 0 rgba(255, 255, 255, 0.12));
+}

@@ -8,7 +8,8 @@ import { CameraButton, type CameraControls } from './CameraButton';
 import { RulesForm, rulesSummary } from './RulesForm';
 import { arrowLink, SectionLabel } from './SectionLabel';
 import { VideoTile } from './VideoTile';
-import { BadgeRow, TitleTag } from './Showcase';
+import { Nametag } from './Nametag';
+import { ProfileCard } from './ProfileCard';
 
 export function Lobby({
   table,
@@ -111,15 +112,20 @@ export function Lobby({
                         mirror={isMe}
                         connecting={!isMe && online.includes(m.user_id) && remotes[m.user_id]?.status === 'connecting'}
                         className="aspect-[4/3] w-full"
+                        avatar={m.avatar}
+                        avatarColor={m.avatar_color}
                       >
-                        <div className="absolute bottom-2 left-2 flex max-w-[85%] items-center gap-2 rounded-md bg-felt-950/75 px-2 py-1">
-                          <span className={`size-1.5 shrink-0 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-white/30'}`} />
-                          <span className="flex min-w-0 flex-col leading-tight">
-                            <span className="truncate text-sm font-medium">{isMe ? `${m.display_name} (du)` : m.display_name}</span>
-                            <TitleTag titleKey={m.title} />
-                          </span>
-                          <BadgeRow keys={m.showcase} size={20} />
-                        </div>
+                        <span className="absolute bottom-2 left-2 max-w-[90%]">
+                          <ProfileCard userId={m.user_id} name={m.display_name}>
+                            <Nametag
+                              name={isMe ? `${m.display_name} (du)` : m.display_name}
+                              title={m.title}
+                              badges={m.showcase}
+                              frame={m.frame}
+                              before={<span className={`size-1.5 shrink-0 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-white/30'}`} />}
+                            />
+                          </ProfileCard>
+                        </span>
                       </VideoTile>
                     </motion.div>
                   ) : (

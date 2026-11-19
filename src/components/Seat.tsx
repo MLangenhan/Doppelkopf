@@ -5,7 +5,9 @@ import { Brackets } from './Cursor';
 import type { ShownReaction } from '../lib/reactions';
 import { CARD_RATIO, PlayingCard } from './PlayingCard';
 import { ReactionBubble } from './Reactions';
-import { BadgeRow, TitleTag } from './Showcase';
+import type { FrameKey } from '../lib/cosmetics';
+import { Nametag } from './Nametag';
+import { ProfileCard } from './ProfileCard';
 import { VideoTile } from './VideoTile';
 
 export function PartyBadge({ party, small }: { party: Party; small?: boolean }) {
@@ -41,6 +43,10 @@ export function Seat({
   reaction,
   title,
   badges,
+  frame,
+  avatar,
+  avatarColor,
+  profileId,
   className = '',
 }: {
   name: string;
@@ -68,6 +74,11 @@ export function Seat({
   /** Vitrine: gekaufter Titel und bis zu drei Erfolge */
   title?: string | null;
   badges?: string[];
+  frame?: FrameKey | null;
+  avatar?: string | null;
+  avatarColor?: string | null;
+  /** Konto-ID für die Profilkarte (nicht für Bots) */
+  profileId?: string | null;
   className?: string;
 }) {
   const facts = [
@@ -87,24 +98,24 @@ export function Seat({
           connecting={connecting}
           videoOff={videoOff}
           small={compact}
+          avatar={avatar}
+          avatarColor={avatarColor}
           className={`aspect-[4/3] w-full transition-[box-shadow] duration-300 ${isTurn ? 'shadow-[0_0_0_1px_rgba(217,180,90,0.6)]' : ''}`}
         >
           {media}
-          <div
-            className={`absolute flex max-w-[92%] items-center rounded-md bg-felt-950/75 ${
-              compact ? 'bottom-1 left-1 gap-1 px-1 py-0.5' : 'bottom-2 left-2 gap-2 px-2 py-1'
-            }`}
-          >
-            {online === false && <span className="size-1.5 shrink-0 rounded-full bg-white/30" title="Nicht verbunden" />}
-            <span className="flex min-w-0 flex-col leading-tight">
-              <span className={`truncate font-medium ${compact ? 'text-[11px]' : 'text-sm'}`}>
-                {isMe && name !== 'Du' && !compact ? `${name} (du)` : name}
-              </span>
-              {!compact && <TitleTag titleKey={title} />}
-            </span>
-            {!compact && <BadgeRow keys={badges} size={20} />}
-            {party && !compact && <PartyBadge party={party} small />}
-          </div>
+          <span className={`absolute max-w-[92%] ${compact ? 'bottom-1 left-1' : 'bottom-2 left-2'}`}>
+            <ProfileCard userId={profileId} name={name}>
+              <Nametag
+                compact={compact}
+                name={isMe && name !== 'Du' && !compact ? `${name} (du)` : name}
+                title={title}
+                badges={badges}
+                frame={frame}
+                before={online === false ? <span className="size-1.5 shrink-0 rounded-full bg-white/30" title="Nicht verbunden" /> : undefined}
+                after={party && !compact ? <PartyBadge party={party} small /> : undefined}
+              />
+            </ProfileCard>
+          </span>
           <AnimatePresence>
             {callouts && callouts.length > 0 && (
               <motion.div

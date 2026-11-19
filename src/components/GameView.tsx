@@ -533,6 +533,10 @@ export function GameView({
         reaction={reactions?.shown[uid]}
         title={members.find((m) => m.user_id === uid)?.title}
         badges={members.find((m) => m.user_id === uid)?.showcase}
+        frame={members.find((m) => m.user_id === uid)?.frame}
+        avatar={members.find((m) => m.user_id === uid)?.avatar}
+        avatarColor={members.find((m) => m.user_id === uid)?.avatar_color}
+        profileId={isBotSeat(uid) || uid === 'me' || compact ? null : uid}
       />
     );
   };

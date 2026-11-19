@@ -1,3 +1,4 @@
+import { AVATARS } from '../lib/cosmetics';
 import { type ReactNode, useEffect, useRef } from 'react';
 
 const AVATAR_COLORS = ['#c98b6b', '#6fa596', '#c9ae6b', '#8fa878', '#9a88c4', '#c48aa6', '#6f9cc4'];
@@ -18,6 +19,8 @@ export function VideoTile({
   children,
   connecting,
   small,
+  avatar,
+  avatarColor,
 }: {
   stream: MediaStream | null | undefined;
   name: string;
@@ -29,6 +32,9 @@ export function VideoTile({
   connecting?: boolean;
   /** Kleine Kachel (Handy): kleinerer Avatar */
   small?: boolean;
+  /** Eigenes Symbol und Farbe statt Anfangsbuchstabe */
+  avatar?: string | null;
+  avatarColor?: string | null;
   className?: string;
   children?: ReactNode;
 }) {
@@ -78,10 +84,15 @@ export function VideoTile({
             className={`grid aspect-square place-items-center rounded-full font-bold text-felt-950 shadow-lg ${
               small ? 'w-[30%] -translate-y-2 text-sm' : 'w-[34%] max-w-20 text-2xl'
             }`}
-            style={{ background: colorFor(name) }}
+            style={{ background: avatarColor ?? colorFor(name) }}
             aria-hidden
           >
-            {name.slice(0, 1).toUpperCase()}
+            {avatar && AVATARS[avatar]
+              ? (() => {
+                  const Icon = AVATARS[avatar];
+                  return <Icon className="size-[55%]" strokeWidth={2} />;
+                })()
+              : name.slice(0, 1).toUpperCase()}
           </div>
           {connecting && <span className="absolute bottom-9 text-[11px] text-white/50">verbindet …</span>}
         </div>
