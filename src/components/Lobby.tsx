@@ -8,6 +8,7 @@ import { CameraButton, type CameraControls } from './CameraButton';
 import { RulesForm, rulesSummary } from './RulesForm';
 import { arrowLink, SectionLabel } from './SectionLabel';
 import { VideoTile } from './VideoTile';
+import { BadgeRow, TitleTag } from './Showcase';
 
 export function Lobby({
   table,
@@ -113,7 +114,11 @@ export function Lobby({
                       >
                         <div className="absolute bottom-2 left-2 flex max-w-[85%] items-center gap-2 rounded-md bg-felt-950/75 px-2 py-1">
                           <span className={`size-1.5 shrink-0 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-white/30'}`} />
-                          <span className="truncate text-sm font-medium">{isMe ? `${m.display_name} (du)` : m.display_name}</span>
+                          <span className="flex min-w-0 flex-col leading-tight">
+                            <span className="truncate text-sm font-medium">{isMe ? `${m.display_name} (du)` : m.display_name}</span>
+                            <TitleTag titleKey={m.title} />
+                          </span>
+                          <BadgeRow keys={m.showcase} size={20} />
                         </div>
                       </VideoTile>
                     </motion.div>

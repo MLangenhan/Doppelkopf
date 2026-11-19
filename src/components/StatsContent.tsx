@@ -6,8 +6,9 @@ import { PlayerStats } from './PlayerStats';
 import { SectionLabel } from './SectionLabel';
 import { useAuth } from '../lib/auth';
 import { RecentGames } from './RecentGames';
+import { BadgeRow, TitleTag } from './Showcase';
 import { countBadges, eveningTitles } from '../lib/achievements';
-import { type GameRow, type ResultRow, supabase, type TableRow } from '../lib/supabase';
+import { type GameRow, type ResultRow, supabase, type TableRow, displayOf } from '../lib/supabase';
 
 interface PlayerStats {
   user_id: string;
@@ -36,11 +37,13 @@ export function StatsContent({ inDialog }: { inDialog?: boolean }) {
 
   useEffect(() => {
     (async () => {
-      const [{ data: s }, { data: r }, { data: g }] = await Promise.all([
+      const [{ data: s }, { data: r }, { data: g }, { data: prof }] = await Promise.all([
         supabase.from('player_stats').select('*').gt('games', 0).order('points', { ascending: false }),
         supabase.from('game_results').select('*').order('created_at', { ascending: false }).limit(5000),
         supabase.from('games').select('*').eq('status', 'finished').order('finished_at', { ascending: false }).limit(400),
+        supabase.from('profiles').select('id, showcase, title, show_badges, show_title'),
       ]);
+      setShowcases(new Map((prof ?? []).map((p) => [p.id as string, displayOf(p)])));
       setRecent((g ?? []) as GameRow[]);
       setStats((s ?? []) as PlayerStats[]);
       const rows = (r ?? []) as ResultRow[];
@@ -53,6 +56,7 @@ export function StatsContent({ inDialog }: { inDialog?: boolean }) {
     })();
   }, []);
 
+  const [showcases, setShowcases] = useState(new Map<string, ReturnType<typeof displayOf>>());
   const badgeCounts = useMemo(() => countBadges(recent), [recent]);
   const names = useMemo(() => new Map((stats ?? []).map((s) => [s.user_id, s.display_name])), [stats]);
 
@@ -115,8 +119,12 @@ export function StatsContent({ inDialog }: { inDialog?: boolean }) {
                     <div
                       className={`truncate text-xl font-medium transition-colors group-hover:text-gold-300 ${s.user_id === me ? 'text-gold-300' : 'text-white'}`}
                     >
-                      {s.display_name}
+                      <span className="flex items-center gap-2">
+                        <span className="truncate">{s.display_name}</span>
+                        <BadgeRow keys={showcases.get(s.user_id)?.showcase} size={22} />
+                      </span>
                     </div>
+                    <TitleTag titleKey={showcases.get(s.user_id)?.title} />
                     <div className="tag mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-white/40">
                       <span>{s.games} Spiele</span>
                       <span>{pct(s.wins, s.games)} gewonnen</span>

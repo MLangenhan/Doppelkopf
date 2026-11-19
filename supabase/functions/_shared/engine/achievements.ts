@@ -280,3 +280,41 @@ export function historyAchievements(userId: string, h: AchievementHistory): stri
 
   return [...out];
 }
+
+// ---------------------------------------------------------------------------
+// Titel: mit Erfolgspunkten kaufbar. Wer alle Erfolge hat, kann sich alle Titel leisten.
+// Die Preise stehen auch in der Datenbank-Funktion title_cost (Migration) – beide gleich halten.
+// ---------------------------------------------------------------------------
+
+export interface TitleDef {
+  key: string;
+  name: string;
+  cost: number;
+  /** Sehr selten: babyblaues Leuchten */
+  rare?: boolean;
+}
+
+export const TITLES: TitleDef[] = [
+  { key: 'pechvogel', name: 'Pechvogel vom Dienst', cost: 20 },
+  { key: 'kartenschubser', name: 'Kartenschubser', cost: 30 },
+  { key: 'stichsammler', name: 'Stichsammler', cost: 40 },
+  { key: 'fuchsfluesterer', name: 'Fuchsflüsterer', cost: 50 },
+  { key: 'karokoenig', name: 'Karo-König', cost: 60 },
+  { key: 'dullenschwinger', name: 'Dullenschwinger', cost: 70 },
+  { key: 'ansagenass', name: 'Ansagen-Ass', cost: 80 },
+  { key: 'schweinchenzuechter', name: 'Schweinchenzüchter', cost: 90 },
+  { key: 'hochzeitsplaner', name: 'Hochzeitsplaner', cost: 100 },
+  { key: 'kontrarebell', name: 'Kontra-Rebell', cost: 110 },
+  { key: 'solokuenstler', name: 'Solo-Künstler', cost: 120 },
+  { key: 'unbestechlich', name: 'Der Unbestechliche', cost: 130 },
+  { key: 'schwarzmaler', name: 'Der Schwarzmaler', cost: 250, rare: true },
+  { key: 'grossmeister', name: 'Großmeister des Doppelkopfs', cost: 300, rare: true },
+  { key: 'legende', name: 'Legende der Tafelrunde', cost: 400, rare: true },
+];
+
+export const TITLE_BY_KEY = new Map(TITLES.map((t) => [t.key, t]));
+
+export function achievementPointsOf(key: string): number {
+  const a = ACHIEVEMENT_BY_KEY.get(key);
+  return a ? RARITIES[a.rarity].points : 0;
+}

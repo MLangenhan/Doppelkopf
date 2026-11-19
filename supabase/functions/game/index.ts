@@ -14,6 +14,7 @@ import {
   BOT_IDS,
   botAction,
   createGame,
+  achievementPointsOf,
   foxesCaught,
   gameAchievements,
   historyAchievements,
@@ -242,7 +243,7 @@ async function awardAchievements(db: SupabaseClient, game: LoadedGame, s: GameSt
       await db
         .from('user_achievements')
         .upsert(
-          fresh.map((key) => ({ user_id: uid, key, game_id: game.id, table_id: game.table_id })),
+          fresh.map((key) => ({ user_id: uid, key, points: achievementPointsOf(key), game_id: game.id, table_id: game.table_id })),
           { onConflict: 'user_id,key', ignoreDuplicates: true },
         );
     }

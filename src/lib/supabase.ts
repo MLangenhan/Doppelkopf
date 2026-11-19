@@ -32,6 +32,17 @@ export interface Member {
   user_id: string;
   seat: number;
   display_name: string;
+  /** Vitrine: bis zu 3 Erfolge und ein Titel (wenn angezeigt) */
+  showcase?: string[];
+  title?: string | null;
+}
+
+/** Was jemand von seinen Erfolgen zeigt: nur, was er freigegeben hat */
+export function displayOf(p: { showcase?: string[] | null; title?: string | null; show_badges?: boolean; show_title?: boolean } | null | undefined) {
+  return {
+    showcase: p && p.show_badges !== false ? (p.showcase ?? []).slice(0, 3) : [],
+    title: p && p.show_title !== false ? (p.title ?? null) : null,
+  };
 }
 
 export interface GameRow {

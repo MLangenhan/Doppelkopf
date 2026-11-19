@@ -2,6 +2,7 @@ import { ACHIEVEMENTS, achievementPoints, achievementProgress, RARITIES, type Ra
 import { motion } from 'motion/react';
 import { useEffect, useMemo, useState } from 'react';
 import { AchievementBadge } from '../components/AchievementBadge';
+import { ShowcaseEditor } from '../components/ShowcaseEditor';
 import { TopBar } from '../components/TopBar';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
@@ -16,7 +17,7 @@ const ORDER: Rarity[] = ['mythic', 'legendary', 'epic', 'rare', 'common'];
 const RESULT_COLS = 'user_id, game_id, table_id, points, won, kind, solo, is_soloist, created_at';
 
 /** Übersicht aller Erfolge: freigeschaltet, Fortschritt, wie selten sie in der Runde sind, Punkte */
-export function AchievementsPage() {
+export function AchievementsContent() {
   const { session } = useAuth();
   const me = session?.user.id ?? null;
   const [all, setAll] = useState<Earned[] | null>(null);
@@ -53,9 +54,7 @@ export function AchievementsPage() {
   const maxPoints = achievementPoints(ACHIEVEMENTS.map((a) => a.key));
 
   return (
-    <div className="felt min-h-full">
-      <TopBar />
-      <main className="mx-auto max-w-5xl px-4 pt-4 pb-20">
+    <>
         <p className="tag text-[11px] text-white/45">
           <span className="text-gold-400">Erfolge</span> / {mineEarned.size} von {ACHIEVEMENTS.length} freigeschaltet
         </p>
@@ -74,6 +73,8 @@ export function AchievementsPage() {
             </div>
           </div>
         </div>
+
+        {me && <ShowcaseEditor me={me} earned={[...mineEarned.keys()]} points={points} />}
 
         {ORDER.map((rarity) => (
           <section key={rarity} className="mt-10 border-t border-white/[0.08] pt-6">
@@ -123,6 +124,16 @@ export function AchievementsPage() {
           </section>
         ))}
         {all === null && <p className="tag mt-6 text-[11px] text-white/40">Lädt …</p>}
+    </>
+  );
+}
+
+export function AchievementsPage() {
+  return (
+    <div className="felt min-h-full">
+      <TopBar />
+      <main className="mx-auto max-w-5xl px-4 pt-4 pb-20">
+        <AchievementsContent />
       </main>
     </div>
   );

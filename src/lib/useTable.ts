@@ -1,7 +1,7 @@
 import type { Card, GameAction } from '@engine';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from './auth';
-import { api, type GameRow, type Member, type ResultRow, supabase, type TableRow } from './supabase';
+import { api, displayOf, type GameRow, type Member, type ResultRow, supabase, type TableRow } from './supabase';
 
 interface HandEntry {
   cards: Card[];
@@ -50,7 +50,7 @@ export function useTable(code: string) {
   const loadMembers = useCallback(async (tableId: string) => {
     const { data } = await supabase
       .from('table_players')
-      .select('user_id, seat, profiles(display_name)')
+      .select('user_id, seat, profiles(display_name, showcase, title, show_badges, show_title)')
       .eq('table_id', tableId)
       .order('seat');
     setMembers(
@@ -58,6 +58,7 @@ export function useTable(code: string) {
         user_id: m.user_id as string,
         seat: m.seat as number,
         display_name: (m.profiles as unknown as { display_name: string } | null)?.display_name ?? '?',
+        ...displayOf(m.profiles as unknown as Parameters<typeof displayOf>[0]),
       })),
     );
   }, []);

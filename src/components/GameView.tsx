@@ -531,6 +531,8 @@ export function GameView({
         compact={compact}
         media={cats && isBotSeat(uid) ? <BotCat mood={moodOf(view, pos, announcer)} bot={botIndex(uid, r)} /> : undefined}
         reaction={reactions?.shown[uid]}
+        title={members.find((m) => m.user_id === uid)?.title}
+        badges={members.find((m) => m.user_id === uid)?.showcase}
       />
     );
   };

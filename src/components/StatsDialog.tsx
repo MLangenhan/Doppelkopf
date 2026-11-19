@@ -2,9 +2,10 @@ import { ArrowLeft, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect } from 'react';
 import { StatsContent } from './StatsContent';
+import { AchievementsContent } from '../pages/AchievementsPage';
 
 /** Statistik als Popup: im Spiel (auch gegen Bots) nachschauen, ohne den Tisch zu verlassen. */
-export function StatsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function StatsDialog({ open, onClose, view = 'stats' }: { open: boolean; onClose: () => void; view?: 'stats' | 'achievements' }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -43,7 +44,7 @@ export function StatsDialog({ open, onClose }: { open: boolean; onClose: () => v
               </button>
             </div>
             <div className="overflow-y-auto px-4 pt-5 pb-10 sm:px-6">
-              <StatsContent inDialog />
+              {view === 'stats' ? <StatsContent inDialog /> : <AchievementsContent />}
             </div>
           </motion.div>
         </motion.div>

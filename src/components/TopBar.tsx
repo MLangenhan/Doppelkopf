@@ -10,6 +10,7 @@ export function TopBar({ children }: { children?: ReactNode }) {
   const { profile, session } = useAuth();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
+  const [achievementsOpen, setAchievementsOpen] = useState(false);
   // Im Spiel öffnet die Statistik als Popup, damit man nicht vom Tisch weg muss
   const { pathname } = useLocation();
   const inGame = pathname.startsWith('/t/') || pathname.startsWith('/uebung');
@@ -32,6 +33,7 @@ export function TopBar({ children }: { children?: ReactNode }) {
       </button>
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <StatsDialog open={statsOpen} onClose={() => setStatsOpen(false)} />
+      <StatsDialog open={achievementsOpen} onClose={() => setAchievementsOpen(false)} view="achievements" />
       {session ? (
         <nav className="flex shrink-0 items-center gap-1">
           {inGame ? (
@@ -43,9 +45,13 @@ export function TopBar({ children }: { children?: ReactNode }) {
               {statsLabel}
             </Link>
           )}
-          {/* Im Spiel nicht anbieten: der Wechsel würde den Tisch (bzw. das Übungsspiel) verlassen */}
-          {!inGame && (
-            <Link to="/erfolge" className="btn-ghost tag p-2 text-[11px] sm:px-3 sm:py-1.5" aria-label="Erfolge">
+          {inGame ? (
+            <button className={statsClass} onClick={() => setAchievementsOpen(true)} aria-label="Erfolge">
+              <Trophy className="size-5 sm:hidden" />
+              <span className="hidden sm:inline">Erfolge</span>
+            </button>
+          ) : (
+            <Link to="/erfolge" className={statsClass} aria-label="Erfolge">
               <Trophy className="size-5 sm:hidden" />
               <span className="hidden sm:inline">Erfolge</span>
             </Link>

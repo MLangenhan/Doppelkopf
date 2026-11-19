@@ -5,6 +5,7 @@ import { Brackets } from './Cursor';
 import type { ShownReaction } from '../lib/reactions';
 import { CARD_RATIO, PlayingCard } from './PlayingCard';
 import { ReactionBubble } from './Reactions';
+import { BadgeRow, TitleTag } from './Showcase';
 import { VideoTile } from './VideoTile';
 
 export function PartyBadge({ party, small }: { party: Party; small?: boolean }) {
@@ -38,6 +39,8 @@ export function Seat({
   compact,
   media,
   reaction,
+  title,
+  badges,
   className = '',
 }: {
   name: string;
@@ -62,6 +65,9 @@ export function Seat({
   media?: ReactNode;
   /** Gerade gesendete Reaktion (Applaus, Autsch …) */
   reaction?: ShownReaction;
+  /** Vitrine: gekaufter Titel und bis zu drei Erfolge */
+  title?: string | null;
+  badges?: string[];
   className?: string;
 }) {
   const facts = [
@@ -90,9 +96,13 @@ export function Seat({
             }`}
           >
             {online === false && <span className="size-1.5 shrink-0 rounded-full bg-white/30" title="Nicht verbunden" />}
-            <span className={`truncate font-medium ${compact ? 'text-[11px]' : 'text-sm'}`}>
-              {isMe && name !== 'Du' && !compact ? `${name} (du)` : name}
+            <span className="flex min-w-0 flex-col leading-tight">
+              <span className={`truncate font-medium ${compact ? 'text-[11px]' : 'text-sm'}`}>
+                {isMe && name !== 'Du' && !compact ? `${name} (du)` : name}
+              </span>
+              {!compact && <TitleTag titleKey={title} />}
             </span>
+            {!compact && <BadgeRow keys={badges} size={20} />}
             {party && !compact && <PartyBadge party={party} small />}
           </div>
           <AnimatePresence>
