@@ -26,6 +26,7 @@ import {
   partyLabel,
   trumpMode,
 } from '../lib/gameText';
+import type { AchievementEvent } from '../lib/achievementFeed';
 import { eveningTitles } from '../lib/achievements';
 import { moodOf } from '../lib/botMood';
 import { useCardOrder } from '../lib/cardOrder';
@@ -54,6 +55,7 @@ import { type Rel, TrickArea, type TrickPlay } from './TrickArea';
 import { VideoTile } from './VideoTile';
 import { BotCat } from './BotCat';
 import { CardGuide } from './CardGuide';
+import { AchievementBanner } from './AchievementBanner';
 import { ReactionPicker } from './Reactions';
 import { LeaveDialog } from './LeaveDialog';
 
@@ -102,6 +104,7 @@ export function GameView({
   onAbort,
   rules,
   reactions,
+  achievementFeed,
 }: {
   game: GameRow;
   hand: Card[];
@@ -120,6 +123,8 @@ export function GameView({
   onLeave?: () => void;
   /** Laufendes Spiel für alle abbrechen */
   onAbort?: () => Promise<void> | void;
+  /** Neu freigeschaltete Erfolge am Tisch */
+  achievementFeed?: { current: AchievementEvent | null; done: (id: number) => void };
   /** Reaktionen am Tisch (Applaus, Autsch …) */
   reactions?: { shown: Record<string, ShownReaction>; send: (k: ReactionKind) => void };
   /** Hausregeln in der Seitenleiste anpassen */
@@ -889,6 +894,8 @@ export function GameView({
             </>
           )}
         </AnimatePresence>
+
+      {achievementFeed && <AchievementBanner event={achievementFeed.current} name={nameOfUser} onDone={achievementFeed.done} />}
 
       <LeaveDialog
         open={leaveOpen}

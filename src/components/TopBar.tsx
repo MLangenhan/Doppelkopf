@@ -1,4 +1,4 @@
-import { BarChart3, LogOut, Settings } from 'lucide-react';
+import { BarChart3, LogOut, Settings, Trophy } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
@@ -41,6 +41,13 @@ export function TopBar({ children }: { children?: ReactNode }) {
           ) : (
             <Link to="/statistik" className={statsClass} aria-label="Statistik">
               {statsLabel}
+            </Link>
+          )}
+          {/* Im Spiel nicht anbieten: der Wechsel würde den Tisch (bzw. das Übungsspiel) verlassen */}
+          {!inGame && (
+            <Link to="/erfolge" className="btn-ghost tag p-2 text-[11px] sm:px-3 sm:py-1.5" aria-label="Erfolge">
+              <Trophy className="size-5 sm:hidden" />
+              <span className="hidden sm:inline">Erfolge</span>
             </Link>
           )}
           <span className="tag hidden px-2 text-[11px] text-white/45 md:inline">{profile?.display_name}</span>

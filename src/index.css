@@ -122,3 +122,23 @@ html.gamepad :focus {
   outline: 3px solid var(--color-gold-400);
   outline-offset: 3px;
 }
+
+/* Achievement-Medaillen: Glanz, Lichtkranz, Funken */
+@keyframes achievement-shine {
+  0%, 60% { transform: translateX(0) rotate(20deg); }
+  100% { transform: translateX(180px) rotate(20deg); }
+}
+@keyframes achievement-rays {
+  to { transform: rotate(360deg); }
+}
+@keyframes achievement-spark {
+  0%, 100% { opacity: 0; transform: scale(0.4); }
+  50% { opacity: 1; transform: scale(1.4); }
+}
+.achievement-shine { animation: achievement-shine 3.2s ease-in-out infinite; }
+.achievement-rays { animation: achievement-rays 9s linear infinite; filter: blur(6px); }
+.achievement-spark { animation: achievement-spark 2s ease-in-out infinite; }
+.achievement-glow { filter: drop-shadow(0 0 10px var(--glow)); }
+@media (prefers-reduced-motion: reduce) {
+  .achievement-shine, .achievement-rays, .achievement-spark { animation: none; }
+}

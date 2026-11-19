@@ -5,3 +5,4 @@ export * from './game.ts';
 export * from './scoring.ts';
 export * from './view.ts';
 export * from './bots.ts';
+export * from './achievements.ts';

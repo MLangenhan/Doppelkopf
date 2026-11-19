@@ -189,6 +189,28 @@ export const sound = {
     window.speechSynthesis.speak(u);
   },
 
+  /** Erfolg freigeschaltet: Glockenspiel statt Fanfare, je seltener desto voller */
+  achievement(rarity: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic') {
+    const c = audio();
+    if (!c) return;
+    const at = c.currentTime;
+    const notes = [1046.5, 1318.5, 1568, 2093];
+    const count = { common: 3, rare: 4, epic: 4, legendary: 4, mythic: 4 }[rarity];
+    notes.slice(0, count).forEach((f, i) => {
+      tone(c, at + i * 0.09, f, 0.12, 0.9, 'sine');
+      tone(c, at + i * 0.09, f * 2, 0.03, 0.5, 'sine');
+    });
+    if (rarity === 'epic' || rarity === 'legendary' || rarity === 'mythic') {
+      // Nachklingender Akkord
+      [523.25, 659.25, 783.99].forEach((f) => tone(c, at + 0.45, f, 0.07, 1.6, 'triangle'));
+    }
+    if (rarity === 'legendary' || rarity === 'mythic') {
+      // "Chor": tiefe, langsam anschwellende Flächen
+      [261.63, 329.63, 392, rarity === 'mythic' ? 466.16 : 523.25].forEach((f) => tone(c, at + 0.7, f, 0.09, 2.4, 'sawtooth'));
+      thump(c, at + 0.7, 0.5, 90, 40);
+    }
+  },
+
   /** Reaktionen am Tisch */
   reaction(kind: 'applaus' | 'autsch' | 'glueck' | 'hmm') {
     const c = audio();

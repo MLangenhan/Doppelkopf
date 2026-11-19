@@ -14,7 +14,11 @@ import {
   BOT_IDS,
   botAction,
   createGame,
+  foxesCaught,
+  gameAchievements,
+  historyAchievements,
   isBot,
+  type ResultLite,
   GameError,
   type GameAction,
   type GameState,
@@ -186,7 +190,63 @@ async function persist(db: SupabaseClient, game: LoadedGame, before: GameState, 
   });
   if (error) throw new Error(error.message);
   if (!saved) throw new GameError('Jemand war schneller – bitte nochmal versuchen.');
+  if (status === 'finished' && after.result) {
+    // Erfolge vergeben: Ein Fehler hier darf das gespeicherte Spiel nicht kippen
+    try {
+      await awardAchievements(db, game, after);
+    } catch (e) {
+      console.error('Erfolge konnten nicht vergeben werden', e);
+    }
+  }
   return { version: after.version };
+}
+
+/** Erfolge am Spielende vergeben – nur an Tischen ohne Bots */
+async function awardAchievements(db: SupabaseClient, game: LoadedGame, s: GameState) {
+  const players = game.players as string[];
+  if (players.some((u) => isBot(u))) return;
+  const { data: table } = await db.from('tables').select('host_id').eq('id', game.table_id).single();
+  const finishedAt = new Date();
+
+  for (let pos = 0; pos < players.length; pos++) {
+    const uid = players[pos];
+    // Füchse zählen
+    const caught = foxesCaught(s, pos);
+    const { data: counter } = await db.from('user_counters').select('value').eq('user_id', uid).eq('key', 'fox').maybeSingle();
+    const foxes = (counter?.value ?? 0) + caught;
+    if (caught) await db.from('user_counters').upsert({ user_id: uid, key: 'fox', value: foxes });
+
+    const cols = 'user_id, game_id, table_id, points, won, kind, solo, is_soloist, created_at';
+    const { data: mine } = await db.from('game_results').select(cols).eq('user_id', uid).order('created_at');
+    const tableIds = [...new Set((mine ?? []).map((r) => r.table_id as string))];
+    const { data: tables } = tableIds.length
+      ? await db.from('game_results').select(cols).in('table_id', tableIds).order('created_at')
+      : { data: [] };
+
+    const earned = new Set([
+      ...gameAchievements(s, pos),
+      ...historyAchievements(uid, {
+        mine: (mine ?? []) as ResultLite[],
+        tables: (tables ?? []) as ResultLite[],
+        tableId: game.table_id as string,
+        isHost: table?.host_id === uid,
+        foxes,
+        finishedAt,
+      }),
+    ]);
+    if (!earned.size) continue;
+    const { data: have } = await db.from('user_achievements').select('key').eq('user_id', uid);
+    const known = new Set((have ?? []).map((r) => r.key as string));
+    const fresh = [...earned].filter((k) => !known.has(k));
+    if (fresh.length) {
+      await db
+        .from('user_achievements')
+        .upsert(
+          fresh.map((key) => ({ user_id: uid, key, game_id: game.id, table_id: game.table_id })),
+          { onConflict: 'user_id,key', ignoreDuplicates: true },
+        );
+    }
+  }
 }
 
 async function act(db: SupabaseClient, userId: string, gameId: string, action: GameAction) {

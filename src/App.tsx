@@ -11,6 +11,7 @@ import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { PracticePage } from './pages/PracticePage';
 import { StatsPage } from './pages/StatsPage';
+import { AchievementsPage } from './pages/AchievementsPage';
 import { TablePage } from './pages/TablePage';
 
 function GamepadSupport() {
@@ -68,6 +69,14 @@ export function App() {
                 element={
                   <RequireAuth>
                     <TablePage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/erfolge"
+                element={
+                  <RequireAuth>
+                    <AchievementsPage />
                   </RequireAuth>
                 }
               />

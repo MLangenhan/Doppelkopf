@@ -45,3 +45,16 @@ describe('Abzeichen', () => {
     expect(titles.find((t) => t.title === 'Pechvogel')?.holders).toEqual(['b', 'd']);
   });
 });
+
+describe('Globale Erfolge', () => {
+  it('Regeln laufen auf echten Spielständen und vergeben typische Erfolge', async () => {
+    const { gameAchievements, ACHIEVEMENT_BY_KEY } = await import('@engine');
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 300; seed++) {
+      const s = finishedGame(seed);
+      for (let p = 0; p < 4; p++) for (const k of gameAchievements(s, p)) seen.add(k);
+    }
+    for (const k of seen) expect(ACHIEVEMENT_BY_KEY.has(k)).toBe(true);
+    for (const k of ['ersterStich', 'fuchsjaeger', 'gegenDieAlten', 'keine90', 'doppelkopf']) expect(seen.has(k)).toBe(true);
+  });
+});
