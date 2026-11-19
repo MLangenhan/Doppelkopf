@@ -140,7 +140,7 @@ export function AchievementsContent() {
   };
 
   const close = [...ACHIEVEMENTS]
-    .filter((a) => a.target && !mineEarned.has(a.key) && (progress[a.key] ?? 0) > 0)
+    .filter((a) => a.target && !mineEarned.has(a.key) && (progress[a.key] ?? 0) > 0 && (progress[a.key] ?? 0) < a.target)
     .sort((a, b) => (progress[b.key] ?? 0) / b.target! - (progress[a.key] ?? 0) / a.target!)
     .slice(0, 3);
 
@@ -229,8 +229,8 @@ export function AchievementsContent() {
                       <AchievementBadge achievementKey={a.key} size={48} locked />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold">{a.name}</span>
-                        <span className="mt-1 block h-1 rounded-full bg-white/[0.08]">
-                          <span className="block h-full rounded-full bg-gold-400" style={{ width: `${((progress[a.key] ?? 0) / a.target!) * 100}%` }} />
+                        <span className="mt-1 block h-1 overflow-hidden rounded-full bg-white/[0.08]">
+                          <span className="block h-full rounded-full bg-gold-400" style={{ width: `${Math.min(1, (progress[a.key] ?? 0) / a.target!) * 100}%` }} />
                         </span>
                         <span className="tag text-[9px] text-white/45">
                           {progress[a.key]} / {a.target}
