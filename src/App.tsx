@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
 import { useGamepad } from './lib/gamepad';
+import { usePersonalSync } from './lib/personalSync';
 import { usePrefs } from './lib/prefs';
 import { configureSound } from './lib/sound';
 import { Cursor } from './components/Cursor';
@@ -16,6 +17,11 @@ import { TablePage } from './pages/TablePage';
 
 function GamepadSupport() {
   useGamepad();
+  return null;
+}
+
+function PersonalSync() {
+  usePersonalSync();
   return null;
 }
 
@@ -54,6 +60,7 @@ export function App() {
       <GamepadSupport />
       <Cursor />
       <AuthProvider>
+        <PersonalSync />
         <ToastProvider>
           {/* HashRouter, damit GitHub Pages bei Direktaufrufen keine 404 liefert */}
           <HashRouter>
