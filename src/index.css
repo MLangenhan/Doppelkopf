@@ -167,3 +167,44 @@ html.gamepad :focus {
 .medal-locked {
   filter: grayscale(1) brightness(0.32) contrast(1.4) drop-shadow(0 1px 0 rgba(255, 255, 255, 0.12));
 }
+
+/* Filzfarben (Einstellung, durch Erfolge freigeschaltet). Die Tischmitte nutzt --mat-1 … --mat-4. */
+:root {
+  --mat-1: #2c5e4a;
+  --mat-2: #1d4334;
+  --mat-3: #142f25;
+  --mat-4: #10261e;
+}
+:root[data-felt='blue'] {
+  --color-felt-950: #070f1c;
+  --color-felt-900: #0c1830;
+  --color-felt-800: #13233f;
+  --color-felt-700: #1a2d4f;
+  --color-felt-600: #26395f;
+  --mat-1: #2b4a7a;
+  --mat-2: #1c3560;
+  --mat-3: #132648;
+  --mat-4: #0e1d38;
+}
+:root[data-felt='bordeaux'] {
+  --color-felt-950: #170609;
+  --color-felt-900: #230b10;
+  --color-felt-800: #331219;
+  --color-felt-700: #421a22;
+  --color-felt-600: #55252f;
+  --mat-1: #6e2433;
+  --mat-2: #521a26;
+  --mat-3: #3b121b;
+  --mat-4: #2c0d14;
+}
+:root[data-felt='black'] {
+  --color-felt-950: #050505;
+  --color-felt-900: #0b0b0c;
+  --color-felt-800: #141416;
+  --color-felt-700: #1c1c1f;
+  --color-felt-600: #29292d;
+  --mat-1: #2a2a2e;
+  --mat-2: #1d1d20;
+  --mat-3: #141416;
+  --mat-4: #0e0e10;
+}

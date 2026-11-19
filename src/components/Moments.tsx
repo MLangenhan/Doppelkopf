@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useFx } from '../lib/prefs';
+import { CONFETTI } from '../lib/cosmetics';
+import { getPrefs, useFx } from '../lib/prefs';
 
 // Große Momente am Tisch: Ansagen, Soli, Fuchs, Doppelkopf … erscheinen kurz groß über der Spielfläche.
 
@@ -101,7 +102,9 @@ export function Confetti({ active }: { active: boolean }) {
     const dpr = Math.min(window.devicePixelRatio, 1.5);
     const w = (canvas.width = window.innerWidth * dpr);
     const h = (canvas.height = window.innerHeight * dpr);
-    const colors = ['#e8cd85', '#d9b45a', '#6aa8f0', '#ee8a6b', '#e9f0ec', '#8fd3a8'];
+    // Eigener Konfetti-Stil (durch Erfolge freigeschaltet)
+    const style = CONFETTI.find((c) => c.key === getPrefs().confetti) ?? CONFETTI[0];
+    const colors = style.colors;
     const pieces = Array.from({ length: 160 }, () => ({
       x: w / 2 + (Math.random() - 0.5) * w * 0.3,
       y: h * 0.45,
@@ -128,7 +131,26 @@ export function Confetti({ active }: { active: boolean }) {
         ctx.translate(p.x, p.y);
         ctx.rotate(p.r);
         ctx.fillStyle = p.c;
-        ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+        if (style.shape === 'card') {
+          // Kleine Spielkarte mit rotem oder schwarzem Farbzeichen
+          ctx.fillRect(-p.s / 2, -p.s * 0.7, p.s, p.s * 1.4);
+          ctx.fillStyle = p.s % 2 > 1 ? '#c81e1e' : '#111';
+          ctx.font = `${p.s * 0.9}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(['♥', '♠', '♦', '♣'][Math.floor(p.s) % 4], 0, 0);
+        } else if (style.shape === 'star') {
+          ctx.beginPath();
+          for (let i = 0; i < 10; i++) {
+            const r = i % 2 ? p.s * 0.35 : p.s * 0.8;
+            const a = (i * Math.PI) / 5;
+            ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+          }
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+        }
         ctx.restore();
       }
       if (t < 3.2) raf = requestAnimationFrame(frame);

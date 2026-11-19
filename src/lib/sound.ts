@@ -212,7 +212,7 @@ export const sound = {
   },
 
   /** Reaktionen am Tisch */
-  reaction(kind: 'applaus' | 'autsch' | 'glueck' | 'hmm') {
+  reaction(kind: string) {
     const c = audio();
     if (!c) return;
     const at = c.currentTime;
@@ -234,8 +234,11 @@ export const sound = {
       osc.connect(g).connect(master!);
       osc.start(at + 0.1);
       osc.stop(at + 0.6);
-    } else if (kind === 'glueck') {
+    } else if (kind === 'glueck' || kind === 'ehrenrunde' || kind === 'brille') {
       [783.99, 987.77, 1174.66, 1567.98].forEach((f, i) => tone(c, at + i * 0.06, f, 0.08, 0.35, 'sine'));
+    } else if (kind === 'hoert' || kind === 'fuchs') {
+      tone(c, at, 523.25, 0.12, 0.15, 'square');
+      tone(c, at + 0.15, 659.25, 0.12, 0.3, 'square');
     } else {
       tone(c, at, 196, 0.12, 0.5, 'triangle');
       tone(c, at + 0.25, 174.61, 0.1, 0.5, 'triangle');

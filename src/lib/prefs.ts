@@ -32,6 +32,10 @@ export interface Prefs {
   highlightPlayable: boolean;
   /** Spickzettel mit Trumpf-Reihenfolge und Augen rechts zwischen den Kameras */
   cardGuide: boolean;
+  /** Nur für dich: Kartenrücken, Filzfarbe, Konfetti (durch Erfolge freigeschaltet) */
+  cardBack: string;
+  felt: string;
+  confetti: string;
   /** Einzelne Effekte */
   fx: Record<FxKey, boolean>;
   /** Kartenreihenfolge in der Hand */
@@ -54,6 +58,9 @@ const fxAll = (on: boolean) => Object.fromEntries(ALL_FX.map((k) => [k, on])) as
 const DEFAULTS: Prefs = {
   highlightPlayable: true,
   cardGuide: false,
+  cardBack: 'blue',
+  felt: 'green',
+  confetti: 'classic',
   fx: fxAll(true),
   handSort: 'trumpFirst',
   sound: true,

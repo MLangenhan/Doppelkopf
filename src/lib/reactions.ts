@@ -6,13 +6,19 @@ import { supabase } from './supabase';
 // Schnelle Reaktionen am Tisch (Applaus, Autsch …). Laufen über einen Realtime-Broadcast pro Tisch,
 // im Übungsmodus nur lokal.
 
-export type ReactionKind = 'applaus' | 'autsch' | 'glueck' | 'hmm';
+export type ReactionKind = 'applaus' | 'autsch' | 'glueck' | 'hmm' | 'hoert' | 'fuchs' | 'brille' | 'ehrenrunde';
+/** Grundreaktionen (Tasten 1–4); dazu kommen die durch Erfolge freigeschalteten */
 export const REACTION_KINDS: ReactionKind[] = ['applaus', 'autsch', 'glueck', 'hmm'];
+export const EXTRA_REACTION_KINDS: ReactionKind[] = ['hoert', 'fuchs', 'brille', 'ehrenrunde'];
 export const REACTION_LABELS: Record<ReactionKind, string> = {
   applaus: 'Applaus',
   autsch: 'Autsch',
   glueck: 'Glück gehabt',
   hmm: 'Hmm …',
+  hoert: 'Hört, hört!',
+  fuchs: 'Fuchs!',
+  brille: 'Brille auf',
+  ehrenrunde: 'Ehrenrunde',
 };
 
 export interface ShownReaction {
@@ -30,7 +36,7 @@ export function useReactions(tableId: string | null, me: string | null) {
   const last = useRef(0);
 
   const show = useCallback((uid: string, kind: ReactionKind) => {
-    if (!REACTION_KINDS.includes(kind)) return;
+    if (!REACTION_KINDS.includes(kind) && !EXTRA_REACTION_KINDS.includes(kind)) return;
     const id = nextId++;
     setShown((cur) => ({ ...cur, [uid]: { kind, id } }));
     sound.reaction(kind);

@@ -1,6 +1,16 @@
 import { type Card, cardName, rankOf, suitOf } from '@engine';
 import { motion, type HTMLMotionProps } from 'motion/react';
 import { forwardRef } from 'react';
+import { cardBackSvg } from '../lib/cosmetics';
+import { usePrefs } from '../lib/prefs';
+
+const backs = new Map<string, string>();
+/** Eigener Kartenrücken (nur für dich sichtbar) */
+const backUrl = (key: string) => {
+  if (key === 'blue') return cardUrl(null);
+  if (!backs.has(key)) backs.set(key, cardBackSvg(key));
+  return backs.get(key)!;
+};
 
 const BASE = `${import.meta.env.BASE_URL}cards/`;
 const RANK_FILE = { '9': '9', '10': 'T', J: 'J', Q: 'Q', K: 'K', A: 'A' } as const;
@@ -42,6 +52,7 @@ export const PlayingCard = forwardRef<HTMLDivElement, Props>(function PlayingCar
   ref,
 ) {
   const showBack = back || !card;
+  const [prefs] = usePrefs();
   return (
     <motion.div
       ref={ref}
@@ -52,7 +63,7 @@ export const PlayingCard = forwardRef<HTMLDivElement, Props>(function PlayingCar
       {...rest}
     >
       <img
-        src={cardUrl(showBack ? null : card!)}
+        src={showBack ? backUrl(prefs.cardBack) : cardUrl(card!)}
         alt=""
         draggable={false}
         className="pointer-events-none absolute inset-0 h-full w-full"

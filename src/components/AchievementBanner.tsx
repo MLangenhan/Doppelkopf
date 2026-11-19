@@ -2,6 +2,7 @@ import { ACHIEVEMENT_BY_KEY, RARITIES } from '@engine';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect } from 'react';
 import type { AchievementEvent } from '../lib/achievementFeed';
+import { refreshMyAchievements } from '../lib/myAchievements';
 import { sound } from '../lib/sound';
 import { AchievementBadge } from './AchievementBadge';
 import { Confetti } from './Moments';
@@ -25,6 +26,8 @@ export function AchievementBanner({ event, name, onDone }: { event: AchievementE
   useEffect(() => {
     if (!event || !a) return;
     sound.achievement(a.rarity);
+    // Neue Freischaltungen (Kartenrücken, Reaktionen …) sofort verfügbar machen
+    refreshMyAchievements();
     if (big) sound.say(`${RARITIES[a.rarity].label}! ${a.name}!`);
     const t = setTimeout(() => onDone(event.id), big ? 6000 : 4000);
     return () => clearTimeout(t);

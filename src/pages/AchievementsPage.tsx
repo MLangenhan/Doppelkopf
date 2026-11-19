@@ -11,7 +11,7 @@ import {
 } from '@engine';
 import { Check, Lock, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { AchievementBadge } from '../components/AchievementBadge';
 import { Nametag } from '../components/Nametag';
 import { TitleTag } from '../components/Showcase';
@@ -19,7 +19,8 @@ import { useToast } from '../components/Toast';
 import { TopBar } from '../components/TopBar';
 import { VideoTile } from '../components/VideoTile';
 import { useAuth } from '../lib/auth';
-import { AVATAR_COLORS, AVATARS, type FrameKey, FRAME_STYLE, FRAMES } from '../lib/cosmetics';
+import { AVATAR_COLORS, AVATARS, CARD_BACKS, cardBackSvg, CONFETTI, EXTRA_REACTIONS, FELTS, type FrameKey, FRAME_STYLE, FRAMES, type Unlockable } from '../lib/cosmetics';
+import { usePrefs } from '../lib/prefs';
 import { errorMessage, supabase } from '../lib/supabase';
 
 interface Earned {
@@ -73,6 +74,7 @@ export function AchievementsContent() {
   const [peekTitle, setPeekTitle] = useState<string | null>(null);
   const [filter, setFilter] = useState<'alle' | 'frei' | 'fehlt'>('alle');
   const [detail, setDetail] = useState<AchievementDef | null>(null);
+  const [prefs, setPref] = usePrefs();
 
   useEffect(() => {
     if (!me) return;
@@ -374,6 +376,59 @@ export function AchievementsContent() {
               ))}
             </ul>
           </section>
+
+          <section className="lg:col-span-2">
+            <h2 className="text-sm font-medium">Nur für dich</h2>
+            <p className="mb-3 text-xs text-white/45">Siehst nur du. Jede Variante schaltet ein bestimmter Erfolg frei – fahr über ein Schloss, um zu sehen, welcher.</p>
+            <div className="grid gap-6 md:grid-cols-3">
+              <Picker
+                label="Kartenrücken"
+                items={CARD_BACKS}
+                value={prefs.cardBack}
+                earned={mineEarned}
+                onPick={(k) => setPref('cardBack', k)}
+                render={(k) => <img src={k === 'blue' ? `${import.meta.env.BASE_URL}cards/back.svg` : cardBackSvg(k)} alt="" className="h-14 w-10 rounded-[3px]" />}
+              />
+              <Picker
+                label="Filzfarbe"
+                items={FELTS}
+                value={prefs.felt}
+                earned={mineEarned}
+                onPick={(k) => setPref('felt', k)}
+                render={(k) => <span className="block size-10 rounded-full" style={{ background: FELT_SWATCH[k] }} />}
+              />
+              <Picker
+                label="Konfetti"
+                items={CONFETTI}
+                value={prefs.confetti}
+                earned={mineEarned}
+                onPick={(k) => setPref('confetti', k)}
+                render={(k) => (
+                  <span className="flex size-10 flex-wrap items-center justify-center gap-0.5">
+                    {CONFETTI.find((c) => c.key === k)!.colors.slice(0, 4).map((c, i) => (
+                      <span key={i} className={`size-2.5 ${k === 'stars' ? 'rotate-45' : 'rounded-[1px]'}`} style={{ background: c }} />
+                    ))}
+                  </span>
+                )}
+              />
+            </div>
+            <h3 className="mt-6 mb-2 text-xs text-white/55">Zusätzliche Reaktionen (sehen alle am Tisch)</h3>
+            <ul className="flex flex-wrap gap-2">
+              {EXTRA_REACTIONS.map((r) => {
+                const has = !r.unlock || mineEarned.has(r.unlock);
+                return (
+                  <li
+                    key={r.key}
+                    title={has ? 'Freigeschaltet' : `Freischalten mit „${ACHIEVEMENT_BY_KEY.get(r.unlock!)?.name}“`}
+                    className={`tag flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] ${has ? 'bg-gold-400/15 text-gold-200' : 'bg-white/[0.04] text-white/40'}`}
+                  >
+                    {!has && <Lock className="size-3" />}
+                    {r.label}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
         </div>
       )}
 
@@ -467,6 +522,54 @@ export function AchievementsContent() {
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+const FELT_SWATCH: Record<string, string> = {
+  green: 'radial-gradient(circle, #2c5e4a, #10261e)',
+  blue: 'radial-gradient(circle, #2b4a7a, #0e1d38)',
+  bordeaux: 'radial-gradient(circle, #6e2433, #2c0d14)',
+  black: 'radial-gradient(circle, #2a2a2e, #0e0e10)',
+};
+
+/** Auswahl mit Schloss für noch nicht freigeschaltete Varianten */
+function Picker({
+  label,
+  items,
+  value,
+  earned,
+  onPick,
+  render,
+}: {
+  label: string;
+  items: Unlockable[];
+  value: string;
+  earned: Map<string, unknown>;
+  onPick: (key: string) => void;
+  render: (key: string) => ReactNode;
+}) {
+  return (
+    <div>
+      <h3 className="mb-2 text-xs text-white/55">{label}</h3>
+      <ul className="flex flex-wrap gap-2">
+        {items.map((it) => {
+          const has = !it.unlock || earned.has(it.unlock);
+          return (
+            <li key={it.key}>
+              <button
+                disabled={!has}
+                onClick={() => onPick(it.key)}
+                title={has ? it.name : `${it.name} – freischalten mit „${ACHIEVEMENT_BY_KEY.get(it.unlock!)?.name}“`}
+                className={`relative rounded-lg p-1.5 transition ${value === it.key ? 'bg-gold-400/20 ring-2 ring-gold-400' : 'bg-white/[0.04] hover:bg-white/10'} disabled:cursor-not-allowed`}
+              >
+                <span className={has ? '' : 'opacity-30 grayscale'}>{render(it.key)}</span>
+                {!has && <Lock className="absolute top-1/2 left-1/2 size-4 -translate-x-1/2 -translate-y-1/2 text-white/80" />}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 

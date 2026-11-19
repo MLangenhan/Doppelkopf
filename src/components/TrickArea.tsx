@@ -122,7 +122,7 @@ export function TrickArea({
         aria-hidden
         className="absolute inset-0 rounded-[50%]"
         style={{
-          background: 'radial-gradient(ellipse at 50% 38%, #2c5e4a 0%, #1d4334 48%, #142f25 78%, #10261e 100%)',
+          background: 'radial-gradient(ellipse at 50% 38%, var(--mat-1) 0%, var(--mat-2) 48%, var(--mat-3) 78%, var(--mat-4) 100%)',
         }}
         animate={{
           boxShadow: complete

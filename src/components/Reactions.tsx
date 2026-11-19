@@ -1,9 +1,20 @@
-import { CircleQuestionMark, Clover, PartyPopper, ThumbsUp, Zap } from 'lucide-react';
+import { CircleQuestionMark, Clover, Crown, Glasses, Megaphone, PartyPopper, Rabbit, ThumbsUp, Zap } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
-import { REACTION_KINDS, REACTION_LABELS, type ReactionKind, type ShownReaction } from '../lib/reactions';
+import { EXTRA_REACTIONS } from '../lib/cosmetics';
+import { useMyAchievements } from '../lib/myAchievements';
+import { EXTRA_REACTION_KINDS, REACTION_KINDS, REACTION_LABELS, type ReactionKind, type ShownReaction } from '../lib/reactions';
 
-export const REACTION_ICONS = { applaus: PartyPopper, autsch: Zap, glueck: Clover, hmm: CircleQuestionMark } as const;
+export const REACTION_ICONS = {
+  applaus: PartyPopper,
+  autsch: Zap,
+  glueck: Clover,
+  hmm: CircleQuestionMark,
+  hoert: Megaphone,
+  fuchs: Rabbit,
+  brille: Glasses,
+  ehrenrunde: Crown,
+} as const;
 
 /** Reaktion groß über einer Kamera */
 export function ReactionBubble({ reaction, compact }: { reaction?: ShownReaction; compact?: boolean }) {
@@ -39,6 +50,14 @@ export function ReactionBubble({ reaction, compact }: { reaction?: ShownReaction
 export function ReactionPicker({ onReact }: { onReact: (k: ReactionKind) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const earned = useMyAchievements();
+  const kinds: ReactionKind[] = [
+    ...REACTION_KINDS,
+    ...EXTRA_REACTION_KINDS.filter((k) => {
+      const u = EXTRA_REACTIONS.find((e) => e.key === k)?.unlock;
+      return !u || earned.has(u);
+    }),
+  ];
   useEffect(() => {
     if (!open) return;
     const close = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
@@ -64,10 +83,10 @@ export function ReactionPicker({ onReact }: { onReact: (k: ReactionKind) => void
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            className="panel absolute top-full left-1/2 z-40 mt-1 flex -translate-x-1/2 gap-1 p-1.5"
+            className="panel absolute top-full left-1/2 z-40 mt-1 grid w-max -translate-x-1/2 grid-cols-4 gap-1 p-1.5"
             role="menu"
           >
-            {REACTION_KINDS.map((k, i) => {
+            {kinds.map((k, i) => {
               const Icon = REACTION_ICONS[k];
               return (
                 <button
@@ -78,7 +97,7 @@ export function ReactionPicker({ onReact }: { onReact: (k: ReactionKind) => void
                     onReact(k);
                     setOpen(false);
                   }}
-                  title={`${REACTION_LABELS[k]} (${i + 1})`}
+                  title={i < 4 ? `${REACTION_LABELS[k]} (${i + 1})` : REACTION_LABELS[k]}
                 >
                   <Icon className="size-5" />
                   <span className="tag text-[9px] whitespace-nowrap">{REACTION_LABELS[k]}</span>

@@ -22,6 +22,10 @@ function GamepadSupport() {
 /** Überträgt die Sound-Einstellungen an die Audio-Engine */
 function SoundSync() {
   const [prefs] = usePrefs();
+  // Eigene Filzfarbe (nur für dich sichtbar)
+  useEffect(() => {
+    document.documentElement.dataset.felt = prefs.felt;
+  }, [prefs.felt]);
   useEffect(
     () => configureSound(prefs.sound, prefs.volume, prefs.voice, prefs.voiceName),
     [prefs.sound, prefs.volume, prefs.voice, prefs.voiceName],
