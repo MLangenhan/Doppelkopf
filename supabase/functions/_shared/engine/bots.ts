@@ -8,6 +8,7 @@ import {
   type Party,
   type Trick,
   trickContext,
+  armutCount,
 } from './game.ts';
 import { cardPower, effectiveSuit, isTrump, legalCards, type TrickContext, trickWinnerIndex } from './rules.ts';
 import { scoreGame } from './scoring.ts';
@@ -99,7 +100,7 @@ export function botAction(s: GameState, pos: number, level: BotLevel = 'medium',
     const ctx = trickContext(s);
     const keep = (c: Card) => (isTrump(c, ctx) ? 1000 + cardPower(c, ctx) : rankOf(c) === 'A' ? 500 : augenOf(c) * 10);
     const sorted = [...hand].sort((a, b) => keep(a) - keep(b));
-    return { type: 'armutReturn', cards: sorted.slice(0, 3) };
+    return { type: 'armutReturn', cards: sorted.slice(0, armutCount(s)) };
   }
 
   if (s.phase !== 'playing' || s.turn !== pos) return null;

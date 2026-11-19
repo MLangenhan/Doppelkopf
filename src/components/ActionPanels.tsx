@@ -1,5 +1,6 @@
 import {
   allowedDeclarations,
+  armutCount,
   type AnnounceLevel,
   type Card,
   type Declaration,
@@ -205,9 +206,9 @@ export function ArmutOfferPanel({
   return (
     <Bubble className="text-center">
       <p className="text-sm">
-        <span className="font-semibold">{name(a.poor)}</span> hat eine Armut (3 Trümpfe). Nimmst du sie mit?
+        <span className="font-semibold">{name(a.poor)}</span> hat eine Armut ({armutCount(view)} {armutCount(view) === 1 ? 'Trumpf' : 'Trümpfe'}). Nimmst du sie mit?
       </p>
-      <p className="mt-1 text-xs text-white/60">Du bekommst die Trümpfe und gibst 3 beliebige Karten zurück. Ihr spielt dann zusammen.</p>
+      <p className="mt-1 text-xs text-white/60">Du bekommst die Trümpfe und gibst {armutCount(view)} beliebige Karten zurück. Ihr spielt dann zusammen.</p>
       <div className="mt-3 flex justify-center gap-3">
         <button className="btn-primary" disabled={busy} onClick={() => onAnswer(true)}>
           Mitnehmen
@@ -239,7 +240,7 @@ export function ArmutReturnPanel({
   if (a.rich !== myPos) {
     return (
       <Bubble className="text-center text-sm text-white/80">
-        <span className="font-semibold text-white">{name(a.rich!)}</span> nimmt die Armut mit und sucht 3 Karten für{' '}
+        <span className="font-semibold text-white">{name(a.rich!)}</span> nimmt die Armut mit und sucht {armutCount(view)} Karten für{' '}
         <span className="font-semibold text-white">{name(a.poor)}</span> aus …
       </Bubble>
     );
@@ -247,9 +248,9 @@ export function ArmutReturnPanel({
   return (
     <Bubble className="flex flex-wrap items-center justify-center gap-3 text-sm">
       <span>
-        Wähle <strong>3 Karten</strong>, die du an {name(a.poor)} zurückgibst ({picked}/3)
+        Wähle <strong>{armutCount(view)} Karten</strong>, die du an {name(a.poor)} zurückgibst ({picked}/{armutCount(view)})
       </span>
-      <button className="btn-primary" disabled={busy || picked !== 3} onClick={onConfirm}>
+      <button className="btn-primary" disabled={busy || picked !== armutCount(view)} onClick={onConfirm}>
         Zurückgeben
       </button>
     </Bubble>

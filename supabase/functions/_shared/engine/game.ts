@@ -62,6 +62,8 @@ export interface GameState {
     offerTurn: number | null;
     declined: number[];
     returnedTrumps: number | null;
+    /** Wie viele Trümpfe abgegeben werden (höchstens 3) – so viele Karten kommen zurück */
+    given?: number;
   } | null;
   reTeam: number[];
   schweinchen: number | null;
@@ -160,7 +162,7 @@ export function schmeissenReasons(hand: Card[], settings: RuleSettings): Schmeis
 export function allowedDeclarations(hand: Card[], settings: RuleSettings): Declaration[] {
   const out: Declaration[] = [{ kind: 'healthy' }];
   if (hand.filter((c) => faceOf(c) === 'C-Q').length === 2) out.push({ kind: 'hochzeit' });
-  if (settings.armut && countTrumps(hand, NORMAL_CTX) === 3) out.push({ kind: 'armut' });
+  if (settings.armut && countTrumps(hand, NORMAL_CTX) <= 3) out.push({ kind: 'armut' });
   for (const reason of schmeissenReasons(hand, settings)) out.push({ kind: 'schmeissen', reason });
   for (const solo of SOLO_TYPES) if (settings.soli[solo]) out.push({ kind: 'solo', solo });
   return out;
@@ -268,7 +270,7 @@ function resolveReservations(s: GameState) {
 
   const poor = first('armut');
   if (poor !== undefined) {
-    s.armut = { poor, rich: null, offerTurn: next(poor), declined: [], returnedTrumps: null };
+    s.armut = { poor, rich: null, offerTurn: next(poor), declined: [], returnedTrumps: null, given: countTrumps(s.hands[poor], NORMAL_CTX) };
     s.phase = 'armutOffer';
     return;
   }
@@ -328,12 +330,18 @@ function armutAnswer(s: GameState, pos: number, accept: boolean) {
   }
 }
 
+/** Anzahl der Karten, die bei der Armut hin- und zurückgehen */
+export function armutCount(s: Pick<GameState, 'armut'>): number {
+  return s.armut?.given ?? 3;
+}
+
 function armutReturn(s: GameState, pos: number, cards: Card[]) {
   const a = s.armut;
   if (s.phase !== 'armutReturn' || !a) throw new GameError('Gerade werden keine Karten zurückgegeben.');
   if (a.rich !== pos) throw new GameError('Nur wer die Armut mitnimmt, gibt Karten zurück.');
-  if (!Array.isArray(cards) || cards.length !== 3 || new Set(cards).size !== 3) {
-    throw new GameError('Bitte genau drei Karten auswählen.');
+  const need = armutCount(s);
+  if (!Array.isArray(cards) || cards.length !== need || new Set(cards).size !== need) {
+    throw new GameError(`Bitte genau ${need} Karten auswählen.`);
   }
   if (!cards.every((c) => isValidCard(c) && s.hands[pos].includes(c))) {
     throw new GameError('Du kannst nur Karten aus deiner Hand zurückgeben.');

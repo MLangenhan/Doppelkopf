@@ -128,6 +128,7 @@ export function TablePage() {
         <GameView
           game={t.game!}
           hand={t.hand}
+          otherHands={t.otherHands}
           members={t.members}
           results={t.results}
           finishedGames={t.finished}

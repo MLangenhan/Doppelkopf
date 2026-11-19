@@ -1,4 +1,5 @@
 import {
+  armutCount,
   type AnnounceLevel,
   type Card,
   COLLECT_TIMEOUT_MS,
@@ -41,7 +42,7 @@ import { AnnouncePanel, ArmutOfferPanel, ArmutReturnPanel, ReservationPanel } fr
 import { Atmosphere } from './Atmosphere';
 import { CameraButton, type CameraControls } from './CameraButton';
 import { Hand } from './Hand';
-import { CARD_RATIO, preloadCards } from './PlayingCard';
+import { CARD_RATIO, PlayingCard, preloadCards } from './PlayingCard';
 import { LastTrick } from './LastTrick';
 import { MomentOverlay, useMoments } from './Moments';
 import { ResultDialog } from './ResultDialog';
@@ -105,9 +106,12 @@ export function GameView({
   rules,
   reactions,
   achievementFeed,
+  otherHands,
 }: {
   game: GameRow;
   hand: Card[];
+  /** Wer aussetzt, sieht die Hände der vier Spieler (user_id → Karten) */
+  otherHands?: Record<string, Card[]>;
   members: Member[];
   results: ResultRow[];
   /** Fertige Spiele des Abends, neuestes zuerst */
@@ -733,7 +737,29 @@ export function GameView({
     </TrickArea>
   );
 
-  const handEl = myPos >= 0 && (
+  // Zuschauer (zu fünft ausgesetzt): alle vier Hände offen, beginnend mit dem Spieler unten links
+  const peekEl = myPos < 0 && otherHands && view.phase !== 'finished' && (
+    <div className="flex flex-col gap-1.5 rounded-xl bg-black/25 p-2 ring-1 ring-white/[0.06]">
+      {([0, 1, 2, 3] as Rel[]).map((r) => {
+        const pos = posAt(r);
+        const cards = otherHands[game.players[pos]] ?? [];
+        const sorted = arrangeHand(cards, { mode: trumpMode(view), schweinchen: hasSchweinchen(view, cards) }, 'trumpFirst', null);
+        const w = mobile ? 26 : 36;
+        return (
+          <div key={pos} className="flex items-center gap-2">
+            <span className={`tag w-20 shrink-0 truncate text-[10px] ${view.turn === pos ? 'text-gold-300' : 'text-white/55'}`}>{name(pos)}</span>
+            <div className="flex">
+              {sorted.map((c, i) => (
+                <PlayingCard key={c} card={c} width={w} style={{ marginLeft: i ? -w * 0.45 : 0 }} className="ring-1 ring-black/20" />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const handEl = myPos >= 0 ? (
     <Hand
       cards={shownHand}
       dealKey={game.id}
@@ -746,7 +772,7 @@ export function GameView({
         setPicked((cur) => {
           const next = new Set(cur);
           if (next.has(c)) next.delete(c);
-          else if (next.size < 3) next.add(c);
+          else if (next.size < armutCount(view)) next.add(c);
           return next;
         })
       }
@@ -754,6 +780,8 @@ export function GameView({
       onSelect={setSelectedCard}
       onReorder={reorder}
     />
+  ) : (
+    peekEl
   );
 
   const announceEl = announce.length > 0 && (

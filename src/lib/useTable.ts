@@ -20,6 +20,8 @@ export function useTable(code: string) {
   const [members, setMembers] = useState<Member[]>([]);
   const [game, setGame] = useState<GameRow | null>(null);
   const [hands, setHands] = useState<Record<string, HandEntry>>({});
+  /** Wer aussetzt: Hände der Spieler (user_id → Karten) des laufenden Spiels */
+  const [others, setOthers] = useState<{ gameId: string; hands: Record<string, HandEntry> } | null>(null);
   const [results, setResults] = useState<ResultRow[]>([]);
   const [finished, setFinished] = useState<GameRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +75,13 @@ export function useTable(code: string) {
         .eq('user_id', me)
         .maybeSingle();
       if (data) acceptHand(gameId, { cards: data.cards as Card[], version: data.version as number });
+      // Alle anderen Hände kommen nur zurück, wenn ich aussetze (RLS)
+      const { data: rest } = await supabase.from('game_hands').select('user_id, cards, version').eq('game_id', gameId).neq('user_id', me);
+      setOthers(
+        rest && rest.length
+          ? { gameId, hands: Object.fromEntries(rest.map((r) => [r.user_id as string, { cards: r.cards as Card[], version: r.version as number }])) }
+          : null,
+      );
     },
     [me, acceptHand],
   );
@@ -171,9 +180,16 @@ export function useTable(code: string) {
         if (p.eventType === 'INSERT') loadHand(row.id);
         if (row.status === 'finished') loadResults(tableId);
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_hands', filter: `user_id=eq.${me}` }, (p) => {
-        const row = p.new as { game_id: string; cards: Card[]; version: number };
-        if (row?.game_id) acceptHand(row.game_id, { cards: row.cards, version: row.version });
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_hands' }, (p) => {
+        const row = p.new as { game_id: string; user_id: string; cards: Card[]; version: number };
+        if (!row?.game_id) return;
+        const entry = { cards: row.cards, version: row.version };
+        if (row.user_id === me) return acceptHand(row.game_id, entry);
+        setOthers((cur) => {
+          const base = cur?.gameId === row.game_id ? cur.hands : {};
+          if ((base[row.user_id]?.version ?? -1) > entry.version) return cur;
+          return { gameId: row.game_id, hands: { ...base, [row.user_id]: entry } };
+        });
       })
       .subscribe((status) => {
         // Nach einem Reconnect alles neu laden, um verpasste Änderungen nachzuholen
@@ -216,6 +232,10 @@ export function useTable(code: string) {
   }, [table, loadGame]);
 
   const hand = game ? (hands[game.id]?.cards ?? []) : [];
+  const otherHands =
+    game && others?.gameId === game.id && me && !game.players.includes(me)
+      ? Object.fromEntries(Object.entries(others.hands).map(([u, h]) => [u, h.cards]))
+      : undefined;
 
   /** Nur den Spielstand nachladen (z. B. nach einem Bot-Zug, falls Realtime hängt) */
   const reloadGame = useCallback(async () => {
@@ -223,5 +243,5 @@ export function useTable(code: string) {
     if (t) await Promise.all([loadGame(t.id), loadResults(t.id)]);
   }, [loadGame, loadResults]);
 
-  return { me, table, members, game, hand, results, finished, error, loading, act, startGame, refresh, reloadGame };
+  return { me, table, members, game, hand, otherHands, results, finished, error, loading, act, startGame, refresh, reloadGame };
 }
