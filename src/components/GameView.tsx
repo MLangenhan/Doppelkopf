@@ -208,6 +208,8 @@ export function GameView({
   const spectating = myPos < 0 && !!otherHands && view.phase === 'playing';
   const [pastTricks, setPastTricks] = useState<Trick[]>([]);
   const [tricksOpen, setTricksOpen] = useState(false);
+  // Zuschauer: Hovern über eine Hand vergrößert alle vier
+  const [peekZoom, setPeekZoom] = useState(false);
   useEffect(() => {
     if (!spectating) return setPastTricks([]);
     let alive = true;
@@ -529,6 +531,32 @@ export function GameView({
     2: { side: 'left', v: 'below' },
     3: { side: 'left', v: 'above' },
   };
+  // Zuschauer am großen Bildschirm: jede Hand direkt an der Kamera ihres Spielers
+  const seatPeek =
+    myPos < 0 && otherHands && view.phase !== 'finished' && !mobile
+      ? (r: Rel) => {
+          const pos = posAt(r);
+          const cards = otherHands[game.players[pos]] ?? [];
+          const sorted = arrangeHand(cards, { mode: trumpMode(view), schweinchen: hasSchweinchen(view, cards) }, 'trumpFirst', null);
+          const step = 0.42;
+          const w = Math.min(64, Math.floor(camW / (1 + Math.max(0, sorted.length - 1) * step)));
+          const bottom = r === 0 || r === 3;
+          return (
+            <div
+              className={`relative z-20 flex justify-center transition-transform duration-200 ${bottom ? 'origin-bottom' : 'origin-top'} ${
+                peekZoom ? 'z-40 scale-[1.6]' : ''
+              }`}
+              onMouseEnter={() => setPeekZoom(true)}
+              onMouseLeave={() => setPeekZoom(false)}
+            >
+              {sorted.map((c, i) => (
+                <PlayingCard key={c} card={c} width={w} style={{ marginLeft: i ? -w * (1 - step) : 0 }} className="shadow-md ring-1 ring-black/20" />
+              ))}
+            </div>
+          );
+        }
+      : null;
+
   const seatFor = (r: Rel, compact = false) => {
     const pos = posAt(r);
     const uid = game.players[pos];
@@ -558,6 +586,7 @@ export function GameView({
         avatar={members.find((m) => m.user_id === uid)?.avatar}
         avatarColor={members.find((m) => m.user_id === uid)?.avatar_color}
         profileId={isBotSeat(uid) || uid === 'me' || compact ? null : uid}
+        peek={!compact && seatPeek ? { node: seatPeek(r), v: r === 0 || r === 3 ? 'above' : 'below' } : undefined}
       />
     );
   };
@@ -801,7 +830,7 @@ export function GameView({
           Alle Stiche ansehen ({pastTricks.length})
         </button>
       )}
-      {peekHands}
+      {mobile && peekHands}
     </div>
   );
   const handEl = myPos >= 0 ? (

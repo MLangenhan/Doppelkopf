@@ -47,6 +47,7 @@ export function Seat({
   avatar,
   avatarColor,
   profileId,
+  peek,
   className = '',
 }: {
   name: string;
@@ -79,6 +80,8 @@ export function Seat({
   avatarColor?: string | null;
   /** Konto-ID für die Profilkarte (nicht für Bots) */
   profileId?: string | null;
+  /** Zuschauer: offene Hand dieses Spielers direkt über bzw. unter der Kamera */
+  peek?: { node: ReactNode; v: 'above' | 'below' };
   className?: string;
 }) {
   const facts = [
@@ -90,6 +93,7 @@ export function Seat({
   return (
     <div className={`relative flex flex-col ${compact ? 'gap-1' : 'gap-2'} ${className}`}>
       {pile && !!tricks && <TrickPile count={tricks} {...pile} />}
+      {peek?.v === 'above' && peek.node}
       <div className="relative">
         <VideoTile
           stream={stream}
@@ -166,6 +170,7 @@ export function Seat({
         ))}
         {status && <span>{status}</span>}
       </div>
+      {peek?.v === 'below' && peek.node}
     </div>
   );
 }
