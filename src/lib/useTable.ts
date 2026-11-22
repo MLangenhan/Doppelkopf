@@ -177,7 +177,8 @@ export function useTable(code: string) {
         const row = p.new as GameRow;
         if (!row?.id) return;
         acceptGame(row);
-        if (p.eventType === 'INSERT') loadHand(row.id);
+        // Zuschauer: Hände bei jeder Spieländerung frisch holen (Realtime auf fremde Hände ist unzuverlässig)
+        if (p.eventType === 'INSERT' || (me && !(row.players ?? []).includes(me))) loadHand(row.id);
         if (row.status === 'finished') loadResults(tableId);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_hands' }, (p) => {

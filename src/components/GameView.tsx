@@ -764,7 +764,11 @@ export function GameView({
         const sorted = arrangeHand(cards, { mode: trumpMode(view), schweinchen: hasSchweinchen(view, cards) }, 'trumpFirst', null);
         const w = mobile ? 26 : 36;
         return (
-          <div key={pos} className="flex items-center gap-2">
+          // Beim Hovern wird die Reihe groß, damit man die Karten gut erkennt
+          <div
+            key={pos}
+            className="relative flex origin-left items-center gap-2 rounded-lg transition-transform duration-200 hover:z-30 hover:scale-[1.9] hover:bg-felt-950/90 hover:shadow-2xl"
+          >
             <span className={`tag w-20 shrink-0 truncate text-[10px] ${view.turn === pos ? 'text-gold-300' : 'text-white/55'}`}>{name(pos)}</span>
             <div className="flex">
               {sorted.map((c, i) => (
