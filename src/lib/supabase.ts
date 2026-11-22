@@ -1,7 +1,7 @@
 import type { FrameKey } from './cosmetics';
 import { createClient } from '@supabase/supabase-js';
 import { FunctionsHttpError } from '@supabase/supabase-js';
-import type { GameAction, PublicGameState, RuleSettings } from '@engine';
+import type { GameAction, PublicGameState, RuleSettings, Trick } from '@engine';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -120,6 +120,8 @@ export const api = {
   act: (gameId: string, action: GameAction) => callGame({ type: 'action', gameId, action }),
   abortGame: (gameId: string) => callGame({ type: 'abort', gameId }),
   botStep: (gameId: string) => callGame({ type: 'botStep', gameId }),
+  /** Nur für wer aussetzt: alle bisherigen Stiche */
+  spectate: (gameId: string) => callGame({ type: 'spectate', gameId }) as Promise<{ tricks: Trick[] }>,
 
   async createTable(settings: RuleSettings, name: string): Promise<TableRow> {
     const { data, error } = await supabase.rpc('create_table', { p_settings: settings, p_name: name });

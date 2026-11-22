@@ -279,6 +279,20 @@ async function botStep(db: SupabaseClient, userId: string, gameId: string) {
   return persist(db, game, before, applyAction(before, pos, action));
 }
 
+/** Wer aussetzt, darf alle bisherigen Stiche sehen (Mitspieler nicht – die sehen nur den letzten). */
+async function spectate(db: SupabaseClient, userId: string, gameId: string) {
+  const { game, state } = await loadGame(db, gameId);
+  if ((game.players as string[]).includes(userId)) throw new GameError('Nur wer aussetzt, darf alle Stiche sehen.');
+  const { data: member } = await db
+    .from('table_players')
+    .select('user_id')
+    .eq('table_id', game.table_id)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (!member) throw new GameError('Du sitzt nicht an diesem Tisch.');
+  return { tricks: state.tricks.filter((t) => t.winner !== null && t.winner !== undefined), version: state.version };
+}
+
 async function abort(db: SupabaseClient, userId: string, gameId: string) {
   const { data: game, error: gErr } = await db.from('games').select('id, status, players').eq('id', gameId).single();
   if (gErr || !game) throw new GameError('Dieses Spiel gibt es nicht.');
@@ -316,6 +330,9 @@ Deno.serve(async (req) => {
     }
     if (body?.type === 'botStep' && typeof body.gameId === 'string') {
       return json(await botStep(db, auth.user.id, body.gameId));
+    }
+    if (body?.type === 'spectate' && typeof body.gameId === 'string') {
+      return json(await spectate(db, auth.user.id, body.gameId));
     }
     if (body?.type === 'abort' && typeof body.gameId === 'string') {
       return json(await abort(db, auth.user.id, body.gameId));

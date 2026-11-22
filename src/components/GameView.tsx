@@ -2,6 +2,7 @@ import {
   armutCount,
   type AnnounceLevel,
   type Card,
+  type Trick,
   COLLECT_TIMEOUT_MS,
   type Declaration,
   faceOf,
@@ -37,7 +38,7 @@ import { explainTrick, explainTurn } from '../lib/explain';
 import { arrangeHand, defaultFaceOrder, orderFromHand, updateFaceOrder } from '../lib/handSort';
 import { HAND_SORT_LABELS, type HandSort, useFx, usePrefs } from '../lib/prefs';
 import { sound } from '../lib/sound';
-import type { GameRow, Member, ResultRow } from '../lib/supabase';
+import { api, type GameRow, type Member, type ResultRow } from '../lib/supabase';
 import type { RemoteVideo } from '../lib/video';
 import { AnnouncePanel, ArmutOfferPanel, ArmutReturnPanel, ReservationPanel } from './ActionPanels';
 import { Atmosphere } from './Atmosphere';
@@ -203,6 +204,21 @@ export function GameView({
   };
 
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  // Wer aussetzt: alle bisherigen Stiche (vom Server, nur für Zuschauer)
+  const spectating = myPos < 0 && !!otherHands && view.phase === 'playing';
+  const [pastTricks, setPastTricks] = useState<Trick[]>([]);
+  const [tricksOpen, setTricksOpen] = useState(false);
+  useEffect(() => {
+    if (!spectating) return setPastTricks([]);
+    let alive = true;
+    api
+      .spectate(game.id)
+      .then((r) => alive && setPastTricks(r.tricks))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [spectating, game.id, view.trickWinners.length]);
   const myTurnToPlay = view.phase === 'playing' && view.turn === myPos && !pending && !view.collectPending;
   // Ohne Hervorhebung ("schwarz spielen") ist jede Karte wählbar; der Server prüft das Bedienen
   const playable =
@@ -756,7 +772,7 @@ export function GameView({
   );
 
   // Zuschauer (zu fünft ausgesetzt): alle vier Hände offen, beginnend mit dem Spieler unten links
-  const peekEl = myPos < 0 && otherHands && view.phase !== 'finished' && (
+  const peekHands = myPos < 0 && otherHands && view.phase !== 'finished' && (
     // Beim Hovern werden alle vier Blätter zusammen groß, damit man die Karten gut erkennt
     <div className="relative flex origin-bottom flex-col gap-1.5 rounded-xl bg-black/25 p-2 ring-1 ring-white/[0.06] transition-transform duration-200 hover:z-30 hover:scale-[1.7] hover:bg-felt-950/95 hover:shadow-2xl">
       {([0, 1, 2, 3] as Rel[]).map((r) => {
@@ -778,6 +794,16 @@ export function GameView({
     </div>
   );
 
+  const peekEl = myPos < 0 && otherHands && view.phase !== 'finished' && (
+    <div className="flex flex-col items-center gap-2">
+      {pastTricks.length > 0 && (
+        <button className="btn-ghost tag px-3 py-1 text-[10px]" onClick={() => setTricksOpen(true)}>
+          Alle Stiche ansehen ({pastTricks.length})
+        </button>
+      )}
+      {peekHands}
+    </div>
+  );
   const handEl = myPos >= 0 ? (
     <Hand
       cards={shownHand}
@@ -952,6 +978,12 @@ export function GameView({
 
       {achievementFeed && <AchievementBanner event={achievementFeed.current} name={nameOfUser} onDone={achievementFeed.done} />}
 
+      <AnimatePresence>
+        {tricksOpen && spectating && (
+          <TricksDialog tricks={pastTricks} name={name} onClose={() => setTricksOpen(false)} cardW={mobile ? 40 : 56} />
+        )}
+      </AnimatePresence>
+
       <LeaveDialog
         open={leaveOpen}
         onClose={() => setLeaveOpen(false)}
@@ -1065,6 +1097,64 @@ function ExplainBox({ title, lines }: { title: string; lines: string[] }) {
       {lines.map((l) => (
         <p key={l}>{l}</p>
       ))}
+    </motion.div>
+  );
+}
+
+/** Zuschauer: alle bisherigen Stiche, neuester oben */
+function TricksDialog({ tricks, name, onClose, cardW }: { tricks: Trick[]; name: (pos: number) => string; onClose: () => void; cardW: number }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return (
+    <motion.div
+      className="fixed inset-0 z-[70] grid place-items-center bg-black/60 p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Alle Stiche"
+    >
+      <div className="panel max-h-full w-full max-w-xl overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Alle Stiche</h2>
+          <button className="btn-ghost p-1.5" onClick={onClose} aria-label="Schließen">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <ol className="flex flex-col gap-4">
+          {tricks
+            .map((t, n) => ({ t, n }))
+            .reverse()
+            .map(({ t, n }) => (
+              <li key={n} className="flex items-center gap-4 border-t border-white/[0.06] pt-3 first:border-0 first:pt-0">
+                <span className="tag w-16 shrink-0 text-[10px] text-white/45">
+                  Stich {n + 1}
+                  <span className="block text-gold-300/90 normal-case">{name(t.winner!)}</span>
+                </span>
+                <div className="flex gap-2">
+                  {t.cards.map((c, i) => {
+                    const pos = (t.leader + i) % 4;
+                    return (
+                      <div key={c} className="flex flex-col items-center gap-1">
+                        <PlayingCard card={c} width={cardW} className={pos === t.winner ? 'ring-2 ring-gold-400' : 'opacity-90'} />
+                        <span className="max-w-[4.5rem] truncate text-[10px] text-white/55">
+                          {i === 0 ? '▸ ' : ''}
+                          {name(pos)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </li>
+            ))}
+        </ol>
+        <p className="mt-4 text-xs text-white/40">▸ hat ausgespielt · Gold umrandet: hat den Stich gewonnen</p>
+      </div>
     </motion.div>
   );
 }
