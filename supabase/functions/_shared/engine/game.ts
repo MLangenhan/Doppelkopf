@@ -264,7 +264,7 @@ function resolveReservations(s: GameState) {
     s.solo = d.solo;
     s.soloist = soloist;
     s.reTeam = [soloist];
-    startPlay(s, soloist);
+    startPlay(s, s.settings.soloistLeads !== false ? soloist : s.starter);
     return;
   }
 

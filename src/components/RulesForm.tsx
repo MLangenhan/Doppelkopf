@@ -157,6 +157,13 @@ export function RulesForm({
       </Section>
 
       <Section title="Soli">
+        <Toggle
+          label="Solist kommt raus"
+          hint="Der Solist spielt den ersten Stich aus. Aus: Es beginnt wie immer der Spieler links vom Geber."
+          checked={value.soloistLeads}
+          onChange={(v) => set('soloistLeads', v)}
+          disabled={disabled}
+        />
         {SOLO_TYPES.map((t) => (
           <Toggle
             key={t}
@@ -172,7 +179,7 @@ export function RulesForm({
         <Toggle label="Hochzeit" hint="Immer erlaubt" checked onChange={() => {}} disabled />
         <Toggle
           label="Armut"
-          hint="Bei genau 3 Trümpfen: Trümpfe abgeben"
+          hint="Bei höchstens 3 Trümpfen: Trümpfe abgeben"
           checked={value.armut}
           onChange={(v) => set('armut', v)}
           disabled={disabled}
@@ -222,6 +229,7 @@ export function rulesSummary(s: RuleSettings): string[] {
   if (!s.announcements) out.push('Keine Ansagen');
   const soli = SOLO_TYPES.filter((t) => s.soli[t]);
   out.push(soli.length === SOLO_TYPES.length ? 'Alle Soli' : soli.length ? `Soli: ${soli.map((t) => SOLO_NAMES[t]).join(', ')}` : 'Keine Soli');
+  if (soli.length && !s.soloistLeads) out.push('Solist kommt nicht raus');
   if (s.armut) out.push('Armut');
   return out;
 }
