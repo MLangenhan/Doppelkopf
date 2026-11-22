@@ -3,7 +3,9 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { useFx } from '../lib/prefs';
 import { sound } from '../lib/sound';
-import { levelLabel, partyLabel, resultKindLabel, SCHMEISSEN_LABEL } from '../lib/gameText';
+import { hasSchweinchen, levelLabel, partyLabel, resultKindLabel, SCHMEISSEN_LABEL, trumpMode } from '../lib/gameText';
+import { arrangeHand } from '../lib/handSort';
+import { PlayingCard } from './PlayingCard';
 import type { SchmeissenReason } from '@engine';
 import { Medal } from 'lucide-react';
 import { BADGES, badgesOfGame } from '../lib/achievements';
@@ -75,6 +77,7 @@ export function ResultDialog({
                 ? `${name(view.redeal.pos)} hat geschmissen (${SCHMEISSEN_LABEL[view.redeal.detail as SchmeissenReason] ?? view.redeal.detail}).`
                 : `Niemand wollte die Armut von ${name(view.redeal.pos)} mitnehmen.`}
             </p>
+            <AllHands view={view} name={name} myPos={myPos} />
           </>
         ) : r ? (
           <ResultBody view={view} name={name} myPos={myPos} skip={skip} onRevealed={() => setRevealed(true)} />
@@ -265,6 +268,7 @@ function ResultBody({
           </motion.div>
         ))}
       </div>
+      {revealed && <AllHands view={view} name={name} myPos={myPos} />}
     </>
   );
 }
@@ -314,4 +318,51 @@ function useAugenReveal(
   }, [revealed, myParty, winner]);
 
   return { re, kontra, revealed };
+}
+
+/** Nach dem Spiel: alle vier Blätter, wie sie ausgeteilt wurden */
+function AllHands({ view, name, myPos }: { view: PublicGameState; name: (pos: number) => string; myPos: number }) {
+  const [open, setOpen] = useState(false);
+  const hands = view.dealtHands;
+  if (!hands) return null;
+  const r = view.result;
+  const mode = trumpMode(view);
+  return (
+    <div className="mt-5">
+      <button className="btn-ghost tag px-2 py-1 text-[10px]" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        {open ? 'Blätter ausblenden' : 'Alle Blätter ansehen'}
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-2 flex flex-col gap-2.5">
+              {hands.map((cards, p) => {
+                const sorted = arrangeHand(cards, { mode, schweinchen: hasSchweinchen(view, cards) }, 'trumpFirst', null);
+                const party: Party | null = r ? (r.reTeam.includes(p) ? 're' : 'kontra') : null;
+                return (
+                  <div key={p}>
+                    <div className="mb-1 flex items-center gap-2 text-xs text-white/70">
+                      <span className={`truncate ${p === myPos ? 'font-semibold text-white' : ''}`}>{name(p)}</span>
+                      {party && <PartyBadge party={party} small />}
+                    </div>
+                    <div className="flex">
+                      {sorted.map((c, i) => (
+                        <PlayingCard key={c} card={c} width={40} style={{ marginLeft: i ? -14 : 0 }} className="ring-1 ring-black/20" />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-[10px] text-white/40">So wurden die Karten ausgeteilt (vor einer Armut-Übergabe).</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
