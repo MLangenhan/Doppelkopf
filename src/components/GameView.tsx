@@ -33,6 +33,7 @@ import { moodOf } from '../lib/botMood';
 import { useCardOrder } from '../lib/cardOrder';
 import { giphyEnabled } from '../lib/giphy';
 import { REACTION_KINDS, type ReactionKind, type ShownReaction } from '../lib/reactions';
+import { explainTrick, explainTurn } from '../lib/explain';
 import { arrangeHand, defaultFaceOrder, orderFromHand, updateFaceOrder } from '../lib/handSort';
 import { HAND_SORT_LABELS, type HandSort, useFx, usePrefs } from '../lib/prefs';
 import { sound } from '../lib/sound';
@@ -590,6 +591,23 @@ export function GameView({
       );
     }
   }
+  // Doppelkopf lernen: Erklärung zum aktuellen Zug bzw. zum fertigen Stich
+  const explainEl = (() => {
+    if (!prefs.explain || myPos < 0 || view.phase !== 'playing' || !view.current) return null;
+    const leader = view.current.leader;
+    const nameAt = (i: number) => {
+      const pos = (leader + i) % 4;
+      return pos === myPos ? 'Du' : name(pos);
+    };
+    if (view.collectPending && view.current.winner != null) {
+      const text = explainTrick(view.current.cards, (view.current.winner - leader + 4) % 4, ctx, nameAt);
+      return <ExplainBox key={`t:${trickCount}`} title="Stich vorbei" lines={[text.replace(/^Du gewinnt/, 'Du gewinnst')]} />;
+    }
+    if (!myTurnToPlay) return null;
+    const e = explainTurn(hand, view.current.cards, ctx, nameAt);
+    return <ExplainBox key={`m:${trickCount}:${view.current.cards.length}`} title={e.title} lines={e.lines} />;
+  })();
+
   // Einziger Hinweis: nach 5 Sekunden ohne Aktion, was die Leertaste gerade tut
   const hint = iCollect ? (
     <SpaceHint active resetKey={`c:${shownTrick.key}`} label="Stich nehmen" touchLabel="Stich antippen zum Nehmen" />
@@ -843,6 +861,7 @@ export function GameView({
           </div>
           <div className="flex min-h-11 flex-col items-center justify-end gap-2">
             <AnimatePresence mode="wait">{panel}</AnimatePresence>
+            {explainEl}
             {hint}
             {announceEl}
           </div>
@@ -884,6 +903,7 @@ export function GameView({
           <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
             <div className="flex min-h-11 flex-col items-center justify-end gap-2">
               <AnimatePresence mode="wait">{panel}</AnimatePresence>
+              {explainEl}
               {hint}
             </div>
             {handEl}
@@ -1030,5 +1050,20 @@ function RulesPanel({
         </>
       )}
     </section>
+  );
+}
+
+function ExplainBox({ title, lines }: { title: string; lines: string[] }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-lg rounded-xl bg-black/45 px-4 py-2.5 text-left text-xs leading-relaxed text-white/75 ring-1 ring-gold-400/25 backdrop-blur"
+    >
+      <p className="tag mb-1 text-[10px] text-gold-300">Doppelkopf lernen · {title}</p>
+      {lines.map((l) => (
+        <p key={l}>{l}</p>
+      ))}
+    </motion.div>
   );
 }

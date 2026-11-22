@@ -32,6 +32,8 @@ export interface Prefs {
   highlightPlayable: boolean;
   /** Spickzettel mit Trumpf-Reihenfolge und Augen rechts zwischen den Kameras */
   cardGuide: boolean;
+  /** Spiel erklären: bei jedem Stich, warum welche Karten erlaubt sind */
+  explain: boolean;
   /** Nur für dich: Kartenrücken, Filzfarbe, Konfetti (durch Erfolge freigeschaltet) */
   cardBack: string;
   felt: string;
@@ -58,6 +60,7 @@ const fxAll = (on: boolean) => Object.fromEntries(ALL_FX.map((k) => [k, on])) as
 const DEFAULTS: Prefs = {
   highlightPlayable: true,
   cardGuide: false,
+  explain: false,
   cardBack: 'blue',
   felt: 'green',
   confetti: 'classic',

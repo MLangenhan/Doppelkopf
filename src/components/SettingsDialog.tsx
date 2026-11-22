@@ -78,7 +78,7 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
             </div>
             <p className="mt-1 text-sm text-white/55">Gilt nur für dich, in diesem Browser.</p>
 
-            <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Spielhilfen</h3>
+            <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Doppelkopf lernen</h3>
             <Toggle
               checked={prefs.highlightPlayable}
               onChange={(v) => setPref('highlightPlayable', v)}
@@ -90,6 +90,12 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
               onChange={(v) => setPref('cardGuide', v)}
               label="Kartenübersicht anzeigen"
               hint="Rechts zwischen den Kameras: Trumpf-Reihenfolge von hoch nach niedrig und die Augen jeder Karte (Normalspiel). Nur auf größeren Bildschirmen."
+            />
+            <Toggle
+              checked={prefs.explain}
+              onChange={(v) => setPref('explain', v)}
+              label="Spiel erklären"
+              hint="Wenn du dran bist: welche Karten du legen darfst und warum die anderen nicht, wer gerade vorne liegt und womit du übernehmen kannst. Nach jedem Stich: warum er an wen geht."
             />
 
             <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Ton</h3>
