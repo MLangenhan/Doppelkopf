@@ -322,7 +322,7 @@ function useAugenReveal(
 
 /** Nach dem Spiel: alle vier Blätter, wie sie ausgeteilt wurden */
 function AllHands({ view, name, myPos }: { view: PublicGameState; name: (pos: number) => string; myPos: number }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const hands = view.dealtHands;
   if (!hands) return null;
   const r = view.result;

@@ -538,14 +538,16 @@ export function GameView({
           const pos = posAt(r);
           const cards = otherHands[game.players[pos]] ?? [];
           const sorted = arrangeHand(cards, { mode: trumpMode(view), schweinchen: hasSchweinchen(view, cards) }, 'trumpFirst', null);
-          const step = 0.42;
-          const w = Math.min(64, Math.floor(camW / (1 + Math.max(0, sorted.length - 1) * step)));
+          // Größer und enger gefächert, damit man die Karten auch auf kleineren Bildschirmen erkennt
+          const step = 0.3;
+          const w = Math.min(96, Math.floor(camW / (1 + Math.max(0, sorted.length - 1) * step)));
           const bottom = r === 0 || r === 3;
+          const left = r === 0 || r === 1;
+          // Beim Vergrößern zur Tischmitte hin wachsen, nie aus dem Bildschirm heraus
+          const origin = bottom ? (left ? 'origin-bottom-left' : 'origin-bottom-right') : left ? 'origin-top-left' : 'origin-top-right';
           return (
             <div
-              className={`relative z-20 flex justify-center transition-transform duration-200 ${bottom ? 'origin-bottom' : 'origin-top'} ${
-                peekZoom ? 'z-40 scale-[1.6]' : ''
-              }`}
+              className={`relative z-20 flex justify-center transition-transform duration-200 ${origin} ${peekZoom ? 'z-40 scale-[1.35]' : ''}`}
               onMouseEnter={() => setPeekZoom(true)}
               onMouseLeave={() => setPeekZoom(false)}
             >
