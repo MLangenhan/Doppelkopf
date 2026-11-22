@@ -1,4 +1,4 @@
-import { type Card, type Suit, cardPower, effectiveSuit, faceOf, rankOf, sortHand, suitOf } from '@engine';
+import { type Card, type Suit, type TrumpMode, cardPower, effectiveSuit, faceOf, rankOf, sortHand, suitOf } from '@engine';
 import type { HandSort } from './prefs';
 
 type Ctx = Parameters<typeof sortHand>[1];
@@ -23,24 +23,30 @@ export function arrangeHand(hand: Card[], ctx: Ctx, mode: HandSort, custom: Face
     const key = (c: Card) => SUITS.indexOf(suitOf(c)) * 100 + RANKS.indexOf(rankOf(c)) * 2 + copy(c);
     return [...hand].sort((a, b) => key(a) - key(b));
   }
-  return applyFaceOrder(hand, custom ?? defaultFaceOrder());
+  return applyFaceOrder(hand, custom ?? defaultFaceOrder(ctx.mode));
 }
 
-// Startpunkt der eigenen Reihenfolge: wie "Trumpf zuerst" im Normalspiel
-const ALL_FACES: FaceOrder = sortHand(
-  SUITS.flatMap((s) => RANKS.map((r) => `${s}-${r}-0` as Card)),
-  { mode: 'normal', schweinchen: false },
-).map(faceOf);
+/**
+ * Jede Spielart mit eigener Trumpffolge hat ihre eigene Reihenfolge, damit sich Soli und Normalspiel
+ * nicht gegenseitig umsortieren. Das Karo-Solo hat dieselben Trümpfe wie das Normalspiel.
+ */
+export function faceOrderKey(mode: TrumpMode): string {
+  return mode === 'diamonds' ? 'normal' : mode;
+}
 
-export function defaultFaceOrder(): FaceOrder {
-  return [...ALL_FACES];
+const ALL_CARDS = SUITS.flatMap((s) => RANKS.map((r) => `${s}-${r}-0` as Card));
+const ALL_FACES: FaceOrder = sortHand(ALL_CARDS, { mode: 'normal', schweinchen: false }).map(faceOf);
+
+/** Startpunkt der eigenen Reihenfolge: wie "Trumpf zuerst" in dieser Spielart */
+export function defaultFaceOrder(mode: TrumpMode = 'normal'): FaceOrder {
+  return sortHand(ALL_CARDS, { mode, schweinchen: false }).map(faceOf);
 }
 
 /** Gespeicherte Reihenfolge prüfen und um fehlende Kartenarten ergänzen */
-export function normalizeFaceOrder(raw: unknown): FaceOrder | null {
+export function normalizeFaceOrder(raw: unknown, mode: TrumpMode = 'normal'): FaceOrder | null {
   if (!Array.isArray(raw)) return null;
   const known = [...new Set(raw.filter((f): f is string => typeof f === 'string' && ALL_FACES.includes(f)))];
-  for (const f of ALL_FACES) if (!known.includes(f)) known.push(f);
+  for (const f of defaultFaceOrder(mode)) if (!known.includes(f)) known.push(f);
   return known;
 }
 

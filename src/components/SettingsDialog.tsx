@@ -2,8 +2,7 @@ import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { FX_LABELS, type FxKey, HAND_SORT_LABELS, type HandSort, setAllFx, setFx, usePrefs } from '../lib/prefs';
-import { useCardOrder } from '../lib/cardOrder';
-import { defaultFaceOrder } from '../lib/handSort';
+import { useAllCardOrders } from '../lib/cardOrder';
 import { germanVoices, sound } from '../lib/sound';
 
 const SHORTCUTS: [string[], string][] = [
@@ -28,7 +27,7 @@ const PAD: [string[], string][] = [
 
 export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [prefs, setPref] = usePrefs();
-  const [faceOrder, saveFaceOrder] = useCardOrder();
+  const cardOrders = useAllCardOrders();
   // Stimmen lädt der Browser erst nach und nach
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>(() => germanVoices());
   useEffect(() => {
@@ -185,12 +184,12 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
               ))}
             </div>
             <p className="px-2 pt-1.5 text-xs text-white/50">
-              Zieh Karten in der Hand an ihren Platz – daraus wird deine eigene Reihenfolge. Sie gilt in jedem Spiel und
-              wird mit deinem Konto gespeichert.
+              Zieh Karten in der Hand an ihren Platz – daraus wird deine eigene Reihenfolge. Normalspiel und jedes Solo
+              merken sich ihre eigene Reihenfolge, gespeichert mit deinem Konto.
             </p>
-            {faceOrder && (
-              <button type="button" className="btn-ghost tag mx-2 mt-1 px-2 py-1 text-[10px]" onClick={() => saveFaceOrder(defaultFaceOrder())}>
-                Eigene Reihenfolge zurücksetzen
+            {cardOrders.any && (
+              <button type="button" className="btn-ghost tag mx-2 mt-1 px-2 py-1 text-[10px]" onClick={cardOrders.reset}>
+                Eigene Reihenfolgen zurücksetzen
               </button>
             )}
 

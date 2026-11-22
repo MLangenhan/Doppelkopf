@@ -186,14 +186,14 @@ export function GameView({
   const ctx = { mode: trumpMode(view), schweinchen: hasSchweinchen(view, hand) };
   const [prefs, setPref] = usePrefs();
   // Eigene Reihenfolge: eine Rangfolge der Kartenarten für alle Spiele, im Profil gespeichert
-  const [faceOrder, saveFaceOrder] = useCardOrder();
+  const [faceOrder, saveFaceOrder] = useCardOrder(ctx.mode);
   const shownHand = useMemo(
     () => arrangeHand(hand.filter((c) => c !== pending), ctx, prefs.handSort, faceOrder),
     [hand, pending, ctx.mode, ctx.schweinchen, prefs.handSort, faceOrder], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const reorder = (cards: Card[]) => {
     // Ausgangspunkt ist die gerade gezeigte Ordnung, damit ein Wechsel von einer Vorlage nahtlos ist
-    const base = prefs.handSort === 'custom' && faceOrder ? faceOrder : orderFromHand(faceOrder ?? defaultFaceOrder(), shownHand);
+    const base = prefs.handSort === 'custom' && faceOrder ? faceOrder : orderFromHand(faceOrder ?? defaultFaceOrder(ctx.mode), shownHand);
     saveFaceOrder(updateFaceOrder(base, shownHand, cards));
     if (prefs.handSort !== 'custom') setPref('handSort', 'custom');
   };
