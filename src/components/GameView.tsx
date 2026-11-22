@@ -757,18 +757,15 @@ export function GameView({
 
   // Zuschauer (zu fünft ausgesetzt): alle vier Hände offen, beginnend mit dem Spieler unten links
   const peekEl = myPos < 0 && otherHands && view.phase !== 'finished' && (
-    <div className="flex flex-col gap-1.5 rounded-xl bg-black/25 p-2 ring-1 ring-white/[0.06]">
+    // Beim Hovern werden alle vier Blätter zusammen groß, damit man die Karten gut erkennt
+    <div className="relative flex origin-bottom flex-col gap-1.5 rounded-xl bg-black/25 p-2 ring-1 ring-white/[0.06] transition-transform duration-200 hover:z-30 hover:scale-[1.7] hover:bg-felt-950/95 hover:shadow-2xl">
       {([0, 1, 2, 3] as Rel[]).map((r) => {
         const pos = posAt(r);
         const cards = otherHands[game.players[pos]] ?? [];
         const sorted = arrangeHand(cards, { mode: trumpMode(view), schweinchen: hasSchweinchen(view, cards) }, 'trumpFirst', null);
         const w = mobile ? 26 : 36;
         return (
-          // Beim Hovern wird die Reihe groß, damit man die Karten gut erkennt
-          <div
-            key={pos}
-            className="relative flex origin-left items-center gap-2 rounded-lg transition-transform duration-200 hover:z-30 hover:scale-[1.9] hover:bg-felt-950/90 hover:shadow-2xl"
-          >
+          <div key={pos} className="flex items-center gap-2">
             <span className={`tag w-20 shrink-0 truncate text-[10px] ${view.turn === pos ? 'text-gold-300' : 'text-white/55'}`}>{name(pos)}</span>
             <div className="flex">
               {sorted.map((c, i) => (
