@@ -2,6 +2,7 @@ import {
   armutCount,
   type AnnounceLevel,
   type Card,
+  type Party,
   type Trick,
   COLLECT_TIMEOUT_MS,
   type Declaration,
@@ -16,7 +17,7 @@ import {
   SOLO_NAMES,
   sumAugen,
 } from '@engine';
-import { Crown, ArrowDownUp, ListOrdered, LogOut, Video, VideoOff, X } from 'lucide-react';
+import { Crown, ArrowDownUp, Eye, GraduationCap, ListOrdered, LogOut, Video, VideoOff, X } from 'lucide-react';
 import { AnimatePresence, motion, useAnimate } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -58,6 +59,9 @@ import { type Rel, TrickArea, type TrickPlay } from './TrickArea';
 import { VideoTile } from './VideoTile';
 import { BotCat } from './BotCat';
 import { CardGuide } from './CardGuide';
+import { LearnPrompt, type LessonItem, LessonFeed, RulesPanel as LearnRules } from './Learn';
+import { analyzeTrick, ruleTexts } from '../lib/trickLesson';
+import { trumpRule } from '../lib/explain';
 import { AchievementBanner } from './AchievementBanner';
 import { ReactionPicker } from './Reactions';
 import { LeaveDialog } from './LeaveDialog';
@@ -90,6 +94,9 @@ function useViewport() {
   return size;
 }
 
+/** Zuschauer-Lernmodus für diese Sitzung: null = noch nicht gefragt. Bewusst nicht gespeichert. */
+let learnSession: boolean | null = null;
+
 export function GameView({
   game,
   hand,
@@ -109,11 +116,14 @@ export function GameView({
   reactions,
   achievementFeed,
   otherHands,
+  spectator,
 }: {
   game: GameRow;
   hand: Card[];
   /** Wer aussetzt, sieht die Hände der vier Spieler (user_id → Karten) */
   otherHands?: Record<string, Card[]>;
+  /** Zuschauerplatz: an/aus ab dem nächsten Spiel; takenBy = jemand anderes schaut schon zu */
+  spectator?: { on: boolean; takenBy: string | null; toggle: (on: boolean) => void };
   members: Member[];
   results: ResultRow[];
   /** Fertige Spiele des Abends, neuestes zuerst */
@@ -204,9 +214,11 @@ export function GameView({
   };
 
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
-  // Wer aussetzt: alle bisherigen Stiche (vom Server, nur für Zuschauer)
-  const spectating = myPos < 0 && !!otherHands && view.phase === 'playing';
+  // Wer aussetzt oder zuschaut: alle Hände und alle bisherigen Stiche (vom Server, nur für Zuschauer)
+  const isMember = !!me && members.some((m) => m.user_id === me);
+  const spectating = myPos < 0 && isMember && view.phase !== 'finished';
   const [pastTricks, setPastTricks] = useState<Trick[]>([]);
+  const [spectHands, setSpectHands] = useState<{ gameId: string; hands: Card[][] } | null>(null);
   const [tricksOpen, setTricksOpen] = useState(false);
   // Zuschauer: Hovern über eine Hand vergrößert alle vier
   const [peekZoom, setPeekZoom] = useState(false);
@@ -215,12 +227,91 @@ export function GameView({
     let alive = true;
     api
       .spectate(game.id)
-      .then((r) => alive && setPastTricks(r.tricks))
+      .then((r) => {
+        if (!alive) return;
+        setPastTricks(r.tricks);
+        setSpectHands({ gameId: game.id, hands: r.hands });
+      })
       .catch(() => {});
     return () => {
       alive = false;
     };
-  }, [spectating, game.id, view.trickWinners.length]);
+  }, [spectating, game.id, game.version]);
+  /** Hand eines Spielers für Zuschauer (Server-Stand, sonst die Hand-Zeilen) */
+  const handAt = (pos: number): Card[] =>
+    spectHands?.gameId === game.id ? (spectHands.hands[pos] ?? []) : (otherHands?.[game.players[pos]] ?? []);
+  const showPeek = spectating && (spectHands?.gameId === game.id || !!otherHands);
+
+  // ---- Lernmodus für Zuschauer ----
+  const [learn, setLearnState] = useState(learnSession === true);
+  const setLearn = (on: boolean) => {
+    learnSession = on;
+    setLearnState(on);
+  };
+  const [learnAsked, setLearnAsked] = useState(learnSession !== null);
+  const learning = spectating && learn;
+  const spectCtx = { mode: trumpMode(view), schweinchen: view.schweinchen !== null, dulleRule: view.settings.dulleRule };
+  const handSize = view.settings.withNines ? 12 : 10;
+  /** Partei eines Spielers, soweit der Zuschauer sie kennt (er sieht alle Karten) */
+  const partyOfPos = (pos: number): Party | null => {
+    if (view.kind === 'solo') return pos === view.soloist ? 're' : 'kontra';
+    if (view.kind === 'armut' && view.armut) return pos === view.armut.poor || pos === view.armut.rich ? 're' : 'kontra';
+    if (view.knownParties[pos]) return view.knownParties[pos];
+    const had = (p: number) => [
+      ...handAt(p),
+      ...pastTricks.flatMap((t) => t.cards.filter((_, i) => (t.leader + i) % 4 === p)),
+      ...(view.current?.cards.filter((_, i) => (view.current!.leader + i) % 4 === p) ?? []),
+    ];
+    const queens = [0, 1, 2, 3].map((p) => had(p).filter((c) => faceOf(c) === 'C-Q').length);
+    if (queens.reduce((a, b) => a + b, 0) < 2) return null;
+    return queens[pos] > 0 ? 're' : 'kontra';
+  };
+  const [lessons, setLessons] = useState<LessonItem[]>([]);
+  const seenTricks = useRef<{ gameId: string; seen: Set<number> }>({ gameId: '', seen: new Set() });
+  const [hoverPos, setHoverPos] = useState<number | null>(null);
+  useEffect(() => {
+    const ref = seenTricks.current;
+    if (ref.gameId !== game.id) {
+      ref.gameId = game.id;
+      ref.seen = new Set();
+      setLessons([]);
+    }
+    if (!learning) {
+      // Erst ab dem Einschalten erklären
+      pastTricks.forEach((_, i) => ref.seen.add(i));
+      return;
+    }
+    const fresh: LessonItem[] = [];
+    pastTricks.forEach((t, i) => {
+      if (ref.seen.has(i)) return;
+      ref.seen.add(i);
+      fresh.push({
+        id: Date.now() + i,
+        number: i + 1,
+        cards: t.cards,
+        lesson: analyzeTrick(t.cards, t.leader, spectCtx, { isLast: i === handSize - 1, settings: view.settings, partyOf: partyOfPos }),
+      });
+    });
+    if (fresh.length) setLessons((cur) => [...cur, ...fresh].slice(-6));
+  }, [pastTricks, learning, game.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const liveTrick = view.phase === 'playing' && view.current && view.current.cards.length > 0 && !view.collectPending ? view.current : null;
+  const activeRules = learning
+    ? liveTrick
+      ? analyzeTrick(liveTrick.cards, liveTrick.leader, spectCtx, { isLast: false, settings: view.settings }).rules
+      : (lessons.at(-1)?.lesson.rules ?? ['lead'])
+    : [];
+  const rulesText = ruleTexts(view.settings, trumpRule(spectCtx.mode));
+  const lessonFeed = learning && lessons.length > 0 && (
+    <LessonFeed
+      items={lessons}
+      ctx={spectCtx}
+      name={name}
+      onDone={(id) => setLessons((cur) => cur.filter((x) => x.id !== id))}
+      onHoverPos={setHoverPos}
+    />
+  );
+  const rulesPanel = learning && <LearnRules texts={rulesText} active={activeRules} />;
+
   const myTurnToPlay = view.phase === 'playing' && view.turn === myPos && !pending && !view.collectPending;
   // Ohne Hervorhebung ("schwarz spielen") ist jede Karte wählbar; der Server prüft das Bedienen
   const playable =
@@ -533,16 +624,21 @@ export function GameView({
   };
   // Zuschauer am großen Bildschirm: jede Hand direkt an der Kamera ihres Spielers
   const seatPeek =
-    myPos < 0 && otherHands && view.phase !== 'finished' && !mobile
+    showPeek && !mobile
       ? (r: Rel) => {
           const pos = posAt(r);
-          const cards = otherHands[game.players[pos]] ?? [];
+          const cards = handAt(pos);
           const sorted = arrangeHand(cards, { mode: trumpMode(view), schweinchen: hasSchweinchen(view, cards) }, 'trumpFirst', null);
           // Größer und enger gefächert, damit man die Karten auch auf kleineren Bildschirmen erkennt
           const step = 0.3;
           const w = Math.min(96, Math.floor(camW / (1 + Math.max(0, sorted.length - 1) * step)));
           const bottom = r === 0 || r === 3;
           const left = r === 0 || r === 1;
+          // Lernmodus: Wer dran ist, zeigt, welche Karten er legen darf (der Rest wird blass)
+          const legal =
+            learning && view.phase === 'playing' && view.turn === pos && view.current && !view.collectPending
+              ? new Set(legalCards(cards, view.current.cards, spectCtx))
+              : null;
           // Beim Vergrößern zur Tischmitte hin wachsen, nie aus dem Bildschirm heraus
           const origin = bottom ? (left ? 'origin-bottom-left' : 'origin-bottom-right') : left ? 'origin-top-left' : 'origin-top-right';
           return (
@@ -551,8 +647,16 @@ export function GameView({
               onMouseEnter={() => setPeekZoom(true)}
               onMouseLeave={() => setPeekZoom(false)}
             >
+              {/* Lernmodus: Name in einer Erklärung gehovert → diese Hand leuchtet leicht */}
+              {hoverPos === pos && <span className="pointer-events-none absolute -inset-1.5 rounded-lg shadow-[0_0_18px_rgba(217,180,90,0.45)] ring-1 ring-gold-400/50" />}
               {sorted.map((c, i) => (
-                <PlayingCard key={c} card={c} width={w} style={{ marginLeft: i ? -w * (1 - step) : 0 }} className="shadow-md ring-1 ring-black/20" />
+                <PlayingCard
+                  key={c}
+                  card={c}
+                  width={w}
+                  style={{ marginLeft: i ? -w * (1 - step) : 0 }}
+                  className={`shadow-md ring-1 ring-black/20 transition-[opacity,filter] duration-300 ${legal && !legal.has(c) ? 'opacity-35 saturate-50' : ''}`}
+                />
               ))}
             </div>
           );
@@ -764,6 +868,37 @@ export function GameView({
         </button>
       )}
       {reactions && myPos >= 0 && <ReactionPicker onReact={reactions.send} />}
+      {spectating && (
+        <button
+          className={`btn-ghost flex items-center gap-1.5 p-2 ${learn ? 'text-gold-300' : ''}`}
+          onClick={() => setLearn(!learn)}
+          aria-pressed={learn}
+          title={learn ? 'Erklärungen ausblenden' : 'Doppelkopf lernen: jeden Stich erklären'}
+          data-cursor={learn ? 'Lernen aus' : 'Lernen'}
+        >
+          <GraduationCap className="size-4" />
+          <span className="tag hidden text-[10px] sm:inline">Lernen</span>
+        </button>
+      )}
+      {spectator && (
+        <button
+          className={`btn-ghost flex items-center gap-1.5 p-2 ${spectator.on ? 'text-sky-300' : ''}`}
+          onClick={() => spectator.toggle(!spectator.on)}
+          disabled={!!spectator.takenBy && !spectator.on}
+          aria-pressed={spectator.on}
+          title={
+            spectator.takenBy && !spectator.on
+              ? `${spectator.takenBy} schaut schon zu`
+              : spectator.on
+                ? 'Ab dem nächsten Spiel wieder mitspielen'
+                : 'Ab dem nächsten Spiel zuschauen (du spielst dann nicht mit)'
+          }
+          data-cursor={spectator.on ? 'Mitspielen' : 'Zuschauen'}
+        >
+          <Eye className="size-4" />
+          <span className="tag hidden text-[10px] sm:inline">{spectator.on ? 'Zuschauer' : 'Zuschauen'}</span>
+        </button>
+      )}
       {onLeave && (
         <button className="btn-ghost p-2" onClick={() => setLeaveOpen(true)} aria-label="Spiel verlassen" data-cursor="Verlassen">
           <LogOut className="size-4" />
@@ -803,12 +938,12 @@ export function GameView({
   );
 
   // Zuschauer (zu fünft ausgesetzt): alle vier Hände offen, beginnend mit dem Spieler unten links
-  const peekHands = myPos < 0 && otherHands && view.phase !== 'finished' && (
+  const peekHands = showPeek && (
     // Beim Hovern werden alle vier Blätter zusammen groß, damit man die Karten gut erkennt
     <div className="relative flex origin-bottom flex-col gap-1.5 rounded-xl bg-black/25 p-2 ring-1 ring-white/[0.06] transition-transform duration-200 hover:z-30 hover:scale-[1.7] hover:bg-felt-950/95 hover:shadow-2xl">
       {([0, 1, 2, 3] as Rel[]).map((r) => {
         const pos = posAt(r);
-        const cards = otherHands[game.players[pos]] ?? [];
+        const cards = handAt(pos);
         const sorted = arrangeHand(cards, { mode: trumpMode(view), schweinchen: hasSchweinchen(view, cards) }, 'trumpFirst', null);
         const w = mobile ? 26 : 36;
         return (
@@ -825,8 +960,9 @@ export function GameView({
     </div>
   );
 
-  const peekEl = myPos < 0 && otherHands && view.phase !== 'finished' && (
-    <div className="flex flex-col items-center gap-2">
+  const peekEl = showPeek && (
+    <div className="flex w-full flex-col items-center gap-2">
+      {!mobile && lessonFeed}
       {pastTricks.length > 0 && (
         <button className="btn-ghost tag px-3 py-1 text-[10px]" onClick={() => setTricksOpen(true)}>
           Alle Stiche ansehen ({pastTricks.length})
@@ -917,6 +1053,15 @@ export function GameView({
           <div ref={setTrickCell} className="grid min-h-0 flex-1 place-items-center overflow-clip pt-5">
             {trickArea}
           </div>
+          {learning && (
+            <div className="flex flex-col items-center gap-2">
+              {lessonFeed}
+              <details className="w-full">
+                <summary className="tag cursor-pointer px-1 text-[10px] text-white/50">Regeln anzeigen</summary>
+                {rulesPanel}
+              </details>
+            </div>
+          )}
           <div className="flex min-h-11 flex-col items-center justify-end gap-2">
             <AnimatePresence mode="wait">{panel}</AnimatePresence>
             {explainEl}
@@ -951,6 +1096,17 @@ export function GameView({
         {/* z-0: Die Tischmitte liegt hinter Hand und Aktionen – aufgeklappte Vorbehalte verschwinden nie dahinter */}
         <div ref={setTrickCell} className="relative z-0 col-span-3 grid min-h-0 place-items-center">
           {trickArea}
+          {/* Lernmodus: links die Regeln, rechts Trumpf-Reihenfolge und Augen – beide passen sich der Höhe an */}
+          {learning && (
+            <>
+              <div className="absolute inset-y-0 left-0 overflow-y-auto py-1" style={{ width: camW }}>
+                {rulesPanel}
+              </div>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center overflow-y-auto py-1" style={{ width: camW }}>
+                <CardGuide width={camW} withNines={view.settings.withNines} />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Unten links: ich – oder, wenn ich aussetze, wer nach mir sitzt */}
@@ -973,7 +1129,7 @@ export function GameView({
         <div className="relative z-10 self-end">{seatFor(3)}</div>
 
         {/* Kartenübersicht (Einstellung): rechts zwischen den beiden Kameras */}
-        {prefs.cardGuide && (
+        {prefs.cardGuide && !learning && (
           <div className="pointer-events-none absolute top-1/2 right-3 z-10 -translate-y-1/2" style={{ width: camW }}>
             <CardGuide width={camW} withNines={view.settings.withNines} />
           </div>
@@ -1010,6 +1166,22 @@ export function GameView({
       {achievementFeed && <AchievementBanner event={achievementFeed.current} name={nameOfUser} onDone={achievementFeed.done} />}
 
       <AnimatePresence>
+        {spectating && !learnAsked && prefs.spectatorLearn === 'ask' && (
+          <LearnPrompt
+            onYes={() => {
+              setLearn(true);
+              setLearnAsked(true);
+            }}
+            onNo={() => {
+              setLearn(false);
+              setLearnAsked(true);
+              setPref('spectatorLearn', 'off');
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {tricksOpen && spectating && (
           <TricksDialog tricks={pastTricks} name={name} onClose={() => setTricksOpen(false)} cardW={mobile ? 40 : 56} />
         )}
@@ -1031,6 +1203,7 @@ export function GameView({
             myPos={myPos}
             busy={busy}
             canStart={members.length >= 1 && members.length <= 5}
+            spectator={spectator}
             onClose={() => setDismissed(game.id)}
             onNext={() => run(startGame)}
           />

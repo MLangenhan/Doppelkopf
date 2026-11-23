@@ -62,10 +62,15 @@ function nextOccupied(occupied: number[], seat: number): number {
   return sorted.find((s) => s > seat) ?? sorted[0];
 }
 
-/** Menschen am Tisch plus Bots auf freien Plätzen, bis vier zusammen sind. Sortiert nach Platz. */
-function withBots(seated: { user_id: string; seat: number }[]): { user_id: string; seat: number }[] {
-  const all = seated.map((p) => ({ user_id: p.user_id, seat: p.seat }));
-  const free = [0, 1, 2, 3, 4].filter((seat) => !all.some((p) => p.seat === seat));
+type SeatRow = { user_id: string; seat: number; spectator?: boolean };
+
+/**
+ * Menschen am Tisch plus Bots auf freien Plätzen, bis vier zusammen sind. Sortiert nach Platz.
+ * Wer auf dem Zuschauerplatz sitzt, spielt nicht mit – sein Platz bleibt aber belegt.
+ */
+function withBots(seated: SeatRow[]): { user_id: string; seat: number }[] {
+  const all = seated.filter((p) => !p.spectator).map((p) => ({ user_id: p.user_id, seat: p.seat }));
+  const free = [0, 1, 2, 3, 4].filter((seat) => !seated.some((p) => p.seat === seat));
   for (let i = 0; all.length < 4; i++) all.push({ user_id: BOT_IDS[i], seat: free[i] });
   return all.sort((a, b) => a.seat - b.seat);
 }
@@ -84,13 +89,13 @@ async function startGame(db: SupabaseClient, userId: string, tableId: string) {
 
   const { data: seated, error: pErr } = await db
     .from('table_players')
-    .select('user_id, seat')
+    .select('user_id, seat, spectator')
     .eq('table_id', tableId)
     .order('seat');
   if (pErr || !seated) throw new Error(pErr?.message ?? 'Spieler konnten nicht geladen werden');
   if (!seated.some((p) => p.user_id === userId)) throw new GameError('Du sitzt nicht an diesem Tisch.');
   if (seated.length > 5) throw new GameError('Höchstens 5 Spieler pro Tisch.');
-  const everyone = withBots(seated as { user_id: string; seat: number }[]);
+  const everyone = withBots(seated as SeatRow[]);
 
   const occupied = everyone.map((p) => p.seat);
   const dealer = occupied.includes(table.dealer_seat) ? table.dealer_seat : nextOccupied(occupied, table.dealer_seat);
@@ -173,8 +178,8 @@ async function persist(db: SupabaseClient, game: LoadedGame, before: GameState, 
         .filter((row) => !isBot(row.user_id));
     }
     if (status === 'finished') {
-      const { data: seated } = await db.from('table_players').select('user_id, seat').eq('table_id', game.table_id);
-      const occupied = withBots((seated ?? []) as { user_id: string; seat: number }[]).map((p) => p.seat);
+      const { data: seated } = await db.from('table_players').select('user_id, seat, spectator').eq('table_id', game.table_id);
+      const occupied = withBots((seated ?? []) as SeatRow[]).map((p) => p.seat);
       nextDealer = occupied.length ? nextOccupied(occupied, game.dealer_seat) : null;
     }
   }
@@ -290,7 +295,12 @@ async function spectate(db: SupabaseClient, userId: string, gameId: string) {
     .eq('user_id', userId)
     .maybeSingle();
   if (!member) throw new GameError('Du sitzt nicht an diesem Tisch.');
-  return { tricks: state.tricks.filter((t) => t.winner !== null && t.winner !== undefined), version: state.version };
+  return {
+    tricks: state.tricks.filter((t) => t.winner !== null && t.winner !== undefined),
+    // Alle vier Hände (auch die der Bots, die keine eigene Hand-Zeile haben)
+    hands: state.hands,
+    version: state.version,
+  };
 }
 
 async function abort(db: SupabaseClient, userId: string, gameId: string) {

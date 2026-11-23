@@ -21,6 +21,7 @@ export function ResultDialog({
   onClose,
   busy,
   canStart,
+  spectator,
 }: {
   view: PublicGameState;
   name: (pos: number) => string;
@@ -29,6 +30,7 @@ export function ResultDialog({
   onClose: () => void;
   busy: boolean;
   canStart: boolean;
+  spectator?: { on: boolean; takenBy: string | null; toggle: (on: boolean) => void };
 }) {
   const r = view.result;
   // Leertaste: erst die Auswertung überspringen, dann das nächste Spiel geben
@@ -91,6 +93,11 @@ export function ResultDialog({
             touchLabel=""
           />
           <div className="ml-auto flex flex-wrap justify-end gap-3">
+            {spectator && (!spectator.takenBy || spectator.on) && (
+              <button className="btn-ghost" onClick={() => spectator.toggle(!spectator.on)} disabled={busy}>
+                {spectator.on ? 'Wieder mitspielen' : 'Nächstes Spiel zuschauen'}
+              </button>
+            )}
             <button className="btn-ghost" onClick={onClose}>
               Tisch ansehen
             </button>

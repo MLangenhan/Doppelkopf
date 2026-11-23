@@ -34,6 +34,8 @@ export interface Prefs {
   cardGuide: boolean;
   /** Spiel erklären: bei jedem Stich, warum welche Karten erlaubt sind */
   explain: boolean;
+  /** Zuschauer: zu Rundenbeginn fragen, ob man Doppelkopf lernen möchte ('off' = abgelehnt, nicht mehr fragen) */
+  spectatorLearn: 'ask' | 'off';
   /** Nur für dich: Kartenrücken, Filzfarbe, Konfetti (durch Erfolge freigeschaltet) */
   cardBack: string;
   felt: string;
@@ -61,6 +63,7 @@ const DEFAULTS: Prefs = {
   highlightPlayable: true,
   cardGuide: false,
   explain: false,
+  spectatorLearn: 'ask',
   cardBack: 'blue',
   felt: 'green',
   confetti: 'classic',

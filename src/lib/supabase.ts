@@ -1,7 +1,7 @@
 import type { FrameKey } from './cosmetics';
 import { createClient } from '@supabase/supabase-js';
 import { FunctionsHttpError } from '@supabase/supabase-js';
-import type { GameAction, PublicGameState, RuleSettings, Trick } from '@engine';
+import type { Card, GameAction, PublicGameState, RuleSettings, Trick } from '@engine';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -39,6 +39,8 @@ export interface Member {
   frame?: FrameKey | null;
   avatar?: string | null;
   avatar_color?: string | null;
+  /** Sitzt auf dem Zuschauerplatz: spielt nicht mit, sieht alle Karten */
+  spectator?: boolean;
 }
 
 /** Was jemand von seinen Erfolgen zeigt: nur, was er freigegeben hat */
@@ -121,7 +123,7 @@ export const api = {
   abortGame: (gameId: string) => callGame({ type: 'abort', gameId }),
   botStep: (gameId: string) => callGame({ type: 'botStep', gameId }),
   /** Nur für wer aussetzt: alle bisherigen Stiche */
-  spectate: (gameId: string) => callGame({ type: 'spectate', gameId }) as Promise<{ tricks: Trick[] }>,
+  spectate: (gameId: string) => callGame({ type: 'spectate', gameId }) as Promise<{ tricks: Trick[]; hands: Card[][] }>,
 
   async createTable(settings: RuleSettings, name: string): Promise<TableRow> {
     const { data, error } = await supabase.rpc('create_table', { p_settings: settings, p_name: name });
@@ -135,6 +137,11 @@ export const api = {
   },
   async leaveTable(tableId: string) {
     const { error } = await supabase.rpc('leave_table', { p_table: tableId });
+    if (error) throw new Error(await errorMessage(error));
+  },
+  /** Zuschauerplatz an/aus – gilt ab dem nächsten Spiel */
+  async setSpectator(tableId: string, on: boolean) {
+    const { error } = await supabase.rpc('set_spectator', { p_table: tableId, p_on: on });
     if (error) throw new Error(await errorMessage(error));
   },
   async takeSeat(tableId: string, seat: number) {

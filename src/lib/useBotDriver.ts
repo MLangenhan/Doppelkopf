@@ -18,7 +18,8 @@ export function useBotDriver(game: GameRow | null, me: string | null, online: st
   const pos = game && game.status === 'running' && state ? actorOf(state) : null;
   const botTurn = pos !== null && !!game && isBot(game.players[pos]);
   const humans = game ? game.players.filter((u) => !isBot(u)) : [];
-  const driver = humans.find((u) => u === me || online.includes(u));
+  // Spielen nur Bots (alle Menschen schauen zu), stoßen die Zuschauer die Züge an
+  const driver = humans.find((u) => u === me || online.includes(u)) ?? (humans.length === 0 ? me : undefined);
   const key = game ? `${game.id}:${game.version}:${retry}` : '';
 
   useEffect(() => {

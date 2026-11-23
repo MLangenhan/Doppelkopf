@@ -21,6 +21,7 @@ export function Lobby({
   onStart,
   onTakeSeat,
   onSaveRules,
+  onSpectate,
   onLeave,
   onBack,
   busy,
@@ -35,6 +36,8 @@ export function Lobby({
   onStart: () => void;
   onTakeSeat: (seat: number) => void;
   onSaveRules: (s: RuleSettings) => Promise<void>;
+  /** Zuschauerplatz an/aus (gilt ab dem nächsten Spiel) */
+  onSpectate: (on: boolean) => void;
   onLeave: () => void;
   /** Zurück zum laufenden Abend (wenn schon gespielt wurde) */
   onBack?: () => void;
@@ -47,7 +50,10 @@ export function Lobby({
   const isHost = table.host_id === me;
   const settings = normalizeSettings(table.settings);
   const link = `${window.location.origin}${window.location.pathname}#/t/${table.code}`;
-  const count = members.length;
+  // Wer zuschaut, spielt nicht mit: Bots füllen dann auf
+  const count = members.filter((m) => !m.spectator).length;
+  const spectator = members.find((m) => m.spectator);
+  const meSpectating = !!me && spectator?.user_id === me;
 
   async function copy() {
     try {
@@ -65,6 +71,7 @@ export function Lobby({
       : count === 4
         ? 'Alle da – es kann losgehen'
         : 'Zu fünft – der Geber setzt jeweils aus';
+  const statusLine = spectator ? `${status} · ${spectator.user_id === me ? 'Du schaust zu' : `${spectator.display_name} schaut zu`}` : status;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pt-4 pb-16">
@@ -72,7 +79,7 @@ export function Lobby({
       <header className="flex flex-wrap items-end justify-between gap-6 pb-8">
         <div>
           <p className="tag text-[11px] text-white/45">
-            <span className="text-gold-400">Lobby</span> / {status}
+            <span className="text-gold-400">Lobby</span> / {statusLine}
           </p>
           <h1 className="display mt-2 text-6xl sm:text-7xl">{table.name}</h1>
         </div>
@@ -149,6 +156,7 @@ export function Lobby({
                 <span className="tag flex gap-2 text-[10px] text-white/35">
                   <span>{String(seat + 1).padStart(2, '0')}</span>
                   {m && table.host_id === m.user_id && <span className="text-gold-400/80">Gastgeber</span>}
+                  {m?.spectator && <span className="text-sky-300/80">Zuschauer</span>}
                 </span>
               </motion.div>
             );
@@ -156,7 +164,7 @@ export function Lobby({
         </div>
 
         <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-          <button className="btn-primary px-8 py-3 text-base" disabled={busy || count < 1 || count > 5} onClick={onStart}>
+          <button className="btn-primary px-8 py-3 text-base" disabled={busy || members.length < 1 || members.length > 5} onClick={onStart}>
             {hasPlayed ? 'Weiterspielen' : count < 4 ? 'Mit Bots starten' : 'Spiel starten'} <ArrowRight className="size-4" />
           </button>
           {onBack && (
@@ -165,6 +173,14 @@ export function Lobby({
             </button>
           )}
           <CameraButton camera={camera} />
+          <button
+            className={arrowLink}
+            disabled={busy || (!!spectator && !meSpectating)}
+            title={spectator && !meSpectating ? `${spectator.display_name} schaut schon zu` : undefined}
+            onClick={() => onSpectate(!meSpectating)}
+          >
+            {meSpectating ? 'Doch mitspielen' : 'Nur zuschauen'}
+          </button>
           <span className="flex-1" />
           <button className="tag text-[11px] text-white/40 transition-colors hover:text-red-300" onClick={onLeave} disabled={busy}>
             Tisch verlassen

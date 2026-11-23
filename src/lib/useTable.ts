@@ -52,13 +52,14 @@ export function useTable(code: string) {
   const loadMembers = useCallback(async (tableId: string) => {
     const { data } = await supabase
       .from('table_players')
-      .select(`user_id, seat, profiles(display_name, ${NAMETAG_COLS})`)
+      .select(`user_id, seat, spectator, profiles(display_name, ${NAMETAG_COLS})`)
       .eq('table_id', tableId)
       .order('seat');
     setMembers(
       (data ?? []).map((m) => ({
         user_id: m.user_id as string,
         seat: m.seat as number,
+        spectator: !!m.spectator,
         display_name: (m.profiles as unknown as { display_name: string } | null)?.display_name ?? '?',
         ...displayOf(m.profiles as unknown as Parameters<typeof displayOf>[0]),
       })),

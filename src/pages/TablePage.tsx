@@ -45,6 +45,14 @@ export function TablePage() {
     if (running) setLobby(false);
   }, [running]);
 
+  const myMember = t.members.find((m) => m.user_id === t.me);
+  const spectatorMember = t.members.find((m) => m.spectator);
+  async function setSpectator(on: boolean) {
+    if (!t.table) return;
+    await api.setSpectator(t.table.id, on);
+    await t.refresh();
+    toast(on ? 'Ab dem nächsten Spiel schaust du zu' : 'Ab dem nächsten Spiel spielst du wieder mit', 'success');
+  }
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
     try {
@@ -110,6 +118,7 @@ export function TablePage() {
             onBack={t.game && !aborted ? () => setLobby(false) : undefined}
             onStart={() => run(t.startGame)}
             onTakeSeat={(seat) => run(() => api.takeSeat(table.id, seat))}
+            onSpectate={(on) => run(() => setSpectator(on))}
             onSaveRules={(s: RuleSettings) =>
               run(async () => {
                 await api.updateSettings(table.id, s);
@@ -143,6 +152,11 @@ export function TablePage() {
           reactions={reactions}
           achievementFeed={achievementFeed}
           onAbort={() => run(() => api.abortGame(t.game!.id))}
+          spectator={{
+            on: !!myMember?.spectator,
+            takenBy: spectatorMember && spectatorMember.user_id !== t.me ? spectatorMember.display_name : null,
+            toggle: (on) => run(() => setSpectator(on)),
+          }}
           rules={{
             value: normalizeSettings(table.settings),
             locked: table.host_id !== t.me ? 'Nur der Gastgeber kann die Regeln ändern' : running ? 'Änderbar, sobald das Spiel vorbei ist' : null,

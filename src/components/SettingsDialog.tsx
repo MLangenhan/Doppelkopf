@@ -96,6 +96,12 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
               label="Spiel erklären"
               hint="Wenn du dran bist: welche Karten du legen darfst und warum die anderen nicht, wer gerade vorne liegt und womit du übernehmen kannst. Nach jedem Stich: warum er an wen geht."
             />
+            <Toggle
+              checked={prefs.spectatorLearn === 'ask'}
+              onChange={(v) => setPref('spectatorLearn', v ? 'ask' : 'off')}
+              label="Beim Zuschauen fragen, ob ich lernen möchte"
+              hint="Wer zuschaut, wird zu Rundenbeginn gefragt. Dann wird jeder Stich kurz mit Symbolen und ausführlich erklärt, dazu die Regeln, die gerade greifen."
+            />
 
             <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Ton</h3>
             <Toggle
