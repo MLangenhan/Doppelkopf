@@ -222,6 +222,7 @@ export function LessonGame({
         startGame={async () => onFree()}
         onLeave={onExit}
         forcedCard={forcedCard}
+        playedCards={(state.collectPending ? state.tricks.slice(0, -1) : state.tricks).flatMap((t) => t.cards)}
         allowAnnounce={stage === 3 || free}
         tutorial
       />

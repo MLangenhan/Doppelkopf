@@ -125,6 +125,7 @@ export function GameView({
   forcedCard,
   tutorial = false,
   allowAnnounce = true,
+  playedCards,
 }: {
   game: GameRow;
   hand: Card[];
@@ -140,6 +141,8 @@ export function GameView({
   tutorial?: boolean;
   /** Lektion 1/2: Ansagen ausblenden, sie kommen erst in Lektion 3 */
   allowAnnounce?: boolean;
+  /** Lektion: alle schon gespielten Karten (für die Kartenübersicht) */
+  playedCards?: Card[];
   members: Member[];
   results: ResultRow[];
   /** Fertige Spiele des Abends, neuestes zuerst */
@@ -369,6 +372,22 @@ export function GameView({
     ...(learnLevel < 3 && announced ? ['Es wurde angesagt – was das heißt, kommt in Stufe 3'] : []),
   ];
   const rulesText = ruleTexts(view.settings, trumpRule(spectCtx.mode), spectCtx.mode);
+  // Kartenübersicht mit Live-Markierung: was liegt vorne, was würde übernehmen
+  const guideTrick = view.phase === 'playing' && view.current ? view.current.cards : undefined;
+  const guidePlayed =
+    playedCards ?? (spectating ? pastTricks.filter((t) => t !== view.current && !(view.collectPending && t === pastTricks.at(-1))).flatMap((t) => t.cards) : []);
+  const guide = (w: number) => (
+    <CardGuide
+      width={w}
+      withNines={view.settings.withNines}
+      mode={spectCtx.mode}
+      schweinchen={spectCtx.schweinchen}
+      dulleRule={view.settings.dulleRule}
+      trick={guideTrick}
+      played={guidePlayed}
+      isLast={view.trickWinners.length === handSize - (view.collectPending ? 0 : 1)}
+    />
+  );
   const lessonFeed = learning && lessons.length > 0 && (
     <LessonFeed
       items={lessons}
@@ -1055,7 +1074,7 @@ export function GameView({
           )}
           {learnLevel >= 2 && (
             <div className="pointer-events-none shrink-0">
-              <CardGuide width={Math.min(camW, 260)} withNines={view.settings.withNines} />
+              {guide(Math.min(camW, 300))}
             </div>
           )}
         </div>
@@ -1235,10 +1254,14 @@ export function GameView({
         <div className="relative z-10 self-end">{seatFor(3)}</div>
 
         {/* Kartenübersicht (Einstellung): rechts zwischen den beiden Kameras */}
-        {prefs.cardGuide && !learning && (
-          <div className="pointer-events-none absolute top-1/2 right-3 z-10 -translate-y-1/2" style={{ width: camW }}>
-            <CardGuide width={camW} withNines={view.settings.withNines} />
-          </div>
+        {/* Lektion: links in der Mitte (rechts liegt der Merkzettel); sonst als Einstellung rechts */}
+        {tutorial ? (
+          <div className="pointer-events-none absolute top-1/2 left-3 z-10 -translate-y-1/2">{guide(Math.min(camW, 300))}</div>
+        ) : (
+          prefs.cardGuide &&
+          !learning && (
+            <div className="pointer-events-none absolute top-1/2 right-3 z-10 -translate-y-1/2">{guide(camW)}</div>
+          )
         )}
       </main>
       )}

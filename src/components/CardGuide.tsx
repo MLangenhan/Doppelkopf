@@ -1,57 +1,121 @@
-import { type Card } from '@engine';
-import { PlayingCard } from './PlayingCard';
+import { augenOf, type Card, type DulleRule, faceOf, trickWinnerIndex, trumpOrder, type TrumpMode } from '@engine';
 
 /**
- * Spickzettel: Trumpf-Reihenfolge im Normalspiel und die Augen jeder Karte.
- * Oben die Trümpfe (Dullen, Damen, Buben, Karo), unten die Fehlfarben.
+ * Spickzettel: Trumpf-Reihenfolge und Augen jeder Karte – aus eigenen kleinen Kacheln gebaut (Rang + Farbe),
+ * damit Markierungen auf jedem Bildschirm gleich aussehen. Mit einem laufenden Stich zeigt er,
+ * welche Karte gerade vorne liegt, welche übernehmen würde und welche nicht.
  */
-type Group = { cards: string[]; values: number[] };
+const SUIT_SYMBOL: Record<string, string> = { C: '♣', S: '♠', H: '♥', D: '♦' };
+const RANK_LABEL: Record<string, string> = { A: 'A', '10': '10', K: 'K', Q: 'D', J: 'B', '9': '9' };
+const FEHL_RANKS = ['A', '10', 'K', 'Q', 'J', '9'];
 
-const card = (face: string) => `${face}-0` as Card;
+type State = 'lead' | 'wins' | 'loses' | 'gone' | 'neutral';
 
-export function CardGuide({ width, withNines }: { width: number; withNines: boolean }) {
-  const cw = Math.round(width / 6.4);
-  const step = cw * 0.38;
-  const nine = (faces: string[]) => (withNines ? faces : faces.filter((f) => !f.endsWith('-9')));
-  const values = (faces: string[]) => faces.map((f) => ({ A: 11, '10': 10, K: 4, Q: 3, J: 2, '9': 0 })[f.split('-')[1]] ?? 0);
-  const g = (faces: string[]): Group => ({ cards: nine(faces), values: values(nine(faces)) });
+export function CardGuide({
+  width,
+  withNines,
+  mode = 'normal',
+  schweinchen = false,
+  dulleRule = 'first',
+  trick,
+  played = [],
+  isLast = false,
+}: {
+  width: number;
+  withNines: boolean;
+  mode?: TrumpMode;
+  schweinchen?: boolean;
+  dulleRule?: DulleRule;
+  /** Laufender Stich: markiert, welche Karte übernehmen würde */
+  trick?: Card[];
+  /** Schon gespielte Karten (fertige Stiche): beide weg → durchgestrichen */
+  played?: Card[];
+  isLast?: boolean;
+}) {
+  const ctx = { mode, schweinchen, dulleRule };
+  const keep = (f: string) => withNines || !f.endsWith('-9');
+  const trumps = trumpOrder(mode, schweinchen).filter(keep);
+  const fehl = ['C', 'S', 'H', 'D']
+    .map((s) => FEHL_RANKS.map((r) => `${s}-${r}`).filter((f) => keep(f) && !trumps.includes(f)))
+    .filter((row) => row.length > 0);
 
-  const rows: Group[][] = [
-    [g(['H-10', 'H-10']), g(['C-Q', 'S-Q', 'H-Q', 'D-Q']), g(['C-J', 'S-J', 'H-J', 'D-J'])],
-    [g(['D-A', 'D-10', 'D-K', 'D-9'])],
-    [g(['H-A', 'H-K', 'H-9']), g(['S-A', 'S-10', 'S-K', 'S-9']), g(['C-A', 'C-10', 'C-K', 'C-9'])],
-  ];
+  const cards = trick ?? [];
+  const leadIdx = cards.length ? trickWinnerIndex(cards, ctx, isLast) : -1;
+  const leadFace = leadIdx >= 0 ? faceOf(cards[leadIdx]) : null;
+  const goneCount = (f: string) => played.filter((c) => faceOf(c) === f).length + cards.filter((c) => faceOf(c) === f).length;
+
+  const stateOf = (f: string): State => {
+    if (f === leadFace) return 'lead';
+    const gone = goneCount(f);
+    if (gone >= 2) return 'gone';
+    if (!cards.length || cards.length >= 4) return 'neutral';
+    // Käme diese Karte als nächste, läge sie dann vorne?
+    const copy = `${f}-${cards.some((c) => c === `${f}-0`) ? 1 : 0}` as Card;
+    return trickWinnerIndex([...cards, copy], ctx, isLast) === cards.length ? 'wins' : 'loses';
+  };
+
+  // Kachelgröße aus der verfügbaren Breite: die längste Reihe (Trümpfe) passt, notfalls umgebrochen
+  const cw = Math.max(18, Math.min(30, Math.floor((width - 24) / Math.max(8, Math.ceil(trumps.length / 1.5)) - 4)));
+
+  const tile = (f: string) => {
+    const [suit, rank] = f.split('-');
+    const red = suit === 'H' || suit === 'D';
+    const st = stateOf(f);
+    const ring =
+      st === 'lead'
+        ? 'ring-2 ring-gold-400 shadow-[0_0_10px_rgba(217,180,90,0.7)]'
+        : st === 'wins'
+          ? 'ring-2 ring-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.55)]'
+          : 'ring-1 ring-black/25';
+    const fade = st === 'loses' ? 'opacity-35' : st === 'gone' ? 'opacity-20' : '';
+    return (
+      <div key={f} className="flex flex-col items-center gap-0.5" title={`${f}: ${augenOf(`${f}-0`)} Augen`}>
+        <div
+          className={`relative grid place-items-center rounded-[5px] bg-white leading-none font-bold transition-[opacity,box-shadow] duration-300 ${ring} ${fade}`}
+          style={{ width: cw, height: Math.round(cw * 1.35) }}
+        >
+          <span className={red ? 'text-red-600' : 'text-neutral-900'} style={{ fontSize: Math.round(cw * 0.42) }}>
+            {RANK_LABEL[rank]}
+          </span>
+          <span className={red ? 'text-red-600' : 'text-neutral-900'} style={{ fontSize: Math.round(cw * 0.5) }}>
+            {SUIT_SYMBOL[suit]}
+          </span>
+          {st === 'gone' && <span className="absolute inset-x-0.5 top-1/2 h-0.5 -rotate-45 bg-neutral-800" aria-hidden />}
+        </div>
+        <span className="text-[9px] text-white/55 tabular-nums">{augenOf(`${f}-0`)}</span>
+      </div>
+    );
+  };
 
   return (
     <div
-      className="pointer-events-none flex flex-col items-center gap-2 rounded-xl bg-felt-950/55 p-2 ring-1 ring-white/[0.06]"
+      className="pointer-events-none flex flex-col gap-2 rounded-xl bg-felt-950/70 p-2.5 ring-1 ring-white/[0.06]"
+      style={{ width }}
       aria-label="Kartenübersicht: Trumpf-Reihenfolge und Augen"
     >
-      <span className="tag text-[9px] text-white/45">Trumpf von hoch nach niedrig · Augen</span>
-      {rows.map((row, i) => (
-        <div key={i} className="flex items-center gap-2">
-          {row.map((grp, j) => {
-            const same = grp.values.every((v) => v === grp.values[0]);
-            return (
-              <div key={j} className="relative" style={{ width: cw + step * (grp.cards.length - 1), height: cw * 1.4 }}>
-                {grp.cards.map((f, k) => (
-                  <div key={k} className="absolute top-0" style={{ left: k * step }}>
-                    <PlayingCard card={card(f)} width={cw} />
-                    {(!same || k === grp.cards.length - 1) && (
-                      <span
-                        className="absolute grid size-4 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-gold-400 text-[8px] font-bold text-felt-950 shadow"
-                        style={{ left: k === grp.cards.length - 1 ? '50%' : step / 2, top: '50%' }}
-                      >
-                        {grp.values[k]}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            );
-          })}
+      <span className="tag text-[9px] text-white/45">{trumps.length ? 'Trumpf von hoch nach niedrig' : 'Kein Trumpf'}</span>
+      {trumps.length > 0 && <div className="flex flex-wrap gap-1">{trumps.map(tile)}</div>}
+      <span className="tag text-[9px] text-white/45">Fehlfarben</span>
+      <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+        {fehl.map((row) => (
+          <div key={row[0]} className="flex gap-1">
+            {row.map(tile)}
+          </div>
+        ))}
+      </div>
+      {cards.length > 0 && (
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] text-white/55">
+          <span className="flex items-center gap-1">
+            <span className="size-2 rounded-sm ring-2 ring-gold-400" /> liegt vorne
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="size-2 rounded-sm ring-2 ring-emerald-400" /> würde übernehmen
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="size-2 rounded-sm bg-white/30" /> reicht nicht
+          </span>
         </div>
-      ))}
+      )}
     </div>
   );
 }
