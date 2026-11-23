@@ -211,6 +211,16 @@ export const sound = {
     }
   },
 
+  /** Kauf im Titel-Shop: Münzen klimpern, dann ein heller „Kling“-Akkord */
+  purchase(rare = false) {
+    const c = audio();
+    if (!c) return;
+    const at = c.currentTime;
+    for (let i = 0; i < 5; i++) tone(c, at + i * 0.055, rand(2600, 3400), 0.05, 0.12, 'triangle');
+    [1318.5, 1760, 2637].forEach((f, i) => tone(c, at + 0.32 + i * 0.05, f, 0.1, 1.1, 'sine'));
+    if (rare) [659.25, 830.61, 987.77].forEach((f) => tone(c, at + 0.5, f, 0.06, 1.8, 'triangle'));
+  },
+
   /** Reaktionen am Tisch */
   reaction(kind: string) {
     const c = audio();

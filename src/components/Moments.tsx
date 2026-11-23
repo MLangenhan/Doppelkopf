@@ -92,7 +92,7 @@ export function MomentOverlay({ moment }: { moment: Shown | null }) {
 }
 
 /** Konfetti-Regen, z. B. beim Sieg. Leichtgewichtig auf einem Canvas. */
-export function Confetti({ active }: { active: boolean }) {
+export function Confetti({ active, colors: override }: { active: boolean; colors?: string[] }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const on = useFx('confetti');
   useEffect(() => {
@@ -104,7 +104,7 @@ export function Confetti({ active }: { active: boolean }) {
     const h = (canvas.height = window.innerHeight * dpr);
     // Eigener Konfetti-Stil (durch Erfolge freigeschaltet)
     const style = CONFETTI.find((c) => c.key === getPrefs().confetti) ?? CONFETTI[0];
-    const colors = style.colors;
+    const colors = override ?? style.colors;
     const pieces = Array.from({ length: 160 }, () => ({
       x: w / 2 + (Math.random() - 0.5) * w * 0.3,
       y: h * 0.45,

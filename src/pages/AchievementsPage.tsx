@@ -14,7 +14,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { AchievementBadge } from '../components/AchievementBadge';
 import { Nametag } from '../components/Nametag';
-import { TitleTag } from '../components/Showcase';
+import { TitleShop } from '../components/TitleShop';
 import { useToast } from '../components/Toast';
 import { TopBar } from '../components/TopBar';
 import { VideoTile } from '../components/VideoTile';
@@ -133,10 +133,23 @@ export function AchievementsContent() {
   };
   const buy = async (key: string) => {
     const { error } = await supabase.rpc('buy_title', { p_key: key });
-    if (error) return toast(await errorMessage(error), 'error');
+    if (error) {
+      toast(await errorMessage(error), 'error');
+      return false;
+    }
     setOwned((o) => [...o, key]);
-    toast('Titel gekauft', 'success');
-    void save({ title: key });
+    return true;
+  };
+  const refund = async (key: string) => {
+    const { error } = await supabase.rpc('refund_title', { p_key: key });
+    if (error) {
+      toast(await errorMessage(error), 'error');
+      return false;
+    }
+    setOwned((o) => o.filter((k) => k !== key));
+    if (look.title === key) setLook((l) => ({ ...l, title: null }));
+    toast('Kauf rückgängig gemacht – Punkte sind zurück', 'success');
+    return true;
   };
 
   const close = [...ACHIEVEMENTS]
@@ -433,42 +446,22 @@ export function AchievementsContent() {
       )}
 
       {tab === 'shop' && (
-        <div className="pt-6">
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm text-white/55">
-              <span className="font-semibold text-gold-300 tabular-nums">{free}</span> Punkte frei · Fahr über einen Titel für die Vorschau oben
-            </p>
+        <>
+          <div className="flex justify-end pt-4">
             <Switch label="Titel anzeigen" checked={look.showTitle} onChange={(v) => void save({ showTitle: v })} />
           </div>
-          {[true, false].map((rare) => (
-            <ul key={String(rare)} className={`mb-6 grid gap-2 ${rare ? 'sm:grid-cols-3' : 'sm:grid-cols-3 lg:grid-cols-4'}`}>
-              {TITLES.filter((t) => !!t.rare === rare).map((t) => {
-                const has = owned.includes(t.key);
-                const active = look.title === t.key;
-                return (
-                  <li
-                    key={t.key}
-                    onPointerEnter={() => setPeekTitle(t.key)}
-                    onPointerLeave={() => setPeekTitle(null)}
-                    className={`flex flex-col gap-3 rounded-xl p-4 ring-1 ${rare ? 'bg-gradient-to-br from-sky-400/15 to-transparent ring-sky-300/30' : 'bg-white/[0.03] ring-white/[0.06]'}`}
-                  >
-                    <TitleTag titleKey={t.key} className="self-start text-[11px]" />
-                    {has ? (
-                      <button className={`btn-ghost tag self-start px-2 py-1 text-[10px] ${active ? 'text-gold-300' : ''}`} onClick={() => void save({ title: active ? null : t.key })}>
-                        {active ? 'Gewählt' : 'Wählen'}
-                      </button>
-                    ) : (
-                      <button className="btn-secondary tag self-start px-2 py-1 text-[10px]" disabled={free < t.cost} onClick={() => void buy(t.key)}>
-                        {free < t.cost && <Lock className="size-3" />}
-                        {t.cost} Punkte
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          ))}
-        </div>
+          <TitleShop
+            owned={owned}
+            free={free}
+            name={name}
+            look={look}
+            earned={[...mineEarned.keys()]}
+            onBuy={buy}
+            onRefund={refund}
+            onWear={(key) => void save({ title: key, ...(key ? { showTitle: true } : {}) })}
+            onPeek={setPeekTitle}
+          />
+        </>
       )}
 
       {/* Details zu einem Erfolg */}

@@ -29,6 +29,8 @@ export function useTable(code: string) {
 
   const tableRef = useRef<TableRow | null>(null);
   tableRef.current = table;
+  const membersRef = useRef<Member[]>([]);
+  membersRef.current = members;
 
   /** Übernimmt einen Spielstand nur, wenn er neuer ist als der bekannte. */
   const acceptGame = useCallback((row: GameRow | null) => {
@@ -171,6 +173,11 @@ export function useTable(code: string) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'table_players', filter: `table_id=eq.${tableId}` }, () =>
         loadMembers(tableId),
       )
+      // Titel, Vitrine, Rahmen, Avatar der anderen sofort zeigen – ohne Neuladen
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, (p) => {
+        const id = (p.new as { id?: string })?.id;
+        if (id && membersRef.current.some((m) => m.user_id === id)) loadMembers(tableId);
+      })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables', filter: `id=eq.${tableId}` }, (p) =>
         setTable(p.new as TableRow),
       )
