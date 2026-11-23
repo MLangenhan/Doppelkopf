@@ -19,6 +19,8 @@ export function useBotDriver(
   reload?: () => Promise<void>,
   /** Lernmodus am reinen Bot-Tisch: warten, bis die Erklärung zum letzten Stich geschlossen ist */
   hold = false,
+  /** Zuschauer am reinen Bot-Tisch: Stiche nimmt der Mensch per Klick, nicht der Bot */
+  manualCollect = false,
 ) {
   const [retry, setRetry] = useState(0);
   const state = game?.state;
@@ -30,7 +32,7 @@ export function useBotDriver(
   const key = game ? `${game.id}:${game.version}:${retry}` : '';
 
   useEffect(() => {
-    if (!botTurn || !game || !me || hold) return;
+    if (!botTurn || !game || !me || hold || (manualCollect && state?.collectPending)) return;
     const base = state!.collectPending ? DELAY.collect : state!.phase === 'playing' ? DELAY.play : DELAY.declare;
     const wait = base + (driver === me ? 0 : FALLBACK);
     const t = setTimeout(async () => {
@@ -44,5 +46,5 @@ export function useBotDriver(
       }
     }, wait);
     return () => clearTimeout(t);
-  }, [key, botTurn, hold]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key, botTurn, hold, manualCollect]); // eslint-disable-line react-hooks/exhaustive-deps
 }

@@ -1,4 +1,4 @@
-import { normalizeSettings, type RuleSettings } from '@engine';
+import { isBot, normalizeSettings, type RuleSettings } from '@engine';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Atmosphere } from '../components/Atmosphere';
@@ -22,7 +22,23 @@ export function TablePage() {
   const camera = useCamera();
   const { remotes, online } = useVideoMesh(t.table?.id, t.me, camera.stream);
   const [holdBots, setHoldBots] = useState(false);
-  useBotDriver(t.game, t.me, online, t.reloadGame, holdBots);
+  // Nur Bots spielen und ich schaue zu: Stiche nehme ich selbst vom Tisch
+  const watchingBots = !!t.game && !!t.me && t.game.players.every((u) => isBot(u)) && !t.game.players.includes(t.me);
+  useBotDriver(t.game, t.me, online, t.reloadGame, holdBots, watchingBots);
+  const collectForBot = async () => {
+    if (!t.game) return;
+    // Der Server lässt den Bot den Stich erst nach kurzer Zeit nehmen – so lange freundlich wiederholen
+    for (let i = 0; i < 10; i++) {
+      try {
+        await api.botStep(t.game.id);
+        break;
+      } catch (e) {
+        if (!(e as Error).message.includes('schaut sich')) break;
+        await new Promise((r) => setTimeout(r, 300));
+      }
+    }
+    await t.reloadGame();
+  };
   const reactions = useReactions(t.table?.id ?? null, t.me);
   const achievementFeed = useAchievementFeed(t.table?.id ?? null);
   const [busy, setBusy] = useState(false);
@@ -156,6 +172,8 @@ export function TablePage() {
           achievementFeed={achievementFeed}
           onAbort={() => run(() => api.abortGame(t.game!.id))}
           onHoldBots={setHoldBots}
+          collectAlways={watchingBots}
+          collectAction={watchingBots ? collectForBot : undefined}
           spectator={{
             on: !!myMember?.spectator,
             takenBy: spectatorMember && spectatorMember.user_id !== t.me ? spectatorMember.display_name : null,

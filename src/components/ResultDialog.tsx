@@ -6,6 +6,7 @@ import { sound } from '../lib/sound';
 import { hasSchweinchen, levelLabel, partyLabel, resultKindLabel, SCHMEISSEN_LABEL, trumpMode } from '../lib/gameText';
 import { arrangeHand } from '../lib/handSort';
 import { PlayingCard } from './PlayingCard';
+import { TrickList } from './TrickList';
 import type { SchmeissenReason } from '@engine';
 import { Medal } from 'lucide-react';
 import { BADGES, badgesOfGame } from '../lib/achievements';
@@ -276,6 +277,7 @@ function ResultBody({
         ))}
       </div>
       {revealed && <AllHands view={view} name={name} myPos={myPos} />}
+      {revealed && <AllTricks view={view} name={name} />}
     </>
   );
 }
@@ -366,6 +368,29 @@ function AllHands({ view, name, myPos }: { view: PublicGameState; name: (pos: nu
                 );
               })}
               <p className="text-[10px] text-white/40">So wurden die Karten ausgeteilt (vor einer Armut-Übergabe).</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/** Nach dem Spiel: alle Stiche der Reihe nach */
+function AllTricks({ view, name }: { view: PublicGameState; name: (pos: number) => string }) {
+  const [open, setOpen] = useState(false);
+  const tricks = view.tricks;
+  if (!tricks?.length) return null;
+  return (
+    <div className="mt-3">
+      <button className="btn-ghost tag px-2 py-1 text-[10px]" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        {open ? 'Stiche ausblenden' : `Alle Stiche ansehen (${tricks.length})`}
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <div className="mt-2">
+              <TrickList tricks={tricks} name={name} cardW={40} newestFirst={false} />
             </div>
           </motion.div>
         )}

@@ -59,6 +59,7 @@ import { type Rel, TrickArea, type TrickPlay } from './TrickArea';
 import { VideoTile } from './VideoTile';
 import { BotCat } from './BotCat';
 import { CardGuide } from './CardGuide';
+import { TrickList } from './TrickList';
 import { LearnPrompt, type LessonItem, LessonFeed, RulesPanel as LearnRules } from './Learn';
 import { BigTitle, ConceptCard, NotesRail, useBigTitle } from './Tutorial';
 import { CONCEPTS, type ConceptKey, RULE_CONCEPTS } from '../lib/lessons';
@@ -129,6 +130,7 @@ export function GameView({
   focusCards,
   guideGlow = false,
   collectAlways = false,
+  collectAction,
 }: {
   game: GameRow;
   hand: Card[];
@@ -152,6 +154,8 @@ export function GameView({
   guideGlow?: boolean;
   /** Übung: Jeden Stich nimmt der Spieler selbst vom Tisch – egal, wer ihn gewonnen hat */
   collectAlways?: boolean;
+  /** Statt der eigenen Aktion: so wird der Stich genommen (z. B. Bot-Zug anstoßen) */
+  collectAction?: () => Promise<void>;
   members: Member[];
   results: ResultRow[];
   /** Fertige Spiele des Abends, neuestes zuerst */
@@ -484,7 +488,7 @@ export function GameView({
     clock - collectSeen.at >= COLLECT_TIMEOUT_MS;
   const collect = () => {
     if (busy) return;
-    run(() => act({ type: 'collect' }));
+    run(() => (collectAction ? collectAction() : act({ type: 'collect' })));
   };
   const collectRef = useRef(collect);
   collectRef.current = collect;
@@ -1483,34 +1487,7 @@ function TricksDialog({ tricks, name, onClose, cardW }: { tricks: Trick[]; name:
             <X className="h-5 w-5" />
           </button>
         </div>
-        <ol className="flex flex-col gap-4">
-          {tricks
-            .map((t, n) => ({ t, n }))
-            .reverse()
-            .map(({ t, n }) => (
-              <li key={n} className="flex items-center gap-4 border-t border-white/[0.06] pt-3 first:border-0 first:pt-0">
-                <span className="tag w-16 shrink-0 text-[10px] text-white/45">
-                  Stich {n + 1}
-                  <span className="block text-gold-300/90 normal-case">{name(t.winner!)}</span>
-                </span>
-                <div className="flex gap-2">
-                  {t.cards.map((c, i) => {
-                    const pos = (t.leader + i) % 4;
-                    return (
-                      <div key={c} className="flex flex-col items-center gap-1">
-                        <PlayingCard card={c} width={cardW} className={pos === t.winner ? 'ring-2 ring-gold-400' : 'opacity-90'} />
-                        <span className="max-w-[4.5rem] truncate text-[10px] text-white/55">
-                          {i === 0 ? '▸ ' : ''}
-                          {name(pos)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </li>
-            ))}
-        </ol>
-        <p className="mt-4 text-xs text-white/40">▸ hat ausgespielt · Gold umrandet: hat den Stich gewonnen</p>
+        <TrickList tricks={tricks} name={name} cardW={cardW} />
       </div>
     </motion.div>
   );
