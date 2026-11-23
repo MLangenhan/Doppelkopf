@@ -8,7 +8,8 @@ import { ReactionBubble } from './Reactions';
 import type { FrameKey } from '../lib/cosmetics';
 import { Nametag } from './Nametag';
 import { ProfileCard } from './ProfileCard';
-import { VideoTile } from './VideoTile';
+import { colorFor, VideoTile } from './VideoTile';
+import { AVATARS } from '../lib/cosmetics';
 
 export function PartyBadge({ party, small }: { party: Party; small?: boolean }) {
   return (
@@ -48,6 +49,7 @@ export function Seat({
   avatarColor,
   profileId,
   peek,
+  plate = false,
   className = '',
 }: {
   name: string;
@@ -82,6 +84,8 @@ export function Seat({
   profileId?: string | null;
   /** Zuschauer: offene Hand dieses Spielers direkt über bzw. unter der Kamera */
   peek?: { node: ReactNode; v: 'above' | 'below' };
+  /** Ohne Kameras (Übung, nur Bots): flaches Namensschild statt Kamerakachel – gleiche Ecke, viel weniger Höhe */
+  plate?: boolean;
   className?: string;
 }) {
   const facts = [
@@ -95,58 +99,111 @@ export function Seat({
       {pile && !!tricks && <TrickPile count={tricks} {...pile} />}
       {peek?.v === 'above' && peek.node}
       <div className="relative">
-        <VideoTile
-          stream={stream}
-          name={name}
-          mirror={isMe}
-          connecting={connecting}
-          videoOff={videoOff}
-          small={compact}
-          avatar={avatar}
-          avatarColor={avatarColor}
-          className={`aspect-[4/3] w-full transition-[box-shadow] duration-300 ${isTurn ? 'shadow-[0_0_0_1px_rgba(217,180,90,0.6)]' : ''}`}
-        >
-          {media}
-          <span className={`absolute max-w-[92%] ${compact ? 'bottom-1 left-1' : 'bottom-2 left-2'}`}>
-            <ProfileCard userId={profileId} name={name}>
-              <Nametag
-                compact={compact}
-                name={isMe && name !== 'Du' && !compact ? `${name} (du)` : name}
-                title={title}
-                badges={badges}
-                frame={frame}
-                before={online === false ? <span className="size-1.5 shrink-0 rounded-full bg-white/30" title="Nicht verbunden" /> : undefined}
-                after={party && !compact ? <PartyBadge party={party} small /> : undefined}
-              />
-            </ProfileCard>
-          </span>
-          <AnimatePresence>
+        {plate ? (
+          <div
+            className={`relative flex items-center gap-3 rounded-xl bg-felt-900/70 p-2.5 ring-1 ring-white/[0.07] transition-[box-shadow] duration-300 ${
+              isTurn ? 'shadow-[0_0_0_1px_rgba(217,180,90,0.6)]' : ''
+            }`}
+          >
+            <div
+              className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-full font-bold text-felt-950 shadow-md [&_.tag]:hidden"
+              style={{ background: avatarColor ?? colorFor(name) }}
+              aria-hidden
+            >
+              {media ??
+                (avatar && AVATARS[avatar]
+                  ? (() => {
+                      const Icon = AVATARS[avatar];
+                      return <Icon className="size-[55%]" strokeWidth={2} />;
+                    })()
+                  : name.slice(0, 1).toUpperCase())}
+            </div>
+            <div className="min-w-0 flex-1">
+              <ProfileCard userId={profileId} name={name}>
+                <Nametag
+                  compact={compact}
+                  name={isMe && name !== 'Du' ? `${name} (du)` : name}
+                  title={title}
+                  badges={badges}
+                  frame={frame}
+                  before={online === false ? <span className="size-1.5 shrink-0 rounded-full bg-white/30" title="Nicht verbunden" /> : undefined}
+                  after={party ? <PartyBadge party={party} small /> : undefined}
+                />
+              </ProfileCard>
+            </div>
+            {media && <span className="tag pointer-events-none absolute right-2 bottom-1 text-[7px] text-white/35">Powered by GIPHY</span>}
             {callouts && callouts.length > 0 && (
-              <motion.div
-                key={callouts.join()}
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className={`absolute flex flex-col items-end gap-1 ${compact ? 'top-1 right-1' : 'top-2 right-2'}`}
-              >
-                {/* Ansagen gut sichtbar: Re blau, Kontra rot, Absagen gold – mit kurzem Aufploppen */}
+              <div className="flex shrink-0 flex-col items-end gap-1">
                 {callouts.map((c) => (
                   <motion.span
                     key={c}
                     initial={{ scale: 1.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ type: 'spring', stiffness: 380, damping: 16 }}
-                    className={`tag rounded-md font-bold text-felt-950 shadow-lg ${
-                      compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs'
-                    } ${c === 'Re' ? 'bg-re' : c === 'Kontra' ? 'bg-kontra' : 'bg-gold-400'}`}
+                    className={`tag rounded-md px-2 py-0.5 text-[10px] font-bold text-felt-950 shadow-lg ${
+                      c === 'Re' ? 'bg-re' : c === 'Kontra' ? 'bg-kontra' : 'bg-gold-400'
+                    }`}
                   >
                     {c}
                   </motion.span>
                 ))}
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
-        </VideoTile>
+          </div>
+        ) : (
+          <VideoTile
+            stream={stream}
+            name={name}
+            mirror={isMe}
+            connecting={connecting}
+            videoOff={videoOff}
+            small={compact}
+            avatar={avatar}
+            avatarColor={avatarColor}
+            className={`aspect-[4/3] w-full transition-[box-shadow] duration-300 ${isTurn ? 'shadow-[0_0_0_1px_rgba(217,180,90,0.6)]' : ''}`}
+          >
+            {media}
+            <span className={`absolute max-w-[92%] ${compact ? 'bottom-1 left-1' : 'bottom-2 left-2'}`}>
+              <ProfileCard userId={profileId} name={name}>
+                <Nametag
+                  compact={compact}
+                  name={isMe && name !== 'Du' && !compact ? `${name} (du)` : name}
+                  title={title}
+                  badges={badges}
+                  frame={frame}
+                  before={online === false ? <span className="size-1.5 shrink-0 rounded-full bg-white/30" title="Nicht verbunden" /> : undefined}
+                  after={party && !compact ? <PartyBadge party={party} small /> : undefined}
+                />
+              </ProfileCard>
+            </span>
+            <AnimatePresence>
+              {callouts && callouts.length > 0 && (
+                <motion.div
+                  key={callouts.join()}
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className={`absolute flex flex-col items-end gap-1 ${compact ? 'top-1 right-1' : 'top-2 right-2'}`}
+                >
+                  {/* Ansagen gut sichtbar: Re blau, Kontra rot, Absagen gold – mit kurzem Aufploppen */}
+                  {callouts.map((c) => (
+                    <motion.span
+                      key={c}
+                      initial={{ scale: 1.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 16 }}
+                      className={`tag rounded-md font-bold text-felt-950 shadow-lg ${
+                        compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs'
+                      } ${c === 'Re' ? 'bg-re' : c === 'Kontra' ? 'bg-kontra' : 'bg-gold-400'}`}
+                    >
+                      {c}
+                    </motion.span>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </VideoTile>
+        )}
         <ReactionBubble reaction={reaction} compact={compact} />
         {/* Wer dran ist: goldene Eckwinkel, die sich um die Kachel ziehen */}
         <AnimatePresence>

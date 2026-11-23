@@ -21,16 +21,19 @@ export function TablePage() {
   const t = useTable(code);
   const camera = useCamera();
   const { remotes, online } = useVideoMesh(t.table?.id, t.me, camera.stream);
-  useBotDriver(t.game, t.me, online, t.reloadGame);
+  const [holdBots, setHoldBots] = useState(false);
+  useBotDriver(t.game, t.me, online, t.reloadGame, holdBots);
   const reactions = useReactions(t.table?.id ?? null, t.me);
   const achievementFeed = useAchievementFeed(t.table?.id ?? null);
   const [busy, setBusy] = useState(false);
   const [lobby, setLobby] = useState(false);
 
   // Kamera beim Betreten des Tisches anfragen – außer man hat sie zuletzt bewusst ausgeschaltet
+  // Allein mit Bots (Übung) braucht es keine Kamera – sie startet erst, wenn jemand dazukommt
+  const othersHere = t.members.some((m) => m.user_id !== t.me);
   useEffect(() => {
-    if (t.table && getPrefs().camera) camera.start();
-  }, [t.table?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (t.table && othersHere && getPrefs().camera && camera.state === 'off') camera.start();
+  }, [t.table?.id, othersHere]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const running = t.game?.status === 'running';
   // Hinweis, wenn jemand das laufende Spiel abbricht
@@ -152,6 +155,7 @@ export function TablePage() {
           reactions={reactions}
           achievementFeed={achievementFeed}
           onAbort={() => run(() => api.abortGame(t.game!.id))}
+          onHoldBots={setHoldBots}
           spectator={{
             on: !!myMember?.spectator,
             takenBy: spectatorMember && spectatorMember.user_id !== t.me ? spectatorMember.display_name : null,

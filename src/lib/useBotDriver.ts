@@ -12,7 +12,14 @@ const FALLBACK = 3500;
  * Der erste anwesende Mensch (in Sitzreihenfolge) stößt den Zug nach einer kurzen Pause an,
  * die anderen nur als Reserve. Doppelte Anstöße lehnt der Server ab (Versionsprüfung).
  */
-export function useBotDriver(game: GameRow | null, me: string | null, online: string[], reload?: () => Promise<void>) {
+export function useBotDriver(
+  game: GameRow | null,
+  me: string | null,
+  online: string[],
+  reload?: () => Promise<void>,
+  /** Lernmodus am reinen Bot-Tisch: warten, bis die Erklärung zum letzten Stich geschlossen ist */
+  hold = false,
+) {
   const [retry, setRetry] = useState(0);
   const state = game?.state;
   const pos = game && game.status === 'running' && state ? actorOf(state) : null;
@@ -23,7 +30,7 @@ export function useBotDriver(game: GameRow | null, me: string | null, online: st
   const key = game ? `${game.id}:${game.version}:${retry}` : '';
 
   useEffect(() => {
-    if (!botTurn || !game || !me) return;
+    if (!botTurn || !game || !me || hold) return;
     const base = state!.collectPending ? DELAY.collect : state!.phase === 'playing' ? DELAY.play : DELAY.declare;
     const wait = base + (driver === me ? 0 : FALLBACK);
     const t = setTimeout(async () => {
@@ -37,5 +44,5 @@ export function useBotDriver(game: GameRow | null, me: string | null, online: st
       }
     }, wait);
     return () => clearTimeout(t);
-  }, [key, botTurn]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key, botTurn, hold]); // eslint-disable-line react-hooks/exhaustive-deps
 }

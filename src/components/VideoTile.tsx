@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useRef } from 'react';
 
 const AVATAR_COLORS = ['#c98b6b', '#6fa596', '#c9ae6b', '#8fa878', '#9a88c4', '#c48aa6', '#6f9cc4'];
 
-function colorFor(name: string) {
+export function colorFor(name: string) {
   let h = 0;
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return AVATAR_COLORS[h % AVATAR_COLORS.length];

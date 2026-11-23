@@ -117,6 +117,7 @@ export function GameView({
   achievementFeed,
   otherHands,
   spectator,
+  onHoldBots,
 }: {
   game: GameRow;
   hand: Card[];
@@ -124,6 +125,8 @@ export function GameView({
   otherHands?: Record<string, Card[]>;
   /** Zuschauerplatz: an/aus ab dem nächsten Spiel; takenBy = jemand anderes schaut schon zu */
   spectator?: { on: boolean; takenBy: string | null; toggle: (on: boolean) => void };
+  /** Bots anhalten, solange die Erklärung zum letzten Stich offen ist (Lernmodus, nur Bots) */
+  onHoldBots?: (hold: boolean) => void;
   members: Member[];
   results: ResultRow[];
   /** Fertige Spiele des Abends, neuestes zuerst */
@@ -158,6 +161,8 @@ export function GameView({
   useEffect(preloadCards, []);
   const view = game.state;
   const myPos = me ? game.players.indexOf(me) : -1;
+  // Übung: kein anderer Mensch am Tisch → keine Kameras, flache Namensschilder, mehr Platz für den Tisch
+  const noCams = !members.some((m) => m.user_id !== me && !isBotSeat(m.user_id));
   // Wer aussetzt (zu fünft), sieht den Tisch von seinem Platz aus: unten links sitzt, wer nach ihm im Uhrzeigersinn kommt.
   // So rotiert die Ansicht mit dem Geber mit, und alle vier Spieler sind mit Kamera zu sehen.
   const mySeat = me ? members.find((m) => m.user_id === me)?.seat : undefined;
@@ -303,6 +308,13 @@ export function GameView({
       setLevelTricks((n) => n + fresh.length);
     }
   }, [pastTricks, learning, game.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Nur Bots spielen: Weiter geht's erst, wenn die Erklärung zum letzten Stich geschlossen ist
+  const botsOnly = game.players.every((u) => isBotSeat(u));
+  const holdBots = learning && botsOnly && lessons.some((l) => l.number === pastTricks.length);
+  useEffect(() => {
+    onHoldBots?.(holdBots);
+  }, [holdBots, onHoldBots]);
+  useEffect(() => () => onHoldBots?.(false), [onHoldBots]);
   const liveTrick = view.phase === 'playing' && view.current && view.current.cards.length > 0 && !view.collectPending ? view.current : null;
   // Lernstufe (Scaffolding): wandert mit dem Konto; nach ein paar Stichen auf einer Stufe kommt der Hinweis „weiter“
   const learnLevel = Math.min(4, Math.max(1, Math.round(prefs.learnLevel) || 1));
@@ -332,7 +344,7 @@ export function GameView({
       onDone={(id) => setLessons((cur) => cur.filter((x) => x.id !== id))}
       onHoverPos={setHoverPos}
       level={learnLevel}
-      manual={game.players.every((u) => isBot(u))}
+      manual={botsOnly}
     />
   );
   const rulesPanel = learning && (
@@ -728,6 +740,7 @@ export function GameView({
         avatar={members.find((m) => m.user_id === uid)?.avatar}
         avatarColor={members.find((m) => m.user_id === uid)?.avatar_color}
         profileId={isBotSeat(uid) || uid === 'me' || compact ? null : uid}
+        plate={noCams && !compact}
         peek={!compact && seatPeek && seatPeek(r) ? { node: seatPeek(r), v: r === 0 || r === 3 ? 'above' : 'below' } : undefined}
       />
     );
@@ -874,7 +887,7 @@ export function GameView({
       <button className="btn-ghost p-2" onClick={() => setSidebarOpen(true)} aria-label="Punkte und Regeln" data-cursor="Punkte">
         <ListOrdered className="size-4" />
       </button>
-      {camera.state === 'on' ? (
+      {noCams ? null : camera.state === 'on' ? (
         <button
           className={`btn-ghost p-2 ${camera.enabled ? '' : 'text-red-300'}`}
           onClick={camera.toggle}
@@ -1056,7 +1069,7 @@ export function GameView({
     <LastTrick trick={view.collectPending ? view.previousTrick : view.lastTrick} name={name} cardW={mobile ? 30 : 44} />
   );
 
-  const sittingOutTiles = sittingOut.map((m) => (
+  const sittingOutTiles = (noCams ? [] : sittingOut).map((m) => (
     <VideoTile
       key={m.user_id}
       stream={streamOf(m.user_id)}
