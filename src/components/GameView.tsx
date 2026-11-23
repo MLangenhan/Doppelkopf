@@ -810,7 +810,7 @@ export function GameView({
         avatar={members.find((m) => m.user_id === uid)?.avatar}
         avatarColor={members.find((m) => m.user_id === uid)?.avatar_color}
         profileId={isBotSeat(uid) || uid === 'me' || compact ? null : uid}
-        plate={noCams && !compact}
+        plate={(noCams || isBotSeat(uid)) && !compact}
         peek={!compact && seatPeek && seatPeek(r) ? { node: seatPeek(r), v: r === 0 || r === 3 ? 'above' : 'below' } : undefined}
       />
     );
