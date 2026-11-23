@@ -40,6 +40,7 @@ export type ConceptKey =
   | 'specials'
   | 'winnerLeads'
   | 'followTrump'
+  | 'doubles'
   | 'fehlOrder'
   | 'order'
   | 'dulle'
@@ -68,7 +69,7 @@ export interface Concept {
 
 export const CONCEPTS: Record<ConceptKey, Concept> = {
   pairs: { stage: 1, icon: Users, title: 'Zwei gegen zwei', points: ['Wer eine Kreuz-Dame hat, spielt „Re“ – die anderen „Kontra“.', 'Wer dein Partner ist, weißt du am Anfang nicht.'] },
-  trick: { stage: 1, icon: Layers, title: 'Der Stich', points: ['Reihum legt jeder eine Karte in die Mitte.', 'Die stärkste Karte gewinnt alle vier.'] },
+  trick: { stage: 1, icon: Layers, title: 'Der Stich', points: ['Reihum legt jeder eine Karte in die Mitte.', 'Die stärkste gewinnt den Stich.'] },
   lead: { stage: 1, icon: Play, title: 'Ausspielen', points: ['Wer beginnt, darf jede Karte legen.', 'Die erste Karte bestimmt, was bedient werden muss.'] },
   follow: { stage: 1, icon: Check, title: 'Bedienen', points: ['Liegt eine Farbe, musst du sie zugeben, wenn du kannst.', 'Die Hand zeigt dir, welche Karten erlaubt sind.'] },
   cantFollow: { stage: 1, icon: Zap, title: 'Nicht bedienen können', points: ['Dann darfst du stechen: Trumpf schlägt jede Farbe.', 'Oder abwerfen: Die Karte kann dann nicht gewinnen.'] },
@@ -76,10 +77,19 @@ export const CONCEPTS: Record<ConceptKey, Concept> = {
   followTrump: { stage: 1, icon: Check, title: 'Trumpf bedienen', points: ['Liegt Trumpf, musst du Trumpf zugeben.', 'Herz-10 und Damen zählen dabei als Trumpf, nicht als Farbe.'] },
   specials: { stage: 1, icon: Flame, title: 'Besondere Karten', points: ['Herz-10 „Dulle“: höchster Trumpf · Kreuz-Dame: zeigt Re.', 'Karo-Ass „Fuchs“ und Kreuz-Bube „Karlchen“ bringen später Extrapunkte.'] },
   winnerLeads: { stage: 1, icon: Repeat, title: 'Wer gewinnt, fängt an', points: ['Der Gewinner nimmt den Stich.', 'Und spielt den nächsten aus.'] },
+  doubles: {
+    stage: 2,
+    icon: Copy,
+    title: 'Alles doppelt',
+    points: [
+      'Jede Karte gibt es zweimal – daher der Name „Doppelkopf“.',
+      'Herz hat nur vier Karten (die Herz-10 ist Trumpf). Darum geht der erste Herz-Stich selten rum – einer kann nicht bedienen und sticht.',
+    ],
+  },
   fehlOrder: { stage: 2, icon: ArrowDownWideNarrow, title: 'Reihenfolge der Farben', points: ['In Kreuz, Pik und Herz gilt: Ass › Zehn › König.', 'Die Zehn ist also stärker als der König.'] },
   order: { stage: 2, icon: ListOrdered, title: 'Trumpf-Rangfolge', points: ['Herz-10 › Damen › Buben › Karo-Ass › Karo-10 › Karo-König.', 'Damen und Buben: Kreuz › Pik › Herz › Karo.'] },
   dulle: { stage: 2, icon: Flame, title: 'Zwei Dullen', points: ['Die Herz-10 ist der höchste Trumpf.', 'Liegen beide im Stich, gewinnt hier die erste.'] },
-  equal: { stage: 2, icon: Copy, title: 'Gleiche Karten', points: ['Jede Karte gibt es zweimal.', 'Liegen beide im Stich, gewinnt die zuerst gespielte.'] },
+  equal: { stage: 2, icon: Copy, title: 'Gleiche Karten', points: ['Liegen beide Exemplare einer Karte im Stich …', '… gewinnt die zuerst gespielte.'] },
   reveal: { stage: 3, icon: Eye, title: 'Partner erkennen', points: ['Wer eine Kreuz-Dame spielt, verrät: „Ich bin Re.“', 'Sobald beide liegen, stehen die Paare fest.'] },
   announce: { stage: 3, icon: Megaphone, title: 'Ansage „Re“', points: ['Mit einer Kreuz-Dame kannst du früh „Re“ ansagen.', 'Das verrät deine Partei und verdoppelt den Einsatz.'] },
   kontra: { stage: 3, icon: Megaphone, title: 'Ansage „Kontra“', points: ['Die Gegenseite kann mit „Kontra“ dagegenhalten.', 'Auch das verdoppelt den Einsatz.'] },
@@ -213,6 +223,7 @@ export const LESSONS: Lesson[] = [
     ),
     beats: [
       { t: 'title', text: 'Lektion 2', sub: 'Rangfolge' },
+      card('doubles'),
       card('fehlOrder'),
       play(0, 'C-K-0'),
       play(1, 'C-10-0'),
@@ -326,7 +337,7 @@ export const RULE_CONCEPTS: Record<string, ConceptKey[]> = {
   trumpBeats: ['trump'],
   special: ['specials'],
   order: ['order'],
-  equal: ['equal'],
+  equal: ['doubles', 'equal'],
   dulle: ['dulle'],
   spielart: [],
   ansagen: ['announce'],
