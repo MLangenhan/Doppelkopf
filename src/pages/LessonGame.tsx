@@ -83,6 +83,8 @@ export function LessonGame({
     const mine = (pos: number) => pos === 0 && !watch;
     switch (beat.t) {
       case 'card':
+        // Erst den großen Titel ausklingen lassen, dann die nächste Lernkarte
+        if (title) return;
         setOpen(beat.concept);
         return;
       case 'title': {
@@ -144,7 +146,7 @@ export function LessonGame({
         showTitle(`Lektion ${stage} geschafft`, STAGES[stage - 1].title);
         return;
     }
-  }, [beat, idx, open, state]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [beat, idx, open, state, beat?.t === 'card' ? title : null]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Weiterspielen nach der Lektion: Bots spielen frei
   useEffect(() => {
@@ -224,7 +226,11 @@ export function LessonGame({
         tutorial
       />
       <AnimatePresence>{open && <ConceptCard key={open} concept={open} onDone={dismiss} />}</AnimatePresence>
-      <NotesRail notes={notes.filter((k) => k !== open)} mobile={mobile} />
+      <NotesRail
+        notes={notes.filter((k) => k !== open)}
+        mobile={mobile}
+        right={watch ? Math.round(Math.max(180, Math.min(400, vp.w * 0.22, vp.h * 0.36))) + 24 : 8}
+      />
       <BigTitle title={title} />
       {/* Was jetzt zu tun ist – deutlich über der Hand */}
       <AnimatePresence>

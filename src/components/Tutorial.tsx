@@ -92,7 +92,18 @@ export function ConceptCard({
 // Merkzettel am rechten Rand
 // ---------------------------------------------------------------------------
 
-export function NotesRail({ notes, mobile, inline = false }: { notes: ConceptKey[]; mobile: boolean; inline?: boolean }) {
+export function NotesRail({
+  notes,
+  mobile,
+  inline = false,
+  right = 8,
+}: {
+  notes: ConceptKey[];
+  mobile: boolean;
+  inline?: boolean;
+  /** Abstand zum rechten Rand – beim Zuschauen neben die Kartenspalte rücken */
+  right?: number;
+}) {
   const [open, setOpen] = useState<ConceptKey | null>(null);
   const [sheet, setSheet] = useState(false);
   if (!notes.length) return null;
@@ -183,7 +194,7 @@ export function NotesRail({ notes, mobile, inline = false }: { notes: ConceptKey
     );
   }
   return (
-    <aside className="fixed top-[180px] right-2 z-[60] flex max-h-[calc(100vh-380px)] w-56 flex-col gap-1.5 overflow-y-auto" aria-label="Merkzettel">
+    <aside className="fixed top-[180px] z-[60] flex max-h-[calc(100vh-380px)] w-56 flex-col gap-1.5 overflow-y-auto" style={{ right }} aria-label="Merkzettel">
       <p className="tag flex items-center gap-1.5 px-1 text-[10px] text-white/50">
         <Pin className="size-3" /> Merkzettel
       </p>
