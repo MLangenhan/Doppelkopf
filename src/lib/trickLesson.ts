@@ -101,7 +101,7 @@ export function ruleTexts(
     pairs: { title: 'Paare', text: 'Re (mit Kreuz-Dame) gegen Kontra. Erst wer die Kreuz-Dame spielt, verrät sich.' },
     lead: { title: 'Ausspielen', text: 'Wer den letzten Stich holt, spielt frei aus.' },
     follow: { title: 'Bedienen', text: 'Ausgespielte Farbe bzw. Trumpf muss zugegeben werden.' },
-    free: { title: 'Nicht bedienen können', text: 'Dann frei: stechen (Trumpf) oder abwerfen.' },
+    free: { title: 'Nicht bedienen können', text: 'Dann darfst du jede andere Karte legen – mit Trumpf holst du den Stich.' },
     trump: { title: 'Trumpf', text: trumpText },
     trumpBeats: { title: 'Stechen', text: 'Trumpf schlägt jede Fehlfarbe.' },
     highest: { title: 'Höchste Karte', text: 'Sonst gewinnt die höchste Karte der ausgespielten Farbe.' },
@@ -216,7 +216,7 @@ export function lessonText(l: TrickLesson, cards: Card[], ctx: TrickContext, nam
     if (p.kind === 'lead') lines.push(`${who} spielt ${card} aus – ${led === 'T' ? 'Trumpf' : `Fehlfarbe ${ledName}`}. Alle müssen ${ledName} bedienen.`);
     else if (p.kind === 'follow') lines.push(`${who} bedient mit ${card}${lead}.`);
     else if (p.kind === 'trump') lines.push(`${who} hat kein ${ledName} mehr und sticht mit ${card} (Trumpf)${lead}.`);
-    else lines.push(`${who} hat kein ${ledName} mehr und wirft ${card} ab – das kann nicht gewinnen.`);
+    else lines.push(`${who} hat kein ${ledName} mehr und legt ${card} – eine andere Farbe holt den Stich nicht.`);
     if (ctx.mode === 'normal' && faceOf(p.card) === 'C-Q') lines.push(`Kreuz-Dame gespielt: ${who} gehört zu Re.`);
   }
   if (l.complete) {

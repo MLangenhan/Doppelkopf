@@ -65,16 +65,36 @@ export interface Concept {
   title: string;
   /** Höchstens zwei kurze Aspekte */
   points: [string] | [string, string];
+  /** Welche Karten in der Hand beim Lesen markiert werden */
+  focus?: 'ledSuit' | 'trumps';
 }
 
 export const CONCEPTS: Record<ConceptKey, Concept> = {
   pairs: { stage: 1, icon: Users, title: 'Zwei gegen zwei', points: ['Wer eine Kreuz-Dame hat, spielt „Re“ – die anderen „Kontra“.', 'Wer dein Partner ist, weißt du am Anfang nicht.'] },
   trick: { stage: 1, icon: Layers, title: 'Der Stich', points: ['Reihum legt jeder eine Karte in die Mitte.', 'Die stärkste gewinnt den Stich.'] },
   lead: { stage: 1, icon: Play, title: 'Ausspielen', points: ['Wer beginnt, darf jede Karte legen.', 'Die erste Karte bestimmt, was bedient werden muss.'] },
-  follow: { stage: 1, icon: Check, title: 'Bedienen', points: ['Liegt eine Farbe, musst du sie zugeben, wenn du kannst.', 'Die Hand zeigt dir, welche Karten erlaubt sind.'] },
-  cantFollow: { stage: 1, icon: Zap, title: 'Nicht bedienen können', points: ['Dann darfst du stechen: Trumpf schlägt jede Farbe.', 'Oder abwerfen: Die Karte kann dann nicht gewinnen.'] },
-  trump: { stage: 1, icon: Sparkles, title: 'Trumpf', points: ['Alle Damen, alle Buben, alle Karo-Karten und die Herz-10.', 'Trumpf ist stärker als Kreuz, Pik und Herz.'] },
-  followTrump: { stage: 1, icon: Check, title: 'Trumpf bedienen', points: ['Liegt Trumpf, musst du Trumpf zugeben.', 'Herz-10 und Damen zählen dabei als Trumpf, nicht als Farbe.'] },
+  follow: {
+    stage: 1,
+    icon: Check,
+    title: 'Bedienen',
+    points: ['Ist eine Farbe ausgespielt, musst du bedienen – also die gleiche Farbe spielen.', 'Die markierten Karten in der Hand sind die, die passen.'],
+    focus: 'ledSuit',
+  },
+  cantFollow: { stage: 1, icon: Zap, title: 'Nicht bedienen können', points: ['Hast du die ausgespielte Farbe nicht, darfst du jede andere Karte legen – auch eine andere Farbe.', 'Mit Trumpf kannst du den Stich sogar holen: Trumpf schlägt jede Farbe.'] },
+  trump: {
+    stage: 1,
+    icon: Sparkles,
+    title: 'Trumpf',
+    points: ['Alle Damen, alle Buben, alle Karo-Karten und die Herz-10 – markiert in der Hand.', 'Trumpf ist stärker als Kreuz, Pik und Herz.'],
+    focus: 'trumps',
+  },
+  followTrump: {
+    stage: 1,
+    icon: Check,
+    title: 'Trumpf bedienen',
+    points: ['Ist Trumpf ausgespielt, musst du Trumpf zugeben – markiert in der Hand.', 'Herz-10 und Damen zählen dabei als Trumpf, nicht als Farbe.'],
+    focus: 'ledSuit',
+  },
   specials: { stage: 1, icon: Flame, title: 'Besondere Karten', points: ['Herz-10 „Dulle“: höchster Trumpf · Kreuz-Dame: zeigt Re.', 'Karo-Ass „Fuchs“ und Kreuz-Bube „Karlchen“ bringen später Extrapunkte.'] },
   winnerLeads: { stage: 1, icon: Repeat, title: 'Wer gewinnt, fängt an', points: ['Der Gewinner nimmt den Stich.', 'Und spielt den nächsten aus.'] },
   doubles: {
@@ -161,7 +181,7 @@ const card = (concept: ConceptKey): Beat => ({ t: 'card', concept });
 const collect: Beat = { t: 'collect' };
 
 export const LESSONS: Lesson[] = [
-  // Stufe 1: Grundlagen – Ausspielen, Bedienen, Abwerfen, Stechen, Trumpf bedienen, Sonderkarten
+  // Stufe 1: Grundlagen – Ausspielen, Bedienen, andere Farbe legen, Stechen, Trumpf bedienen, Sonderkarten
   {
     stage: 1,
     starter: 0,

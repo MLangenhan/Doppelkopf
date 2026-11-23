@@ -126,6 +126,7 @@ export function GameView({
   tutorial = false,
   allowAnnounce = true,
   playedCards,
+  focusCards,
 }: {
   game: GameRow;
   hand: Card[];
@@ -143,6 +144,8 @@ export function GameView({
   allowAnnounce?: boolean;
   /** Lektion: alle schon gespielten Karten (für die Kartenübersicht) */
   playedCards?: Card[];
+  /** Lektion: Karten, die gerade erklärt werden (in der eigenen Hand bzw. den offenen Händen) */
+  focusCards?: Card[] | null;
   members: Member[];
   results: ResultRow[];
   /** Fertige Spiele des Abends, neuestes zuerst */
@@ -755,7 +758,9 @@ export function GameView({
                   card={c}
                   width={w}
                   style={{ marginLeft: i ? -w * (1 - step) : 0 }}
-                  className={`shadow-md ring-1 ring-black/20 transition-[opacity,filter] duration-300 ${legal && !legal.has(c) ? 'opacity-35 saturate-50' : ''}`}
+                  className={`shadow-md transition-[opacity,filter,box-shadow] duration-300 ${
+                    focusCards?.includes(c) ? 'relative z-10 shadow-[0_0_14px_rgba(217,180,90,0.8)] ring-2 ring-gold-400' : 'ring-1 ring-black/20'
+                  } ${(legal && !legal.has(c)) || (focusCards?.length && cards.some((x) => focusCards.includes(x)) && !focusCards.includes(c)) ? 'opacity-35 saturate-50' : ''}`}
                 />
               ))}
             </div>
@@ -1094,7 +1099,8 @@ export function GameView({
       mode={view.phase === 'armutReturn' && isRichReturning ? 'pick' : view.phase === 'playing' ? 'play' : 'view'}
       playable={playable}
       picked={picked}
-      highlight={forcedCard ? new Set([forcedCard]) : newCards}
+      highlight={newCards}
+      focus={focusCards?.length ? new Set(focusCards) : forcedCard ? new Set([forcedCard]) : null}
       maxCardW={mobile ? 84 : 124}
       onPick={(c) =>
         setPicked((cur) => {

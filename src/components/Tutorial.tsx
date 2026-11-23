@@ -16,12 +16,15 @@ export function ConceptCard({
   onDone,
   modal = true,
   doneLabel = 'Verstanden',
+  reveal = false,
 }: {
   concept: ConceptKey;
   onDone: () => void;
   /** Offline: Spiel steht, Hintergrund abgedunkelt. Online: schwebt nur über dem Tisch. */
   modal?: boolean;
   doneLabel?: string;
+  /** Markierte Karten in der Hand sollen sichtbar bleiben: Karte oben, Hintergrund kaum abgedunkelt */
+  reveal?: boolean;
 }) {
   const c = CONCEPTS[concept];
   const Icon = c.icon;
@@ -78,7 +81,7 @@ export function ConceptCard({
   if (!modal) return body;
   return (
     <motion.div
-      className="fixed inset-0 z-[70] grid place-items-center bg-black/45 p-4"
+      className={`fixed inset-0 z-[70] grid justify-items-center p-4 transition-colors ${reveal ? 'items-start bg-black/10 pt-[12vh]' : 'place-items-center bg-black/45'}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

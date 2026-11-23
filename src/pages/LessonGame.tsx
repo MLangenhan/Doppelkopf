@@ -6,6 +6,8 @@ import {
   cardName,
   createGame,
   DEFAULT_SETTINGS,
+  effectiveSuit,
+  isTrump,
   type GameAction,
   type GameState,
   publicView,
@@ -16,7 +18,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GameView, useViewport } from '../components/GameView';
 import { BigTitle, ConceptCard, LayoutGroup, NotesRail, useBigTitle } from '../components/Tutorial';
-import { type ConceptKey, lessonFor, STAGES } from '../lib/lessons';
+import { CONCEPTS, type ConceptKey, lessonFor, STAGES } from '../lib/lessons';
 import { setPref, usePrefs } from '../lib/prefs';
 import type { GameRow, Member } from '../lib/supabase';
 import type { CameraControls } from '../components/CameraButton';
@@ -164,6 +166,19 @@ export function LessonGame({
     return () => clearTimeout(t);
   }, [free, state, watch]);
 
+  // Beim Lesen einer Lernkarte die passenden Karten markieren: eigene Hand, beim Zuschauen die des nächsten Spielers
+  const focusCards = useMemo(() => {
+    const f = open ? CONCEPTS[open].focus : undefined;
+    if (!f) return null;
+    const ctx = { mode: 'normal' as const, schweinchen: false };
+    const who = watch ? (actorOf(state) ?? 0) : 0;
+    const hand = state.hands[who];
+    if (f === 'trumps') return hand.filter((c) => isTrump(c, ctx));
+    const led = state.current?.cards[0];
+    if (!led) return null;
+    return hand.filter((c) => effectiveSuit(c, ctx) === effectiveSuit(led, ctx));
+  }, [open, state, watch]);
+
   const forcedCard: Card | null = beat?.t === 'play' && beat.pos === 0 && !watch && !open ? beat.card : null;
 
   const act = useCallback(async (a: GameAction) => {
@@ -222,11 +237,14 @@ export function LessonGame({
         startGame={async () => onFree()}
         onLeave={onExit}
         forcedCard={forcedCard}
+        focusCards={focusCards}
         playedCards={(state.collectPending ? state.tricks.slice(0, -1) : state.tricks).flatMap((t) => t.cards)}
         allowAnnounce={stage === 3 || free}
         tutorial
       />
-      <AnimatePresence>{open && <ConceptCard key={open} concept={open} onDone={dismiss} />}</AnimatePresence>
+      <AnimatePresence>
+        {open && <ConceptCard key={open} concept={open} onDone={dismiss} reveal={!!focusCards?.length} />}
+      </AnimatePresence>
       <NotesRail
         notes={notes.filter((k) => k !== open)}
         mobile={mobile}

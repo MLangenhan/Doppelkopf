@@ -23,6 +23,7 @@ export function Hand({
   onSelect,
   onReorder,
   highlight,
+  focus,
   dealKey,
   maxCardW = 124,
 }: {
@@ -39,6 +40,8 @@ export function Hand({
   onReorder?: (cards: Card[]) => void;
   /** Karten, die markiert werden sollen (z. B. neu erhalten) */
   highlight?: Set<Card>;
+  /** Lektion: diese Karten hervorheben (gold, leicht angehoben) – ohne „neu“-Schild */
+  focus?: Set<Card> | null;
   /** Ändert sich bei jedem neuen Spiel → Austeil-Animation */
   dealKey: string;
   maxCardW?: number;
@@ -180,9 +183,10 @@ export function Hand({
       <AnimatePresence>
         {cards.map((card, i) => {
           const isPlayable = mode === 'play' && !!playable?.has(card);
-          const dimmed = mode === 'play' && playable !== null && !isPlayable;
+          const dimmed = (mode === 'play' && playable !== null && !isPlayable) || (!!focus && focus.size > 0 && !focus.has(card));
           const isSelected = selected === card || !!picked?.has(card);
-          const isNew = highlight?.has(card);
+          const isNew = highlight?.has(card) && !focus;
+          const isFocus = !!focus?.has(card);
           const interactive = mode === 'pick' || isPlayable;
           const dragging = drag?.card === card;
           const slot = order.indexOf(card);
@@ -207,7 +211,7 @@ export function Hand({
               animate={{
                 opacity: 1,
                 x,
-                y: dragging ? -22 : isSelected ? -30 : cursor === card ? -12 : 0,
+                y: dragging ? -22 : isSelected ? -30 : isFocus ? -18 : cursor === card ? -12 : 0,
                 rotate: dragging ? (drag.dx > 0 ? 4 : -4) : 0,
                 scale: dragging ? 1.05 : 1,
                 filter: dimmed ? 'brightness(0.55) saturate(0.6)' : 'brightness(1) saturate(1)',
@@ -228,7 +232,15 @@ export function Hand({
                 <PlayingCard
                   card={card}
                   width={cardW}
-                  className={isSelected ? 'ring-4 ring-gold-400' : cursor === card ? 'ring-4 ring-white/80' : ''}
+                  className={
+                    isSelected
+                      ? 'ring-4 ring-gold-400'
+                      : isFocus
+                        ? 'shadow-[0_0_18px_rgba(217,180,90,0.75)] ring-4 ring-gold-400'
+                        : cursor === card
+                          ? 'ring-4 ring-white/80'
+                          : ''
+                  }
                 />
               </TiltCard>
               {isNew && (

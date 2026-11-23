@@ -98,7 +98,7 @@ const KIND_ICON: Record<PlayKind, { icon: ReactNode; label: string; cls: string 
   },
   discard: {
     icon: <ArrowDown className="size-3" />,
-    label: 'wirft ab',
+    label: 'legt eine andere Farbe',
     cls: 'text-white/40',
   },
 };
