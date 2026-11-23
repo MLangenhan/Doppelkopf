@@ -1,4 +1,4 @@
-import { ChevronDown, Eye, GraduationCap, Pin, Play, Shuffle, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ChevronDown, Eye, GraduationCap, Pin, Play, Shuffle, X } from 'lucide-react';
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { CONCEPTS, type ConceptKey, STAGES } from '../lib/lessons';
@@ -17,6 +17,8 @@ export function ConceptCard({
   modal = true,
   doneLabel = 'Verstanden',
   reveal = false,
+  guideSide = null,
+  center = false,
 }: {
   concept: ConceptKey;
   onDone: () => void;
@@ -25,6 +27,10 @@ export function ConceptCard({
   doneLabel?: string;
   /** Markierte Karten in der Hand sollen sichtbar bleiben: Karte oben, Hintergrund kaum abgedunkelt */
   reveal?: boolean;
+  /** Wo die Kartenübersicht steht – dann gibt es einen Verweis darauf (null = keine Übersicht sichtbar) */
+  guideSide?: 'left' | 'below' | null;
+  /** Oberflächen-Tour: mittig mit hellem Hintergrund, damit oben und unten alles sichtbar bleibt */
+  center?: boolean;
 }) {
   const c = CONCEPTS[concept];
   const Icon = c.icon;
@@ -72,6 +78,14 @@ export function ConceptCard({
           </li>
         ))}
       </ul>
+      {c.guide && guideSide && (
+        <p className="mt-4 flex items-start gap-2 rounded-xl bg-emerald-400/10 px-3 py-2 text-sm leading-snug text-emerald-100 ring-1 ring-emerald-300/25">
+          {guideSide === 'left' ? <ArrowLeft className="mt-0.5 size-4 shrink-0" /> : <ArrowDown className="mt-0.5 size-4 shrink-0" />}
+          <span>
+            <span className="font-semibold">Kartenübersicht {guideSide === 'left' ? 'links' : 'unten'}:</span> {c.guide}
+          </span>
+        </p>
+      )}
       <button className="btn-primary mt-6 w-full justify-center py-3 text-base" onClick={onDone} autoFocus={modal}>
         {doneLabel} →
       </button>
@@ -81,7 +95,7 @@ export function ConceptCard({
   if (!modal) return body;
   return (
     <motion.div
-      className={`fixed inset-0 z-[70] grid justify-items-center p-4 transition-colors ${reveal ? 'items-start bg-black/10 pt-[12vh]' : 'place-items-center bg-black/45'}`}
+      className={`fixed inset-0 z-[70] grid justify-items-center p-4 transition-colors ${center ? 'place-items-center bg-black/10' : reveal ? 'items-start bg-black/10 pt-[12vh]' : 'place-items-center bg-black/45'}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -307,5 +321,33 @@ export function PracticeChooser({ level, onChoose }: { level: number; onChoose: 
         </button>
       </div>
     </div>
+  );
+}
+
+/** Oberflächen-Tour: legt einen leuchtenden Rahmen um ein Element der Seite */
+export function Spotlight({ selector }: { selector: string }) {
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  useEffect(() => {
+    const measure = () => {
+      const el = document.querySelector(selector);
+      setRect(el ? el.getBoundingClientRect() : null);
+    };
+    measure();
+    const t = setInterval(measure, 400);
+    window.addEventListener('resize', measure);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('resize', measure);
+    };
+  }, [selector]);
+  if (!rect) return null;
+  return (
+    <motion.div
+      className="pointer-events-none fixed z-[72] rounded-xl ring-2 ring-gold-300 shadow-[0_0_0_4px_rgba(217,180,90,0.25),0_0_32px_rgba(217,180,90,0.6)]"
+      initial={{ opacity: 0, scale: 1.2 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0 }}
+      style={{ left: rect.left - 6, top: rect.top - 6, width: rect.width + 12, height: rect.height + 12 }}
+    />
   );
 }

@@ -17,7 +17,7 @@ import { ArrowRight, Check, Hand, Play, RotateCcw } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GameView, useViewport } from '../components/GameView';
-import { BigTitle, ConceptCard, LayoutGroup, NotesRail, useBigTitle } from '../components/Tutorial';
+import { BigTitle, ConceptCard, LayoutGroup, NotesRail, Spotlight, useBigTitle } from '../components/Tutorial';
 import { CONCEPTS, type ConceptKey, lessonFor, STAGES } from '../lib/lessons';
 import { setPref, usePrefs } from '../lib/prefs';
 import type { GameRow, Member } from '../lib/supabase';
@@ -122,25 +122,15 @@ export function LessonGame({
         return () => clearTimeout(t);
       }
       case 'collect': {
+        // Den Stich nimmt immer der Spieler vom Tisch – auch beim Zuschauen, so bestimmst du das Tempo
         const last = s.tricks.at(-1);
         const w = last?.winner;
         if (w === null || w === undefined) return;
-        const announceWin = () =>
+        if (!s.collectPending) {
           showTitle(mine(w) ? 'Dein Stich!' : `Stich für ${nameOf(w)}`, stage >= 4 && last ? `${sumAugen(last.cards)} Augen` : undefined);
-        if (mine(w)) {
-          if (!s.collectPending) {
-            announceWin();
-            next();
-          }
-          return;
-        }
-        if (!s.collectPending) return;
-        const t = setTimeout(() => {
-          setState((cur) => applyAction(cur, w, { type: 'collect' }));
-          announceWin();
           next();
-        }, 1500);
-        return () => clearTimeout(t);
+        }
+        return;
       }
       case 'end':
         setEnded(true);
@@ -154,7 +144,7 @@ export function LessonGame({
   useEffect(() => {
     if (!free) return;
     const who = actorOf(state);
-    if (who === null || (who === 0 && !watch)) return;
+    if (who === null || (who === 0 && !watch) || state.collectPending) return;
     const t = setTimeout(
       () => {
         const s = stateRef.current;
@@ -181,10 +171,15 @@ export function LessonGame({
 
   const forcedCard: Card | null = beat?.t === 'play' && beat.pos === 0 && !watch && !open ? beat.card : null;
 
-  const act = useCallback(async (a: GameAction) => {
-    if (watch) return;
-    setState((cur) => applyAction(cur, 0, a));
-  }, [watch]);
+  const act = useCallback(
+    async (a: GameAction) => {
+      // Stich nehmen gilt für den Gewinner; sonst handelst du nur selbst (beim Zuschauen gar nicht)
+      if (a.type === 'collect') return setState((cur) => applyAction(cur, cur.tricks.at(-1)?.winner ?? 0, a));
+      if (watch) return;
+      setState((cur) => applyAction(cur, 0, a));
+    },
+    [watch],
+  );
 
   const game: GameRow = useMemo(
     () => ({
@@ -237,13 +232,18 @@ export function LessonGame({
         startGame={async () => onFree()}
         onLeave={onExit}
         forcedCard={forcedCard}
+        collectAlways
         focusCards={focusCards}
+        guideGlow={!mobile && !!open && !!CONCEPTS[open].guide}
         playedCards={(state.collectPending ? state.tricks.slice(0, -1) : state.tricks).flatMap((t) => t.cards)}
         allowAnnounce={stage === 3 || free}
         tutorial
       />
+      <AnimatePresence>{open && CONCEPTS[open].target && <Spotlight key={`spot-${open}`} selector={CONCEPTS[open].target!} />}</AnimatePresence>
       <AnimatePresence>
-        {open && <ConceptCard key={open} concept={open} onDone={dismiss} reveal={!!focusCards?.length} />}
+        {open && (
+          <ConceptCard key={open} concept={open} onDone={dismiss} reveal={!!focusCards?.length || !!CONCEPTS[open].target || (!mobile && !!CONCEPTS[open].guide)} guideSide={mobile ? null : 'left'} center={!!CONCEPTS[open].target} />
+        )}
       </AnimatePresence>
       <NotesRail
         notes={notes.filter((k) => k !== open)}
@@ -253,7 +253,7 @@ export function LessonGame({
       <BigTitle title={title} />
       {/* Was jetzt zu tun ist – deutlich über der Hand */}
       <AnimatePresence>
-        {!open && !ended && (forcedCard || (beat?.t === 'announce' && beat.pos === 0 && !watch) || (beat?.t === 'collect' && !watch && state.collectPending && state.tricks.at(-1)?.winner === 0)) && (
+        {!open && !ended && (forcedCard || (beat?.t === 'announce' && beat.pos === 0 && !watch) || (beat?.t === 'collect' && state.collectPending)) && (
           <motion.div
             className="pointer-events-none fixed inset-x-0 bottom-[230px] z-[55] flex justify-center"
             initial={{ opacity: 0, y: 8 }}
@@ -266,7 +266,9 @@ export function LessonGame({
                 ? `Spiel jetzt: ${cardName(forcedCard)}`
                 : beat?.t === 'announce'
                   ? 'Sag jetzt „Re“ an – rechts neben deiner Hand'
-                  : 'Dein Stich – tippe auf die Mitte, um ihn zu nehmen'}
+                  : state.tricks.at(-1)?.winner === 0 && !watch
+                    ? 'Dein Stich – tippe auf die Mitte oder drück die Leertaste'
+                    : `Stich für ${nameOf(state.tricks.at(-1)?.winner ?? 0)} – tippe auf die Mitte, um ihn zu nehmen`}
             </span>
           </motion.div>
         )}

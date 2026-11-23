@@ -1,6 +1,10 @@
 import { type AnnounceLevel, type Card, effectiveSuit } from '@engine';
 import {
   ArrowDownWideNarrow,
+  BarChart3,
+  DoorOpen,
+  LayoutGrid,
+  Settings,
   Calculator,
   Check,
   Coins,
@@ -57,7 +61,11 @@ export type ConceptKey =
   | 'doppelkopf'
   | 'fuchs'
   | 'karlchen'
-  | 'scoring';
+  | 'scoring'
+  | 'uiToolbar'
+  | 'uiSettings'
+  | 'uiStats'
+  | 'uiTables';
 
 export interface Concept {
   stage: 1 | 2 | 3 | 4;
@@ -67,11 +75,15 @@ export interface Concept {
   points: [string] | [string, string];
   /** Welche Karten in der Hand beim Lesen markiert werden */
   focus?: 'ledSuit' | 'trumps';
+  /** Verweis auf die Kartenübersicht (eigene Zeile unter den Punkten) */
+  guide?: string;
+  /** Oberflächen-Tour: dieses Element wird hervorgehoben (CSS-Selektor) */
+  target?: string;
 }
 
 export const CONCEPTS: Record<ConceptKey, Concept> = {
   pairs: { stage: 1, icon: Users, title: 'Zwei gegen zwei', points: ['Wer eine Kreuz-Dame hat, spielt „Re“ – die anderen „Kontra“.', 'Wer dein Partner ist, weißt du am Anfang nicht.'] },
-  trick: { stage: 1, icon: Layers, title: 'Der Stich', points: ['Reihum legt jeder eine Karte in die Mitte.', 'Die stärkste gewinnt den Stich.'] },
+  trick: { stage: 1, icon: Layers, title: 'Der Stich', points: ['Reihum legt jeder eine Karte in die Mitte.', 'Die stärkste gewinnt den Stich.'], guide: 'Gold = liegt gerade vorne, Grün = würde übernehmen.' },
   lead: { stage: 1, icon: Play, title: 'Ausspielen', points: ['Wer beginnt, darf jede Karte legen.', 'Die erste Karte bestimmt, was bedient werden muss.'] },
   follow: {
     stage: 1,
@@ -80,13 +92,14 @@ export const CONCEPTS: Record<ConceptKey, Concept> = {
     points: ['Ist eine Farbe ausgespielt, musst du bedienen – also die gleiche Farbe spielen.', 'Die markierten Karten in der Hand sind die, die passen.'],
     focus: 'ledSuit',
   },
-  cantFollow: { stage: 1, icon: Zap, title: 'Nicht bedienen können', points: ['Hast du die ausgespielte Farbe nicht, darfst du jede andere Karte legen – auch eine andere Farbe.', 'Mit Trumpf kannst du den Stich sogar holen: Trumpf schlägt jede Farbe.'] },
+  cantFollow: { stage: 1, icon: Zap, title: 'Nicht bedienen können', points: ['Hast du die ausgespielte Farbe nicht, darfst du jede andere Karte legen – auch eine andere Farbe.', 'Mit Trumpf kannst du den Stich sogar holen: Trumpf schlägt jede Farbe.'], guide: 'Grün markiert, was den Stich jetzt holen würde.' },
   trump: {
     stage: 1,
     icon: Sparkles,
     title: 'Trumpf',
     points: ['Alle Damen, alle Buben, alle Karo-Karten und die Herz-10 – markiert in der Hand.', 'Trumpf ist stärker als Kreuz, Pik und Herz.'],
     focus: 'trumps',
+    guide: 'Oben stehen alle Trümpfe von hoch nach niedrig.',
   },
   followTrump: {
     stage: 1,
@@ -94,8 +107,9 @@ export const CONCEPTS: Record<ConceptKey, Concept> = {
     title: 'Trumpf bedienen',
     points: ['Ist Trumpf ausgespielt, musst du Trumpf zugeben – markiert in der Hand.', 'Herz-10 und Damen zählen dabei als Trumpf, nicht als Farbe.'],
     focus: 'ledSuit',
+    guide: 'Alle Karten der oberen Reihe sind Trumpf.',
   },
-  specials: { stage: 1, icon: Flame, title: 'Besondere Karten', points: ['Herz-10 „Dulle“: höchster Trumpf · Kreuz-Dame: zeigt Re.', 'Karo-Ass „Fuchs“ und Kreuz-Bube „Karlchen“ bringen später Extrapunkte.'] },
+  specials: { stage: 1, icon: Flame, title: 'Besondere Karten', points: ['Herz-10 „Dulle“: höchster Trumpf · Kreuz-Dame: zeigt Re.', 'Karo-Ass „Fuchs“ und Kreuz-Bube „Karlchen“ bringen später Extrapunkte.'], guide: 'Herz-10 ganz oben, Kreuz-Dame gleich dahinter; Karo-Ass und Kreuz-Bube in der Trumpfreihe.' },
   winnerLeads: { stage: 1, icon: Repeat, title: 'Wer gewinnt, fängt an', points: ['Der Gewinner nimmt den Stich.', 'Und spielt den nächsten aus.'] },
   doubles: {
     stage: 2,
@@ -105,11 +119,12 @@ export const CONCEPTS: Record<ConceptKey, Concept> = {
       'Jede Karte gibt es zweimal – daher der Name „Doppelkopf“.',
       'Herz hat nur vier Karten (die Herz-10 ist Trumpf). Darum geht der erste Herz-Stich selten rum – einer kann nicht bedienen und sticht.',
     ],
+    guide: 'Durchgestrichen heißt: Beide Exemplare sind schon gespielt.',
   },
-  fehlOrder: { stage: 2, icon: ArrowDownWideNarrow, title: 'Reihenfolge der Farben', points: ['In Kreuz, Pik und Herz gilt: Ass › Zehn › König.', 'Die Zehn ist also stärker als der König.'] },
-  order: { stage: 2, icon: ListOrdered, title: 'Trumpf-Rangfolge', points: ['Herz-10 › Damen › Buben › Karo-Ass › Karo-10 › Karo-König.', 'Damen und Buben: Kreuz › Pik › Herz › Karo.'] },
-  dulle: { stage: 2, icon: Flame, title: 'Zwei Dullen', points: ['Die Herz-10 ist der höchste Trumpf.', 'Liegen beide im Stich, gewinnt hier die erste.'] },
-  equal: { stage: 2, icon: Copy, title: 'Gleiche Karten', points: ['Liegen beide Exemplare einer Karte im Stich …', '… gewinnt die zuerst gespielte.'] },
+  fehlOrder: { stage: 2, icon: ArrowDownWideNarrow, title: 'Reihenfolge der Farben', points: ['In Kreuz, Pik und Herz gilt: Ass › Zehn › König.', 'Die Zehn ist also stärker als der König.'], guide: 'Unten die Farben: Ass › 10 › König, mit Augen.' },
+  order: { stage: 2, icon: ListOrdered, title: 'Trumpf-Rangfolge', points: ['Herz-10 › Damen › Buben › Karo-Ass › Karo-10 › Karo-König.', 'Damen und Buben: Kreuz › Pik › Herz › Karo.'], guide: 'Die obere Reihe ist genau diese Rangfolge.' },
+  dulle: { stage: 2, icon: Flame, title: 'Zwei Dullen', points: ['Die Herz-10 ist der höchste Trumpf.', 'Liegen beide im Stich, gewinnt hier die erste.'], guide: 'Die Herz-10 steht ganz oben.' },
+  equal: { stage: 2, icon: Copy, title: 'Gleiche Karten', points: ['Liegen beide Exemplare einer Karte im Stich …', '… gewinnt die zuerst gespielte.'], guide: 'Gold zeigt, welche der beiden vorne liegt.' },
   reveal: { stage: 3, icon: Eye, title: 'Partner erkennen', points: ['Wer eine Kreuz-Dame spielt, verrät: „Ich bin Re.“', 'Sobald beide liegen, stehen die Paare fest.'] },
   announce: { stage: 3, icon: Megaphone, title: 'Ansage „Re“', points: ['Mit einer Kreuz-Dame kannst du früh „Re“ ansagen.', 'Das verrät deine Partei und verdoppelt den Einsatz.'] },
   kontra: { stage: 3, icon: Megaphone, title: 'Ansage „Kontra“', points: ['Die Gegenseite kann mit „Kontra“ dagegenhalten.', 'Auch das verdoppelt den Einsatz.'] },
@@ -117,12 +132,40 @@ export const CONCEPTS: Record<ConceptKey, Concept> = {
   hochzeit: { stage: 3, icon: Heart, title: 'Hochzeit', points: ['Beide Kreuz-Damen auf einer Hand.', 'Wer den ersten fremden Stich gewinnt, wird Partner.'] },
   solo: { stage: 3, icon: User, title: 'Solo', points: ['Einer spielt allein gegen drei.', 'Er bestimmt, was Trumpf ist – z. B. nur Damen.'] },
   armut: { stage: 3, icon: HandCoins, title: 'Armut', points: ['Höchstens drei Trümpfe? Dann darfst du sie abgeben.', 'Wer sie nimmt, gibt Karten zurück und spielt mit dir.'] },
-  augen: { stage: 4, icon: Coins, title: 'Augen zählen', points: ['Ass 11 · Zehn 10 · König 4 · Dame 3 · Bube 2.', 'Zusammen sind 240 Augen im Spiel.'] },
+  augen: { stage: 4, icon: Coins, title: 'Augen zählen', points: ['Ass 11 · Zehn 10 · König 4 · Dame 3 · Bube 2.', 'Zusammen sind 240 Augen im Spiel.'], guide: 'Unter jeder Karte stehen ihre Augen.' },
   win121: { stage: 4, icon: Trophy, title: 'Gewinnen', points: ['Re braucht 121 Augen, Kontra reichen 120.', 'Die Augen aller Stiche einer Partei werden addiert.'] },
-  doppelkopf: { stage: 4, icon: Gem, title: 'Doppelkopf', points: ['Ein Stich mit 40 Augen oder mehr.', 'Bringt dem Gewinner einen Extrapunkt.'] },
-  fuchs: { stage: 4, icon: PawPrint, title: 'Fuchs gefangen', points: ['Holt eine Partei das Karo-Ass der Gegner …', '… bekommt sie einen Extrapunkt.'] },
-  karlchen: { stage: 4, icon: Shield, title: 'Karlchen', points: ['Gewinnt der Kreuz-Bube den letzten Stich …', '… gibt es einen Extrapunkt.'] },
+  doppelkopf: { stage: 4, icon: Gem, title: 'Doppelkopf', points: ['Ein Stich mit 40 Augen oder mehr.', 'Bringt dem Gewinner einen Extrapunkt.'], guide: 'Zähl die Augen unter den Karten im Stich zusammen.' },
+  fuchs: { stage: 4, icon: PawPrint, title: 'Fuchs gefangen', points: ['Holt eine Partei das Karo-Ass der Gegner …', '… bekommt sie einen Extrapunkt.'], guide: 'Das Karo-Ass steht in der Trumpfreihe – 11 Augen.' },
+  karlchen: { stage: 4, icon: Shield, title: 'Karlchen', points: ['Gewinnt der Kreuz-Bube den letzten Stich …', '… gibt es einen Extrapunkt.'], guide: 'Der Kreuz-Bube ist der höchste Bube in der Trumpfreihe.' },
   scoring: { stage: 4, icon: Calculator, title: 'Punkte am Ende', points: ['Gewonnen: +1 Punkt, dazu Extrapunkte und Ansagen.', 'Die Verlierer bekommen dieselben Punkte als Minus.'] },
+  uiToolbar: {
+    stage: 4,
+    icon: LayoutGrid,
+    title: 'Die Leiste über dem Tisch',
+    points: ['Liste: Punkte und Hausregeln · Pfeile: Karten sortieren · Tür: Tisch verlassen.', 'Am echten Tisch zusätzlich: Kamera an/aus und Reaktionen.'],
+    target: '[data-tour="toolbar"]',
+  },
+  uiSettings: {
+    stage: 4,
+    icon: Settings,
+    title: 'Einstellungen',
+    points: ['Lernhilfen, Kartenübersicht, Ton und Effekte an- oder ausschalten.', 'Dort stehen auch alle Tastatur- und Controller-Befehle.'],
+    target: '[data-tour="settings"]',
+  },
+  uiStats: {
+    stage: 4,
+    icon: BarChart3,
+    title: 'Statistik & Erfolge',
+    points: ['Deine Punkte, Siege und Spiele über alle Abende (nach dem Anmelden).', 'Erfolge schalten Titel, Rahmen und Kartenrücken frei.'],
+    target: '[data-tour="nav"]',
+  },
+  uiTables: {
+    stage: 4,
+    icon: DoorOpen,
+    title: 'Mit Freunden spielen',
+    points: ['Auf der Startseite einen Tisch eröffnen und Code oder Link teilen.', 'Vier spielen, ein Fünfter setzt aus – freie Plätze füllen Bots.'],
+    target: '[data-tour="home"]',
+  },
 };
 
 export const STAGES = [
@@ -340,6 +383,11 @@ export const LESSONS: Lesson[] = [
       card('win121'),
       card('karlchen'),
       card('scoring'),
+      { t: 'title', text: 'Die Oberfläche', sub: 'Wo du was findest' },
+      card('uiToolbar'),
+      card('uiSettings'),
+      card('uiStats'),
+      card('uiTables'),
       { t: 'end' },
     ],
   },

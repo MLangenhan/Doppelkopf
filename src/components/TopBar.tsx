@@ -23,19 +23,19 @@ export function TopBar({ children }: { children?: ReactNode }) {
   );
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 px-3 sm:gap-3 sm:px-4">
-      <Link to="/" className="flex items-center gap-2 text-white">
+      <Link to="/" className="flex items-center gap-2 text-white" data-tour="home">
         <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="Doppelkopf" className="h-6 w-6" />
         <span className="display hidden text-2xl sm:inline">Doppelkopf</span>
       </Link>
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">{children}</div>
-      <button className="btn-ghost p-2" onClick={() => setSettingsOpen(true)} aria-label="Einstellungen" title="Einstellungen">
+      <button className="btn-ghost p-2" onClick={() => setSettingsOpen(true)} aria-label="Einstellungen" title="Einstellungen" data-tour="settings">
         <Settings className="h-5 w-5" />
       </button>
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <StatsDialog open={statsOpen} onClose={() => setStatsOpen(false)} />
       <StatsDialog open={achievementsOpen} onClose={() => setAchievementsOpen(false)} view="achievements" />
       {session ? (
-        <nav className="flex shrink-0 items-center gap-1">
+        <nav className="flex shrink-0 items-center gap-1" data-tour="nav">
           {inGame ? (
             <button className={statsClass} onClick={() => setStatsOpen(true)} aria-label="Statistik">
               {statsLabel}
@@ -67,7 +67,7 @@ export function TopBar({ children }: { children?: ReactNode }) {
           </button>
         </nav>
       ) : (
-        <Link to="/login" className="btn-ghost tag px-3 py-1.5 text-[11px]">
+        <Link to="/login" className="btn-ghost tag px-3 py-1.5 text-[11px]" data-tour="nav">
           Anmelden
         </Link>
       )}

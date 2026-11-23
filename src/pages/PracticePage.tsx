@@ -163,7 +163,8 @@ function FreePractice({ camera, onExit }: { camera: ReturnType<typeof useCamera>
   // Bots spielen mit kleiner Pause, damit man folgen kann
   useEffect(() => {
     const who = actorOf(state);
-    if (who === null || who === 0) return;
+    // Den fertigen Stich nimmt immer der Spieler vom Tisch (Klick oder Leertaste)
+    if (who === null || who === 0 || state.collectPending) return;
     // Bots lassen den fertigen Stich kurz liegen, bevor sie ihn nehmen
     // "Schwer" rechnet selbst ein paar hundert Millisekunden, deshalb kürzer warten
     const delay = state.phase !== 'playing' ? 600 : state.collectPending ? 2200 : level === 'hard' ? 500 : 750;
@@ -204,7 +205,10 @@ function FreePractice({ camera, onExit }: { camera: ReturnType<typeof useCamera>
   }, [state, gameId, game]);
 
   const act = useCallback(async (action: GameAction) => {
-    setState(applyAction(stateRef.current, 0, action));
+    const s = stateRef.current;
+    // Stich nehmen gilt für den Gewinner, auch wenn es ein Bot ist
+    const pos = action.type === 'collect' ? (s.tricks.at(-1)?.winner ?? 0) : 0;
+    setState(applyAction(s, pos, action));
   }, []);
 
   const reactions = useReactions(null, 'me');
@@ -250,6 +254,7 @@ function FreePractice({ camera, onExit }: { camera: ReturnType<typeof useCamera>
         act={act}
         startGame={startGame}
         onLeave={onExit}
+        collectAlways
         reactions={reactions}
         rules={{ value: settings, locked: null, onSave: saveRules, bots: false }}
       />

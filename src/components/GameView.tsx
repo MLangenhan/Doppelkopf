@@ -127,6 +127,8 @@ export function GameView({
   allowAnnounce = true,
   playedCards,
   focusCards,
+  guideGlow = false,
+  collectAlways = false,
 }: {
   game: GameRow;
   hand: Card[];
@@ -146,6 +148,10 @@ export function GameView({
   playedCards?: Card[];
   /** Lektion: Karten, die gerade erklärt werden (in der eigenen Hand bzw. den offenen Händen) */
   focusCards?: Card[] | null;
+  /** Kartenübersicht leicht leuchten lassen, während eine Lernkarte darauf verweist */
+  guideGlow?: boolean;
+  /** Übung: Jeden Stich nimmt der Spieler selbst vom Tisch – egal, wer ihn gewonnen hat */
+  collectAlways?: boolean;
   members: Member[];
   results: ResultRow[];
   /** Fertige Spiele des Abends, neuestes zuerst */
@@ -379,7 +385,9 @@ export function GameView({
   const guideTrick = view.phase === 'playing' && view.current ? view.current.cards : undefined;
   const guidePlayed =
     playedCards ?? (spectating ? pastTricks.filter((t) => t !== view.current && !(view.collectPending && t === pastTricks.at(-1))).flatMap((t) => t.cards) : []);
+  const glowGuide = guideGlow || (!!conceptQueue[0] && !!CONCEPTS[conceptQueue[0]].guide);
   const guide = (w: number) => (
+    <div className={`rounded-xl transition-shadow duration-500 ${glowGuide ? 'shadow-[0_0_0_2px_rgba(52,211,153,0.55),0_0_28px_rgba(52,211,153,0.35)]' : ''}`}>
     <CardGuide
       width={w}
       withNines={view.settings.withNines}
@@ -390,6 +398,7 @@ export function GameView({
       played={guidePlayed}
       isLast={view.trickWinners.length === handSize - (view.collectPending ? 0 : 1)}
     />
+    </div>
   );
   const lessonFeed = learning && lessons.length > 0 && (
     <LessonFeed
@@ -458,7 +467,7 @@ export function GameView({
     : { key: `${game.id}:${trickCount}`, plays: currentPlays, winner: null };
 
   // Stich nehmen: der Gewinner per Leertaste oder Klick; nach der Wartezeit dürfen alle wegräumen
-  const iCollect = !!pendingTrick && pendingTrick.winner === myPos;
+  const iCollect = !!pendingTrick && (collectAlways || pendingTrick.winner === myPos);
   const [collectSeen, setCollectSeen] = useState<{ key: string; at: number } | null>(null);
   const [clock, setClock] = useState(() => Date.now());
   useEffect(() => {
@@ -940,7 +949,7 @@ export function GameView({
   );
 
   const toolbar = (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1" data-tour="toolbar">
       <button className="btn-ghost p-2" onClick={() => setSidebarOpen(true)} aria-label="Punkte und Regeln" data-cursor="Punkte">
         <ListOrdered className="size-4" />
       </button>
@@ -1218,7 +1227,13 @@ export function GameView({
             <>
               <AnimatePresence mode="popLayout">
                 {conceptQueue[0] && (
-                  <ConceptCard key={conceptQueue[0]} concept={conceptQueue[0]} modal={false} onDone={dismissConcept} />
+                  <ConceptCard
+                    key={conceptQueue[0]}
+                    concept={conceptQueue[0]}
+                    modal={false}
+                    onDone={dismissConcept}
+                    guideSide={learnLevel >= 2 ? 'below' : null}
+                  />
                 )}
               </AnimatePresence>
               {!conceptQueue[0] && lessonFeed}
