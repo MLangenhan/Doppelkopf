@@ -337,6 +337,7 @@ export function GameView({
   );
   const rulesPanel = learning && (
     <LearnRules
+      columns={vp.w >= 760 && vp.h >= 480}
       texts={rulesText}
       active={activeRules}
       level={learnLevel}
@@ -997,7 +998,17 @@ export function GameView({
 
   const peekEl = showPeek && (
     <div className="flex w-full flex-col items-center gap-2">
-      {!mobile && lessonFeed}
+      {/* Lernmodus: unten, wo Zuschauer sonst keine Hand haben – Regeln und Kartenübersicht */}
+      {!mobile && learning && (
+        <div className="flex w-full items-end justify-center gap-4">
+          <div className="min-w-0 max-w-2xl flex-1">{rulesPanel}</div>
+          {learnLevel >= 2 && (
+            <div className="pointer-events-none shrink-0">
+              <CardGuide width={Math.min(camW, 260)} withNines={view.settings.withNines} />
+            </div>
+          )}
+        </div>
+      )}
       {pastTricks.length > 0 && (
         <button className="btn-ghost tag px-3 py-1 text-[10px]" onClick={() => setTricksOpen(true)}>
           Alle Stiche ansehen ({pastTricks.length})
@@ -1121,8 +1132,15 @@ export function GameView({
         <div className="relative z-10 flex min-w-0 flex-col items-center gap-3 self-start">
           {infoLine}
           {toolbar}
-          {lastTrick}
-          {sittingOutTiles}
+          {/* Lernmodus: Die Erklärungen zeigen den letzten Stich ohnehin – sie stehen hier oben, der Tisch bleibt frei */}
+          {learning ? (
+            lessonFeed
+          ) : (
+            <>
+              {lastTrick}
+              {sittingOutTiles}
+            </>
+          )}
         </div>
 
         {/* Oben rechts: gegenüber */}
@@ -1132,19 +1150,6 @@ export function GameView({
         {/* z-0: Die Tischmitte liegt hinter Hand und Aktionen – aufgeklappte Vorbehalte verschwinden nie dahinter */}
         <div ref={setTrickCell} className="relative z-0 col-span-3 grid min-h-0 place-items-center">
           {trickArea}
-          {/* Lernmodus: links die Regeln, rechts Trumpf-Reihenfolge und Augen – beide passen sich der Höhe an */}
-          {learning && (
-            <>
-              <div className="absolute inset-y-0 left-0 overflow-y-auto py-1" style={{ width: camW }}>
-                {rulesPanel}
-              </div>
-              {learnLevel >= 2 && (
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center overflow-y-auto py-1" style={{ width: camW }}>
-                  <CardGuide width={camW} withNines={view.settings.withNines} />
-                </div>
-              )}
-            </>
-          )}
         </div>
 
         {/* Unten links: ich – oder, wenn ich aussetze, wer nach mir sitzt */}
