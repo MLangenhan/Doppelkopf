@@ -22,6 +22,9 @@ import { CONCEPTS, type ConceptKey, STAGES } from '../lib/lessons';
 import { usePrefs } from '../lib/prefs';
 
 const PLAYERS = ['me', 'bot-1', 'bot-2', 'bot-3'];
+/** Zuschauen: Dora übernimmt deinen Platz, du siehst alle Karten */
+const WATCH_PLAYERS = ['bot-4', 'bot-1', 'bot-2', 'bot-3'];
+const BOT_DISPLAY: Record<string, string> = { 'bot-1': 'Anton', 'bot-2': 'Berta', 'bot-3': 'Carl', 'bot-4': 'Dora' };
 
 function loadRules(): RuleSettings {
   try {
@@ -124,6 +127,10 @@ function FreePractice({ camera, onExit }: { camera: ReturnType<typeof useCamera>
     }
   };
   const [number, setNumber] = useState(1);
+  // Zuschauen wie online: umschalten jederzeit, gilt ab dem nächsten Spiel
+  const [players, setPlayers] = useState(PLAYERS);
+  const [watchNext, setWatchNext] = useState(false);
+  const watching = players[0] !== 'me';
   const [state, setState] = useState<GameState>(() =>
     createGame({ players: PLAYERS, starter: 0, settings }),
   );
@@ -131,15 +138,19 @@ function FreePractice({ camera, onExit }: { camera: ReturnType<typeof useCamera>
   const [finished, setFinished] = useState<GameRow[]>([]);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const watchingRef = useRef(watching);
+  watchingRef.current = watching;
 
   const members: Member[] = useMemo(
     () => [
-      { user_id: 'me', seat: 0, display_name: profile?.display_name ?? 'Du' },
-      { user_id: 'bot-1', seat: 1, display_name: 'Anton' },
-      { user_id: 'bot-2', seat: 2, display_name: 'Berta' },
-      { user_id: 'bot-3', seat: 3, display_name: 'Carl' },
+      { user_id: 'me', seat: watching ? 4 : 0, display_name: profile?.display_name ?? 'Du', spectator: watching },
+      ...players.filter((u) => u !== 'me').map((u) => ({ user_id: u, seat: players.indexOf(u), display_name: BOT_DISPLAY[u] })),
     ],
-    [profile],
+    [profile, players, watching],
+  );
+  const otherHands = useMemo(
+    () => (watching ? Object.fromEntries(players.map((u, i) => [u, state.hands[i]])) : undefined),
+    [watching, players, state.hands],
   );
 
   const gameId = `practice-${number}`;
@@ -150,21 +161,21 @@ function FreePractice({ camera, onExit }: { camera: ReturnType<typeof useCamera>
       number,
       dealer_seat: (state.starter + 3) % 4,
       seats: [0, 1, 2, 3],
-      players: PLAYERS,
+      players,
       state: publicView(state),
       version: state.version,
       status: state.phase === 'finished' ? (state.redeal ? 'redeal' : 'finished') : 'running',
       created_at: '',
       finished_at: null,
     }),
-    [state, number, gameId],
+    [state, number, gameId, players],
   );
 
   // Bots spielen mit kleiner Pause, damit man folgen kann
   useEffect(() => {
     const who = actorOf(state);
     // Den fertigen Stich nimmt immer der Spieler vom Tisch (Klick oder Leertaste)
-    if (who === null || who === 0 || state.collectPending) return;
+    if (who === null || (who === 0 && !watching) || state.collectPending) return;
     // Bots lassen den fertigen Stich kurz liegen, bevor sie ihn nehmen
     // "Schwer" rechnet selbst ein paar hundert Millisekunden, deshalb kürzer warten
     const delay = state.phase !== 'playing' ? 600 : state.collectPending ? 2200 : level === 'hard' ? 500 : 750;
@@ -174,7 +185,7 @@ function FreePractice({ camera, onExit }: { camera: ReturnType<typeof useCamera>
       if (action) setState(applyAction(s, who, action));
     }, delay);
     return () => clearTimeout(t);
-  }, [state, level]);
+  }, [state, level, watching]);
 
   // Ergebnis in die Punkteliste übernehmen
   const recorded = useRef(new Set<string>());
@@ -186,7 +197,7 @@ function FreePractice({ camera, onExit }: { camera: ReturnType<typeof useCamera>
     const now = new Date().toISOString();
     setResults((cur) => [
       ...cur,
-      ...PLAYERS.map((uid, p) => {
+      ...players.map((uid, p) => {
         const party = r.reTeam.includes(p) ? ('re' as const) : ('kontra' as const);
         return {
           game_id: gameId,
@@ -202,14 +213,17 @@ function FreePractice({ camera, onExit }: { camera: ReturnType<typeof useCamera>
         };
       }),
     ]);
-  }, [state, gameId, game]);
+  }, [state, gameId, game, players]);
 
   const act = useCallback(async (action: GameAction) => {
     const s = stateRef.current;
     // Stich nehmen gilt für den Gewinner, auch wenn es ein Bot ist
     const pos = action.type === 'collect' ? (s.tricks.at(-1)?.winner ?? 0) : 0;
+    // Beim Zuschauen nimmst du nur die Stiche vom Tisch
+    if (watchingRef.current && action.type !== 'collect') return;
     setState(applyAction(s, pos, action));
   }, []);
+
 
   const reactions = useReactions(null, 'me');
   const startGame = useCallback(async () => {
@@ -217,8 +231,10 @@ function FreePractice({ camera, onExit }: { camera: ReturnType<typeof useCamera>
     // Bei Neugeben bleibt der Geber, sonst rückt er weiter
     const starter = s.redeal ? s.starter : (s.starter + 1) % 4;
     setNumber((n) => n + 1);
-    setState(createGame({ players: PLAYERS, starter, settings }));
-  }, [settings]);
+    const next = watchNext ? WATCH_PLAYERS : PLAYERS;
+    setPlayers(next);
+    setState(createGame({ players: next, starter, settings }));
+  }, [settings, watchNext]);
 
   return (
     <div className="flex h-full flex-col">
@@ -243,14 +259,17 @@ function FreePractice({ camera, onExit }: { camera: ReturnType<typeof useCamera>
       </TopBar>
       <GameView
         game={game}
-        hand={state.hands[0]}
+        hand={watching ? [] : state.hands[0]}
+        otherHands={otherHands}
+        tutorial={watching}
+        spectator={{ on: watchNext, takenBy: null, toggle: setWatchNext }}
         members={members}
         results={results}
         finishedGames={finished}
         me="me"
         camera={camera}
         remotes={{}}
-        online={['bot-1', 'bot-2', 'bot-3']}
+        online={players.filter((u) => u !== 'me')}
         act={act}
         startGame={startGame}
         onLeave={onExit}
