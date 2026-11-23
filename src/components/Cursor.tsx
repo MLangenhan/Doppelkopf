@@ -1,6 +1,6 @@
 import { Hand } from 'lucide-react';
-import { motion, useMotionValue, useReducedMotion, useSpring } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
+import { useEffect, useRef, useState } from 'react';
 import { useFx } from '../lib/prefs';
 
 type Suit = 'C' | 'S' | 'H' | 'D';
@@ -18,22 +18,25 @@ export function Cursor() {
   const [fine] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches,
   );
-  const enabled = fine && effects && !reduce;
+  // Notbremse für schwache Rechner: läuft es dauerhaft ruckelig, übernimmt der Systemcursor (mit Farbsymbol)
+  const [slow, setSlow] = useState(false);
+  const enabled = fine && effects && !reduce && !slow;
   const [suit, setSuit] = useState<Suit>('S');
   const [overCard, setOverCard] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [grab, setGrab] = useState(false);
   const [spin, setSpin] = useState(0);
-  const x = useMotionValue(-100);
-  const y = useMotionValue(-100);
-  const sx = useSpring(x, { stiffness: 600, damping: 38, mass: 0.4 });
-  const sy = useSpring(y, { stiffness: 600, damping: 38, mass: 0.4 });
+  const el = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!enabled) return;
     document.documentElement.classList.add('has-cursor');
-    const inspect = (el: Element | null) => {
-      const target = el as HTMLElement | null;
+    let px = -100;
+    let py = -100;
+    let frame = 0;
+    let lastTarget: Element | null = null;
+    const inspect = (node: Element | null) => {
+      const target = node as HTMLElement | null;
       const card = target?.closest<HTMLElement>('[data-suit]');
       const action = target?.closest<HTMLElement>(
         'a, button:not([disabled]):not([aria-disabled=true]), [data-cursor], input, select, label, [role=button]',
@@ -43,33 +46,79 @@ export function Cursor() {
       setHovering(!!action);
       setGrab(action?.dataset.cursor === 'Nehmen');
     };
+    // Position direkt und höchstens einmal pro Bild setzen – ohne Feder, damit nichts nachzieht
+    const paint = () => {
+      frame = 0;
+      if (el.current) el.current.style.transform = `translate3d(${px}px, ${py}px, 0) translate(-50%, -50%)`;
+    };
     const move = (e: PointerEvent) => {
-      x.set(e.clientX);
-      y.set(e.clientY);
-      inspect(e.target as Element);
+      px = e.clientX;
+      py = e.clientY;
+      if (!frame) frame = requestAnimationFrame(paint);
+      // Nur prüfen, wenn sich das Element unter der Maus ändert
+      if (e.target !== lastTarget) {
+        lastTarget = e.target as Element;
+        inspect(lastTarget);
+      }
     };
     const down = () => setSpin((s) => s + 360);
     // Nach einem Klick kann das Element unter dem Cursor verschwinden (Karte gespielt, Dialog offen)
-    const up = () => setTimeout(() => inspect(document.elementFromPoint(x.get(), y.get())), 180);
-    window.addEventListener('pointermove', move);
+    const up = () =>
+      setTimeout(() => {
+        lastTarget = document.elementFromPoint(px, py);
+        inspect(lastTarget);
+      }, 180);
+    window.addEventListener('pointermove', move, { passive: true });
     window.addEventListener('pointerdown', down);
     window.addEventListener('pointerup', up);
+
+    // Bildrate messen, solange die Maus sich bewegt: dauerhaft unter ~40 FPS → Systemcursor
+    let last = performance.now();
+    let slowFrames = 0;
+    let samples = 0;
+    let probe = 0;
+    const tick = (now: number) => {
+      const dt = now - last;
+      last = now;
+      if (dt < 200) {
+        samples++;
+        if (dt > 25) slowFrames++;
+        if (samples >= 120) {
+          if (slowFrames / samples > 0.5) setSlow(true);
+          samples = 0;
+          slowFrames = 0;
+        }
+      }
+      probe = requestAnimationFrame(tick);
+    };
+    probe = requestAnimationFrame(tick);
+
     return () => {
+      cancelAnimationFrame(frame);
+      cancelAnimationFrame(probe);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerdown', down);
       window.removeEventListener('pointerup', up);
       document.documentElement.classList.remove('has-cursor');
     };
-  }, [enabled, x, y]);
+  }, [enabled]);
+
+  // Systemcursor mit Farbsymbol, wenn der eigene Cursor zu langsam wäre
+  useEffect(() => {
+    if (!slow || !fine || !effects || reduce) return;
+    document.documentElement.classList.add('native-cursor');
+    return () => document.documentElement.classList.remove('native-cursor');
+  }, [slow, fine, effects, reduce]);
 
   if (!enabled) return null;
   const red = overCard && (suit === 'H' || suit === 'D');
 
   return (
-    <motion.div
+    <div
+      ref={el}
       aria-hidden
-      className="pointer-events-none fixed top-0 left-0 z-[200] flex flex-col items-center"
-      style={{ x: sx, y: sy, translateX: '-50%', translateY: '-50%' }}
+      className="pointer-events-none fixed top-0 left-0 z-[200] flex flex-col items-center will-change-transform"
+      style={{ transform: 'translate3d(-100px, -100px, 0)' }}
     >
       {grab ? (
         <motion.span
@@ -92,7 +141,7 @@ export function Cursor() {
           {GLYPH[overCard ? suit : 'S']}
         </motion.span>
       )}
-    </motion.div>
+    </div>
   );
 }
 

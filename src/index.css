@@ -104,6 +104,28 @@ html.has-cursor *:not(input):not(textarea) {
   cursor: none !important;
 }
 
+/* Schwacher Rechner: Systemcursor mit Farbsymbol (wird vom System gezeichnet und zieht nie nach) */
+html.native-cursor,
+html.native-cursor *:not(input):not(textarea) {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ctext x='12' y='19' font-size='20' text-anchor='middle' fill='%23e8cd85' stroke='%23000' stroke-width='0.8'%3E%E2%99%A0%3C/text%3E%3C/svg%3E") 12 12, auto;
+}
+html.native-cursor [data-suit='C'],
+html.native-cursor [data-suit='C'] * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ctext x='12' y='19' font-size='20' text-anchor='middle' fill='%23ffffff' stroke='%23000' stroke-width='0.8'%3E%E2%99%A3%3C/text%3E%3C/svg%3E") 12 12, auto;
+}
+html.native-cursor [data-suit='S'],
+html.native-cursor [data-suit='S'] * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ctext x='12' y='19' font-size='20' text-anchor='middle' fill='%23ffffff' stroke='%23000' stroke-width='0.8'%3E%E2%99%A0%3C/text%3E%3C/svg%3E") 12 12, auto;
+}
+html.native-cursor [data-suit='H'],
+html.native-cursor [data-suit='H'] * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ctext x='12' y='19' font-size='20' text-anchor='middle' fill='%23e2534a' stroke='%23000' stroke-width='0.8'%3E%E2%99%A5%3C/text%3E%3C/svg%3E") 12 12, auto;
+}
+html.native-cursor [data-suit='D'],
+html.native-cursor [data-suit='D'] * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ctext x='12' y='19' font-size='20' text-anchor='middle' fill='%23e2534a' stroke='%23000' stroke-width='0.8'%3E%E2%99%A6%3C/text%3E%3C/svg%3E") 12 12, auto;
+}
+
 @utility label {
   @apply mb-1.5 block text-sm font-medium text-white/80;
 }
