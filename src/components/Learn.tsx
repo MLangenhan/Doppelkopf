@@ -1,15 +1,15 @@
 import type { Card, TrickContext } from '@engine';
-import { ArrowDown, Check, Copy, Flame, GraduationCap, Play, Trophy, TrendingUp, X, Zap } from 'lucide-react';
+import { ArrowDown, Check, ChevronLeft, ChevronRight, Copy, Flame, GraduationCap, Play, Trophy, TrendingUp, X, Zap } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { lessonText, type PlayKind, RULE_ORDER, type RuleKey, type TrickLesson } from '../lib/trickLesson';
+import { LEARN_LEVELS, lessonText, type PlayKind, RULE_LEVEL, RULE_ORDER, type RuleKey, type TrickLesson } from '../lib/trickLesson';
 import { PlayingCard } from './PlayingCard';
 
 // ---------------------------------------------------------------------------
 // Frage zu Rundenbeginn
 // ---------------------------------------------------------------------------
 
-export function LearnPrompt({ onYes, onNo }: { onYes: () => void; onNo: () => void }) {
+export function LearnPrompt({ onYes, onNo, level }: { onYes: () => void; onNo: () => void; level: number }) {
   return (
     <motion.div
       className="fixed inset-0 z-[75] grid place-items-center bg-black/55 p-4"
@@ -31,8 +31,11 @@ export function LearnPrompt({ onYes, onNo }: { onYes: () => void; onNo: () => vo
           Möchtest du Doppelkopf lernen?
         </h2>
         <p className="mt-2 text-sm text-white/65">
-          Du schaust zu und siehst alle Karten. Auf Wunsch erklären wir dir jeden Stich: wer bedient, wer sticht und warum
-          jemand gewinnt – dazu die Regeln, die gerade greifen.
+          Du schaust zu und siehst alle Karten. Auf Wunsch erklären wir dir jeden Stich – Schritt für Schritt in vier Stufen,
+          von den Grundlagen bis zu den Punkten.
+        </p>
+        <p className="mt-2 text-sm text-gold-200/90">
+          {level > 1 ? `Weiter bei Stufe ${level}: ${LEARN_LEVELS[level - 1].title}` : `Los geht's mit Stufe 1: ${LEARN_LEVELS[0].title}`}
         </p>
         <div className="mt-5 flex flex-col gap-2">
           <button className="btn-primary justify-center" onClick={onYes} autoFocus>
@@ -91,8 +94,10 @@ export function LessonFeed({
   name,
   onDone,
   onHoverPos,
+  level,
   max = 2,
 }: {
+  level: number;
   items: LessonItem[];
   ctx: TrickContext;
   name: (pos: number) => string;
@@ -105,7 +110,7 @@ export function LessonFeed({
     <div className="flex w-full max-w-xl flex-col gap-2" aria-live="polite">
       <AnimatePresence initial={false}>
         {shown.map((it) => (
-          <LessonCard key={it.id} item={it} ctx={ctx} name={name} onDone={() => onDone(it.id)} onHoverPos={onHoverPos} />
+          <LessonCard key={it.id} item={it} ctx={ctx} name={name} level={level} onDone={() => onDone(it.id)} onHoverPos={onHoverPos} />
         ))}
       </AnimatePresence>
     </div>
@@ -118,7 +123,9 @@ function LessonCard({
   name,
   onDone,
   onHoverPos,
+  level,
 }: {
+  level: number;
   item: LessonItem;
   ctx: TrickContext;
   name: (pos: number) => string;
@@ -126,7 +133,7 @@ function LessonCard({
   onHoverPos: (pos: number | null) => void;
 }) {
   const { lesson: l, cards } = item;
-  const lines = lessonText(l, cards, ctx, name);
+  const lines = lessonText(l, cards, ctx, name, level);
   // Genug Zeit zum Lesen: Grundzeit plus pro Zeile; beim Hovern steht die Uhr
   const total = 7000 + lines.length * 2200;
   const [left, setLeft] = useState(total);
@@ -148,7 +155,8 @@ function LessonCard({
   }, [left]);
 
   const winPos = l.plays[l.winnerIdx].pos;
-  const reason = REASON[l.reason];
+  // Was erst in späteren Stufen kommt, bleibt in der Kurzfassung weg
+  const reason = level < 2 && (l.reason === 'dulle' || l.reason === 'highestTrump') ? REASON.highestTrump : REASON[l.reason];
   const chip = (pos: number, children: ReactNode, cls = '') => (
     <span
       className={`cursor-default rounded px-1 font-semibold transition-colors hover:bg-white/10 ${cls}`}
@@ -206,10 +214,12 @@ function LessonCard({
               {reason.label}
             </span>
           )}
-          <span className="rounded-full bg-gold-400/15 px-2 py-0.5 font-semibold text-gold-200 tabular-nums" title="Augen im Stich">
-            {l.augen} Augen
-          </span>
-          {l.specials.map((s) => (
+          {level >= 4 && (
+            <span className="rounded-full bg-gold-400/15 px-2 py-0.5 font-semibold text-gold-200 tabular-nums" title="Augen im Stich">
+              {l.augen} Augen
+            </span>
+          )}
+          {(level >= 4 ? l.specials : []).map((s) => (
             <span key={s} className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-emerald-200">
               {SPECIAL[s]}
             </span>
@@ -248,22 +258,55 @@ function LessonCard({
 export function RulesPanel({
   texts,
   active,
+  level,
+  onLevel,
+  suggestNext,
+  notices,
   className = '',
 }: {
   texts: Record<RuleKey, { title: string; text: string } | null>;
   active: RuleKey[];
+  level: number;
+  onLevel: (level: number) => void;
+  /** Nach ein paar Stichen auf dieser Stufe: Hinweis, dass es weitergehen kann */
+  suggestNext: boolean;
+  /** Was gerade passiert, aber erst in einer späteren Stufe erklärt wird */
+  notices: string[];
   className?: string;
 }) {
+  const info = LEARN_LEVELS[level - 1];
   return (
     <div className={`rounded-xl bg-black/30 p-2.5 ring-1 ring-white/[0.06] ${className}`}>
-      <p className="tag mb-1.5 flex items-center gap-1.5 px-1 text-[10px] text-white/45">
-        <GraduationCap className="size-3.5" aria-hidden /> Regeln
-      </p>
+      {/* Stufe: vor und zurück jederzeit möglich */}
+      <div className="mb-1.5 flex items-center gap-1 px-1">
+        <GraduationCap className="size-3.5 text-white/45" aria-hidden />
+        <span className="tag flex-1 text-[10px] text-white/45">
+          Stufe {level}/{LEARN_LEVELS.length} · <span className="text-white/75">{info.title}</span>
+        </span>
+        <button className="rounded p-0.5 text-white/45 hover:text-white disabled:opacity-25" disabled={level <= 1} onClick={() => onLevel(level - 1)} aria-label="Vorige Stufe">
+          <ChevronLeft className="size-3.5" />
+        </button>
+        <button
+          className="rounded p-0.5 text-white/45 hover:text-white disabled:opacity-25"
+          disabled={level >= LEARN_LEVELS.length}
+          onClick={() => onLevel(level + 1)}
+          aria-label="Nächste Stufe"
+        >
+          <ChevronRight className="size-3.5" />
+        </button>
+      </div>
+      <div className="mb-2 flex gap-0.5 px-1" aria-hidden>
+        {LEARN_LEVELS.map((_, i) => (
+          <span key={i} className={`h-0.5 flex-1 rounded-full ${i < level ? 'bg-gold-400/70' : 'bg-white/10'}`} />
+        ))}
+      </div>
+      <p className="mb-2 px-1 text-[11px] leading-snug text-white/60">{info.intro}</p>
       <ul className="flex flex-col gap-1">
-        {RULE_ORDER.map((k) => {
+        {RULE_ORDER.filter((k) => RULE_LEVEL[k] <= level).map((k) => {
           const r = texts[k];
           if (!r) return null;
           const on = active.includes(k);
+          const fresh = RULE_LEVEL[k] === level && level > 1;
           return (
             <li
               key={k}
@@ -273,11 +316,34 @@ export function RulesPanel({
                   : 'text-white/45'
               }`}
             >
+              {fresh && <span className="mr-1 inline-block size-1.5 rounded-full bg-sky-300/70 align-middle" title="Neu in dieser Stufe" />}
               <span className={`font-semibold ${on ? 'text-gold-200' : 'text-white/60'}`}>{r.title}</span> · {r.text}
             </li>
           );
         })}
       </ul>
+      {notices.length > 0 && (
+        <ul className="mt-2 space-y-0.5 px-1">
+          {notices.map((n) => (
+            <li key={n} className="text-[10px] text-white/40">
+              {n}
+            </li>
+          ))}
+        </ul>
+      )}
+      <AnimatePresence>
+        {suggestNext && level < LEARN_LEVELS.length && (
+          <motion.button
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="mt-2 w-full rounded-lg bg-sky-400/10 px-2 py-1.5 text-left text-[11px] text-sky-200 ring-1 ring-sky-300/25 hover:bg-sky-400/15"
+            onClick={() => onLevel(level + 1)}
+          >
+            Sitzt das? Weiter zu Stufe {level + 1}: {LEARN_LEVELS[level].title} →
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

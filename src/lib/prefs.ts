@@ -36,6 +36,8 @@ export interface Prefs {
   explain: boolean;
   /** Zuschauer: zu Rundenbeginn fragen, ob man Doppelkopf lernen möchte ('off' = abgelehnt, nicht mehr fragen) */
   spectatorLearn: 'ask' | 'off';
+  /** Lernstufe 1–4 (Grundlagen, Rangfolge, Spielarten & Ansagen, Punkte) – wandert mit dem Konto */
+  learnLevel: number;
   /** Nur für dich: Kartenrücken, Filzfarbe, Konfetti (durch Erfolge freigeschaltet) */
   cardBack: string;
   felt: string;
@@ -64,6 +66,7 @@ const DEFAULTS: Prefs = {
   cardGuide: false,
   explain: false,
   spectatorLearn: 'ask',
+  learnLevel: 1,
   cardBack: 'blue',
   felt: 'green',
   confetti: 'classic',

@@ -3,8 +3,8 @@ import { useAuth } from './auth';
 import { getPrefs, type Prefs, setPref, usePrefs } from './prefs';
 import { supabase } from './supabase';
 
-// Kartenrücken, Filzfarbe und Konfetti im Profil speichern, damit sie auf jedem Gerät gelten
-const KEYS = ['cardBack', 'felt', 'confetti'] as const;
+// Kartenrücken, Filzfarbe, Konfetti und Lernstand im Profil speichern, damit sie auf jedem Gerät gelten
+const KEYS = ['cardBack', 'felt', 'confetti', 'learnLevel', 'spectatorLearn'] as const;
 type Personal = Pick<Prefs, (typeof KEYS)[number]>;
 
 export function usePersonalSync() {
@@ -25,7 +25,7 @@ export function usePersonalSync() {
       .then(({ data, error }) => {
         if (!error) {
           const p = (data?.personal ?? {}) as Partial<Personal>;
-          for (const k of KEYS) if (typeof p[k] === 'string' && p[k] !== getPrefs()[k]) setPref(k, p[k] as string);
+          for (const k of KEYS) if (p[k] !== undefined && typeof p[k] === typeof getPrefs()[k] && p[k] !== getPrefs()[k]) setPref(k, p[k] as never);
         }
         loaded.current = uid;
       });

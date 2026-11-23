@@ -292,15 +292,32 @@ export function GameView({
         lesson: analyzeTrick(t.cards, t.leader, spectCtx, { isLast: i === handSize - 1, settings: view.settings, partyOf: partyOfPos }),
       });
     });
-    if (fresh.length) setLessons((cur) => [...cur, ...fresh].slice(-6));
+    if (fresh.length) {
+      setLessons((cur) => [...cur, ...fresh].slice(-6));
+      setLevelTricks((n) => n + fresh.length);
+    }
   }, [pastTricks, learning, game.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const liveTrick = view.phase === 'playing' && view.current && view.current.cards.length > 0 && !view.collectPending ? view.current : null;
+  // Lernstufe (Scaffolding): wandert mit dem Konto; nach ein paar Stichen auf einer Stufe kommt der Hinweis „weiter“
+  const learnLevel = Math.min(4, Math.max(1, Math.round(prefs.learnLevel) || 1));
+  const [levelTricks, setLevelTricks] = useState(0);
+  const changeLevel = (lvl: number) => {
+    setPref('learnLevel', lvl);
+    setLevelTricks(0);
+  };
+  const specialGame = view.kind && view.kind !== 'normal';
+  const announced = view.announcementLog.length > 0;
+  const baseRules = liveTrick
+    ? analyzeTrick(liveTrick.cards, liveTrick.leader, spectCtx, { isLast: false, settings: view.settings }).rules
+    : (lessons.at(-1)?.lesson.rules ?? ['lead' as const]);
   const activeRules = learning
-    ? liveTrick
-      ? analyzeTrick(liveTrick.cards, liveTrick.leader, spectCtx, { isLast: false, settings: view.settings }).rules
-      : (lessons.at(-1)?.lesson.rules ?? ['lead'])
+    ? [...baseRules, ...(specialGame ? (['spielart'] as const) : []), ...(announced ? (['ansagen'] as const) : [])]
     : [];
-  const rulesText = ruleTexts(view.settings, trumpRule(spectCtx.mode));
+  const learnNotices = [
+    ...(learnLevel < 3 && specialGame ? [`Sonderspiel (${view.kind === 'solo' ? 'Solo' : view.kind === 'hochzeit' ? 'Hochzeit' : 'Armut'}) – kommt in Stufe 3`] : []),
+    ...(learnLevel < 3 && announced ? ['Es wurde angesagt – was das heißt, kommt in Stufe 3'] : []),
+  ];
+  const rulesText = ruleTexts(view.settings, trumpRule(spectCtx.mode), spectCtx.mode);
   const lessonFeed = learning && lessons.length > 0 && (
     <LessonFeed
       items={lessons}
@@ -308,9 +325,19 @@ export function GameView({
       name={name}
       onDone={(id) => setLessons((cur) => cur.filter((x) => x.id !== id))}
       onHoverPos={setHoverPos}
+      level={learnLevel}
     />
   );
-  const rulesPanel = learning && <LearnRules texts={rulesText} active={activeRules} />;
+  const rulesPanel = learning && (
+    <LearnRules
+      texts={rulesText}
+      active={activeRules}
+      level={learnLevel}
+      onLevel={changeLevel}
+      suggestNext={levelTricks >= 8}
+      notices={learnNotices}
+    />
+  );
 
   const myTurnToPlay = view.phase === 'playing' && view.turn === myPos && !pending && !view.collectPending;
   // Ohne Hervorhebung ("schwarz spielen") ist jede Karte wählbar; der Server prüft das Bedienen
@@ -1102,9 +1129,11 @@ export function GameView({
               <div className="absolute inset-y-0 left-0 overflow-y-auto py-1" style={{ width: camW }}>
                 {rulesPanel}
               </div>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center overflow-y-auto py-1" style={{ width: camW }}>
-                <CardGuide width={camW} withNines={view.settings.withNines} />
-              </div>
+              {learnLevel >= 2 && (
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center overflow-y-auto py-1" style={{ width: camW }}>
+                  <CardGuide width={camW} withNines={view.settings.withNines} />
+                </div>
+              )}
             </>
           )}
         </div>
@@ -1168,6 +1197,7 @@ export function GameView({
       <AnimatePresence>
         {spectating && !learnAsked && prefs.spectatorLearn === 'ask' && (
           <LearnPrompt
+            level={learnLevel}
             onYes={() => {
               setLearn(true);
               setLearnAsked(true);
