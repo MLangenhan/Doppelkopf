@@ -65,7 +65,7 @@ export function ResultDialog({
       aria-labelledby="result-title"
     >
       <motion.div
-        className="panel max-h-full w-full max-w-lg overflow-y-auto p-5 sm:p-6"
+        className={`panel max-h-full w-full overflow-y-auto p-5 sm:p-6 ${view.redeal ? 'max-w-2xl' : 'max-w-lg lg:max-w-5xl'}`}
         initial={{ y: 30, scale: 0.95, opacity: 0 }}
         animate={{ y: 0, scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 240, damping: 24, delay: 0.1 }}
@@ -86,14 +86,14 @@ export function ResultDialog({
           <ResultBody view={view} name={name} myPos={myPos} skip={skip} onRevealed={() => setRevealed(true)} />
         ) : null}
 
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-6 flex flex-wrap items-center gap-3 sm:flex-nowrap">
           <SpaceHint
             active={!revealed || canStart}
             resetKey={revealed ? 'next' : 'skip'}
             label={revealed ? 'Nächstes Spiel' : 'Überspringen'}
             touchLabel=""
           />
-          <div className="ml-auto flex flex-wrap justify-end gap-3">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-3 sm:flex-nowrap [&>button]:whitespace-nowrap">
             {spectator && (!spectator.takenBy || spectator.on) && (
               <button className="btn-ghost" onClick={() => spectator.toggle(!spectator.on)} disabled={busy}>
                 {spectator.on ? 'Wieder mitspielen' : 'Nächstes Spiel zuschauen'}
@@ -146,7 +146,9 @@ function ResultBody({
   const soloist = r.soloScoring ? r.reTeam[0] : null;
 
   return (
-    <>
+    // Breit: links das Ergebnis, rechts Blätter und Stiche – so passt alles ohne Scrollen
+    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-8">
+      <div className="min-w-0">
       <Confetti active={iWon && revealed} />
       <p className="tag text-[11px] text-white/50">
         {resultKindLabel(kind, view.solo)}
@@ -276,9 +278,12 @@ function ResultBody({
           </motion.div>
         ))}
       </div>
-      {revealed && <AllHands view={view} name={name} myPos={myPos} />}
-      {revealed && <AllTricks view={view} name={name} />}
-    </>
+      </div>
+      <div className="min-w-0 lg:border-l lg:border-white/[0.06] lg:pl-8">
+        {revealed && <AllHands view={view} name={name} myPos={myPos} />}
+        {revealed && <AllTricks view={view} name={name} />}
+      </div>
+    </div>
   );
 }
 
@@ -337,7 +342,7 @@ function AllHands({ view, name, myPos }: { view: PublicGameState; name: (pos: nu
   const r = view.result;
   const mode = trumpMode(view);
   return (
-    <div className="mt-5">
+    <div className="mt-5 lg:mt-0">
       <button className="btn-ghost tag px-2 py-1 text-[10px]" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         {open ? 'Blätter ausblenden' : 'Alle Blätter ansehen'}
       </button>
@@ -361,7 +366,7 @@ function AllHands({ view, name, myPos }: { view: PublicGameState; name: (pos: nu
                     </div>
                     <div className="flex">
                       {sorted.map((c, i) => (
-                        <PlayingCard key={c} card={c} width={40} style={{ marginLeft: i ? -14 : 0 }} className="ring-1 ring-black/20" />
+                        <PlayingCard key={c} card={c} width={46} style={{ marginLeft: i ? -15 : 0 }} className="ring-1 ring-black/20" />
                       ))}
                     </div>
                   </div>
@@ -389,7 +394,7 @@ function AllTricks({ view, name }: { view: PublicGameState; name: (pos: number) 
       <AnimatePresence initial={false}>
         {open && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-            <div className="mt-2">
+            <div className="mt-2 lg:max-h-[42vh] lg:overflow-y-auto lg:pr-2">
               <TrickList tricks={tricks} name={name} cardW={40} newestFirst={false} />
             </div>
           </motion.div>
