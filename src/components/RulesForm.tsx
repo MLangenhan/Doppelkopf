@@ -148,6 +148,13 @@ export function RulesForm({
           disabled={disabled}
         />
         <Toggle
+          label="Mit offenen Karten"
+          hint="Alle sehen die Karten aller Spieler – zum Lernen und Erklären"
+          checked={value.openCards}
+          onChange={(v) => set('openCards', v)}
+          disabled={disabled}
+        />
+        <Toggle
           label="Schweinchen"
           hint="Beide Karo-Asse auf einer Hand sind höchster Trumpf"
           checked={value.schweinchen}
@@ -231,5 +238,6 @@ export function rulesSummary(s: RuleSettings): string[] {
   out.push(soli.length === SOLO_TYPES.length ? 'Alle Soli' : soli.length ? `Soli: ${soli.map((t) => SOLO_NAMES[t]).join(', ')}` : 'Keine Soli');
   if (soli.length && !s.soloistLeads) out.push('Solist kommt nicht raus');
   if (s.armut) out.push('Armut');
+  if (s.openCards) out.push('Offene Karten');
   return out;
 }

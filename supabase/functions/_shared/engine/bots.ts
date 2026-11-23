@@ -33,11 +33,14 @@ export const BOT_IDS = [
   '00000000-0000-4000-8000-0000000000b1',
   '00000000-0000-4000-8000-0000000000b2',
   '00000000-0000-4000-8000-0000000000b3',
+  // Vierter Bot: wenn alle Menschen zuschauen, spielen vier Bots
+  '00000000-0000-4000-8000-0000000000b4',
 ];
 export const BOT_NAMES: Record<string, string> = {
   [BOT_IDS[0]]: 'Anton',
   [BOT_IDS[1]]: 'Berta',
   [BOT_IDS[2]]: 'Carl',
+  [BOT_IDS[3]]: 'Dora',
 };
 export const isBot = (userId: string) => BOT_IDS.includes(userId);
 

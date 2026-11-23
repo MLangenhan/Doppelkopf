@@ -42,6 +42,8 @@ export interface PublicGameState {
   tricks: Trick[] | null;
   /** Bei stillem Solo nach Spielende bekannt. */
   revealedKind: GameKind | null;
+  /** Hausregel „offene Karten“: alle Hände für alle sichtbar */
+  openHands?: Card[][] | null;
 }
 
 export function knownParties(s: GameState): (Party | null)[] {
@@ -109,5 +111,6 @@ export function publicView(s: GameState): PublicGameState {
     dealtHands: finished ? s.dealtHands : null,
     tricks: finished ? s.tricks : null,
     revealedKind: finished ? s.kind : null,
+    openHands: s.settings.openCards && !finished ? s.hands : null,
   };
 }

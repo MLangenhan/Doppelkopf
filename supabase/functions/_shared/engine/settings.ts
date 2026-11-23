@@ -35,6 +35,8 @@ export interface RuleSettings {
   soli: Record<SoloType, boolean>;
   /** Der Solist spielt den ersten Stich aus (sonst wie immer der Spieler links vom Geber) */
   soloistLeads: boolean;
+  /** Mit offenen Karten: alle sehen alle Hände */
+  openCards: boolean;
   armut: boolean;
   schweinchen: boolean;
   schmeissen: {
@@ -64,6 +66,7 @@ export const DEFAULT_SETTINGS: RuleSettings = {
     diamonds: true,
   },
   soloistLeads: true,
+  openCards: false,
   armut: true,
   schweinchen: false,
   schmeissen: {
@@ -91,6 +94,7 @@ export function normalizeSettings(input: unknown): RuleSettings {
     announcements: bool(s.announcements, d.announcements),
     soli: Object.fromEntries(SOLO_TYPES.map((t) => [t, bool(soli[t], d.soli[t])])) as Record<SoloType, boolean>,
     soloistLeads: bool(s.soloistLeads, d.soloistLeads),
+    openCards: bool(s.openCards, d.openCards),
     armut: bool(s.armut, d.armut),
     schweinchen: bool(s.schweinchen, d.schweinchen),
     schmeissen: {

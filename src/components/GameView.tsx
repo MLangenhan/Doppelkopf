@@ -238,8 +238,14 @@ export function GameView({
     };
   }, [spectating, game.id, game.version]);
   /** Hand eines Spielers für Zuschauer (Server-Stand, sonst die Hand-Zeilen) */
+  // Hausregel „offene Karten“: alle Hände stehen im öffentlichen Spielstand
+  const openHands = view.phase !== 'finished' ? (view.openHands ?? null) : null;
   const handAt = (pos: number): Card[] =>
-    spectHands?.gameId === game.id ? (spectHands.hands[pos] ?? []) : (otherHands?.[game.players[pos]] ?? []);
+    openHands
+      ? (openHands[pos] ?? [])
+      : spectHands?.gameId === game.id
+        ? (spectHands.hands[pos] ?? [])
+        : (otherHands?.[game.players[pos]] ?? []);
   const showPeek = spectating && (spectHands?.gameId === game.id || !!otherHands);
 
   // ---- Lernmodus für Zuschauer ----
@@ -651,8 +657,9 @@ export function GameView({
   };
   // Zuschauer am großen Bildschirm: jede Hand direkt an der Kamera ihres Spielers
   const seatPeek =
-    showPeek && !mobile
+    (showPeek || !!openHands) && !mobile
       ? (r: Rel) => {
+          if (myPos >= 0 && r === 0) return null; // die eigene Hand liegt unten wie immer
           const pos = posAt(r);
           const cards = handAt(pos);
           const sorted = arrangeHand(cards, { mode: trumpMode(view), schweinchen: hasSchweinchen(view, cards) }, 'trumpFirst', null);
@@ -719,7 +726,7 @@ export function GameView({
         avatar={members.find((m) => m.user_id === uid)?.avatar}
         avatarColor={members.find((m) => m.user_id === uid)?.avatar_color}
         profileId={isBotSeat(uid) || uid === 'me' || compact ? null : uid}
-        peek={!compact && seatPeek ? { node: seatPeek(r), v: r === 0 || r === 3 ? 'above' : 'below' } : undefined}
+        peek={!compact && seatPeek && seatPeek(r) ? { node: seatPeek(r), v: r === 0 || r === 3 ? 'above' : 'below' } : undefined}
       />
     );
   };
@@ -965,10 +972,10 @@ export function GameView({
   );
 
   // Zuschauer (zu fünft ausgesetzt): alle vier Hände offen, beginnend mit dem Spieler unten links
-  const peekHands = showPeek && (
+  const peekHands = (showPeek || !!openHands) && (
     // Beim Hovern werden alle vier Blätter zusammen groß, damit man die Karten gut erkennt
     <div className="relative flex origin-bottom flex-col gap-1.5 rounded-xl bg-black/25 p-2 ring-1 ring-white/[0.06] transition-transform duration-200 hover:z-30 hover:scale-[1.7] hover:bg-felt-950/95 hover:shadow-2xl">
-      {([0, 1, 2, 3] as Rel[]).map((r) => {
+      {([0, 1, 2, 3] as Rel[]).filter((r) => !(myPos >= 0 && r === 0)).map((r) => {
         const pos = posAt(r);
         const cards = handAt(pos);
         const sorted = arrangeHand(cards, { mode: trumpMode(view), schweinchen: hasSchweinchen(view, cards) }, 'trumpFirst', null);
@@ -1095,6 +1102,7 @@ export function GameView({
             {hint}
             {announceEl}
           </div>
+          {myPos >= 0 && openHands && peekHands}
           {handEl}
         </main>
       ) : (
