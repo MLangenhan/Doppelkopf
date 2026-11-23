@@ -59,6 +59,7 @@ import { type Rel, TrickArea, type TrickPlay } from './TrickArea';
 import { VideoTile } from './VideoTile';
 import { BotCat } from './BotCat';
 import { CardGuide } from './CardGuide';
+import { botLook } from '../lib/botLooks';
 import { TrickList } from './TrickList';
 import { LearnPrompt, type LessonItem, LessonFeed, RulesPanel as LearnRules } from './Learn';
 import { BigTitle, ConceptCard, NotesRail, useBigTitle } from './Tutorial';
@@ -804,8 +805,8 @@ export function GameView({
         compact={compact}
         media={cats && isBotSeat(uid) ? <BotCat mood={moodOf(view, pos, announcer)} bot={botIndex(uid, r)} /> : undefined}
         reaction={reactions?.shown[uid]}
-        title={members.find((m) => m.user_id === uid)?.title}
-        badges={members.find((m) => m.user_id === uid)?.showcase}
+        title={isBotSeat(uid) ? botLook(uid)?.title : members.find((m) => m.user_id === uid)?.title}
+        badges={isBotSeat(uid) ? botLook(uid)?.badges : members.find((m) => m.user_id === uid)?.showcase}
         frame={members.find((m) => m.user_id === uid)?.frame}
         avatar={members.find((m) => m.user_id === uid)?.avatar}
         avatarColor={members.find((m) => m.user_id === uid)?.avatar_color}
