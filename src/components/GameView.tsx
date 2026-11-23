@@ -332,6 +332,7 @@ export function GameView({
       onDone={(id) => setLessons((cur) => cur.filter((x) => x.id !== id))}
       onHoverPos={setHoverPos}
       level={learnLevel}
+      manual={game.players.every((u) => isBot(u))}
     />
   );
   const rulesPanel = learning && (

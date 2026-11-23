@@ -38,6 +38,8 @@ export interface Prefs {
   spectatorLearn: 'ask' | 'off';
   /** Lernstufe 1–4 (Grundlagen, Rangfolge, Spielarten & Ansagen, Punkte) – wandert mit dem Konto */
   learnLevel: number;
+  /** Hinweis „Hovern hält den Timer an“ schon gesehen */
+  learnHoverHintSeen: boolean;
   /** Nur für dich: Kartenrücken, Filzfarbe, Konfetti (durch Erfolge freigeschaltet) */
   cardBack: string;
   felt: string;
@@ -67,6 +69,7 @@ const DEFAULTS: Prefs = {
   explain: false,
   spectatorLearn: 'ask',
   learnLevel: 1,
+  learnHoverHintSeen: false,
   cardBack: 'blue',
   felt: 'green',
   confetti: 'classic',
