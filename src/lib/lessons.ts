@@ -109,7 +109,7 @@ export const CONCEPTS: Record<ConceptKey, Concept> = {
     focus: 'ledSuit',
     guide: 'Alle Karten der oberen Reihe sind Trumpf.',
   },
-  specials: { stage: 1, icon: Flame, title: 'Besondere Karten', points: ['Herz-10 „Dulle“: höchster Trumpf · Kreuz-Dame: zeigt Re.', 'Karo-Ass „Fuchs“ und Kreuz-Bube „Karlchen“ bringen später Extrapunkte.'], guide: 'Herz-10 ganz oben, Kreuz-Dame gleich dahinter; Karo-Ass und Kreuz-Bube in der Trumpfreihe.' },
+  specials: { stage: 1, icon: Flame, title: 'Besondere Karten', points: ['Herz-10 „Dulle“: höchster Trumpf · Kreuz-Dame: zeigt Re – die beiden Kreuz-Damen spielen zusammen gegen Kontra.', 'Karo-Ass „Fuchs“ und Kreuz-Bube „Karlchen“ bringen später Extrapunkte.'], guide: 'Herz-10 ganz oben, Kreuz-Dame gleich dahinter; Karo-Ass und Kreuz-Bube in der Trumpfreihe.' },
   winnerLeads: { stage: 1, icon: Repeat, title: 'Wer gewinnt, fängt an', points: ['Der Gewinner nimmt den Stich.', 'Und spielt den nächsten aus.'] },
   doubles: {
     stage: 2,
