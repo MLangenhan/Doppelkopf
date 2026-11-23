@@ -60,6 +60,8 @@ import { VideoTile } from './VideoTile';
 import { BotCat } from './BotCat';
 import { CardGuide } from './CardGuide';
 import { LearnPrompt, type LessonItem, LessonFeed, RulesPanel as LearnRules } from './Learn';
+import { BigTitle, ConceptCard, NotesRail, useBigTitle } from './Tutorial';
+import { CONCEPTS, type ConceptKey, RULE_CONCEPTS } from '../lib/lessons';
 import { analyzeTrick, ruleTexts } from '../lib/trickLesson';
 import { trumpRule } from '../lib/explain';
 import { AchievementBanner } from './AchievementBanner';
@@ -84,7 +86,7 @@ const isBotSeat = (uid: string) => isBot(uid) || uid.startsWith('bot-');
 const botIndex = (uid: string, fallback: number) =>
   uid.startsWith('bot-') ? Number(uid.slice(4)) - 1 : BOT_IDS.includes(uid) ? BOT_IDS.indexOf(uid) : fallback;
 
-function useViewport() {
+export function useViewport() {
   const [size, setSize] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
   useEffect(() => {
     const on = () => setSize({ w: window.innerWidth, h: window.innerHeight });
@@ -96,6 +98,8 @@ function useViewport() {
 
 /** Zuschauer-Lernmodus für diese Sitzung: null = noch nicht gefragt. Bewusst nicht gespeichert. */
 let learnSession: boolean | null = null;
+/** Online-Lernmodus: Lernkarten, die man in dieser Sitzung schon gesehen hat (landen im Merkzettel) */
+let seenConcepts: ConceptKey[] = [];
 
 export function GameView({
   game,
@@ -118,6 +122,9 @@ export function GameView({
   otherHands,
   spectator,
   onHoldBots,
+  forcedCard,
+  tutorial = false,
+  allowAnnounce = true,
 }: {
   game: GameRow;
   hand: Card[];
@@ -127,6 +134,12 @@ export function GameView({
   spectator?: { on: boolean; takenBy: string | null; toggle: (on: boolean) => void };
   /** Bots anhalten, solange die Erklärung zum letzten Stich offen ist (Lernmodus, nur Bots) */
   onHoldBots?: (hold: boolean) => void;
+  /** Lektion: nur diese Karte ist spielbar und leuchtet (wie im Hearthstone-Tutorial) */
+  forcedCard?: Card | null;
+  /** Offline-Lektion: eigener Lernmodus, kein Server, keine Lern-Frage */
+  tutorial?: boolean;
+  /** Lektion 1/2: Ansagen ausblenden, sie kommen erst in Lektion 3 */
+  allowAnnounce?: boolean;
   members: Member[];
   results: ResultRow[];
   /** Fertige Spiele des Abends, neuestes zuerst */
@@ -222,13 +235,14 @@ export function GameView({
   // Wer aussetzt oder zuschaut: alle Hände und alle bisherigen Stiche (vom Server, nur für Zuschauer)
   const isMember = !!me && members.some((m) => m.user_id === me);
   const spectating = myPos < 0 && isMember && view.phase !== 'finished';
+  const serverSpectate = spectating && !tutorial;
   const [pastTricks, setPastTricks] = useState<Trick[]>([]);
   const [spectHands, setSpectHands] = useState<{ gameId: string; hands: Card[][] } | null>(null);
   const [tricksOpen, setTricksOpen] = useState(false);
   // Zuschauer: Hovern über eine Hand vergrößert alle vier
   const [peekZoom, setPeekZoom] = useState(false);
   useEffect(() => {
-    if (!spectating) return setPastTricks([]);
+    if (!serverSpectate) return setPastTricks([]);
     let alive = true;
     api
       .spectate(game.id)
@@ -241,7 +255,7 @@ export function GameView({
     return () => {
       alive = false;
     };
-  }, [spectating, game.id, game.version]);
+  }, [serverSpectate, game.id, game.version]);
   /** Hand eines Spielers für Zuschauer (Server-Stand, sonst die Hand-Zeilen) */
   // Hausregel „offene Karten“: alle Hände stehen im öffentlichen Spielstand
   const openHands = view.phase !== 'finished' ? (view.openHands ?? null) : null;
@@ -260,7 +274,7 @@ export function GameView({
     setLearnState(on);
   };
   const [learnAsked, setLearnAsked] = useState(learnSession !== null);
-  const learning = spectating && learn;
+  const learning = spectating && learn && !tutorial;
   const spectCtx = { mode: trumpMode(view), schweinchen: view.schweinchen !== null, dulleRule: view.settings.dulleRule };
   const handSize = view.settings.withNines ? 12 : 10;
   /** Partei eines Spielers, soweit der Zuschauer sie kennt (er sieht alle Karten) */
@@ -278,6 +292,16 @@ export function GameView({
     return queens[pos] > 0 ? 're' : 'kontra';
   };
   const [lessons, setLessons] = useState<LessonItem[]>([]);
+  const [conceptQueue, setConceptQueue] = useState<ConceptKey[]>([]);
+  const [conceptNotes, setConceptNotes] = useState<ConceptKey[]>(seenConcepts);
+  const [title, showTitle] = useBigTitle();
+  const dismissConcept = () => {
+    const k = conceptQueue[0];
+    if (!k) return;
+    seenConcepts = [...seenConcepts.filter((x) => x !== k), k];
+    setConceptNotes(seenConcepts);
+    setConceptQueue((q) => q.slice(1));
+  };
   const seenTricks = useRef<{ gameId: string; seen: Set<number> }>({ gameId: '', seen: new Set() });
   const [hoverPos, setHoverPos] = useState<number | null>(null);
   useEffect(() => {
@@ -306,11 +330,20 @@ export function GameView({
     if (fresh.length) {
       setLessons((cur) => [...cur, ...fresh].slice(-6));
       setLevelTricks((n) => n + fresh.length);
+      // Wie offline: Ein Begriff wird beim ersten Auftreten groß erklärt und wandert dann in den Merkzettel
+      const lvl = Math.min(4, Math.max(1, Math.round(prefs.learnLevel) || 1));
+      const newConcepts = [
+        ...new Set(fresh.flatMap((f) => f.lesson.rules.flatMap((r) => RULE_CONCEPTS[r] ?? []))),
+      ].filter((k) => CONCEPTS[k].stage <= lvl && !seenConcepts.includes(k));
+      if (newConcepts.length) setConceptQueue((q) => [...q, ...newConcepts.filter((k) => !q.includes(k))]);
+      const last = fresh[fresh.length - 1];
+      const w = last.lesson.plays[last.lesson.winnerIdx].pos;
+      showTitle(`Stich für ${name(w)}`, lvl >= 4 ? `${last.lesson.augen} Augen` : undefined);
     }
   }, [pastTricks, learning, game.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // Nur Bots spielen: Weiter geht's erst, wenn die Erklärung zum letzten Stich geschlossen ist
   const botsOnly = game.players.every((u) => isBotSeat(u));
-  const holdBots = learning && botsOnly && lessons.some((l) => l.number === pastTricks.length);
+  const holdBots = learning && botsOnly && (conceptQueue.length > 0 || lessons.some((l) => l.number === pastTricks.length));
   useEffect(() => {
     onHoldBots?.(holdBots);
   }, [holdBots, onHoldBots]);
@@ -363,7 +396,7 @@ export function GameView({
   // Ohne Hervorhebung ("schwarz spielen") ist jede Karte wählbar; der Server prüft das Bedienen
   const playable =
     myTurnToPlay && view.current
-      ? new Set(prefs.highlightPlayable ? legalCards(hand, view.current.cards, ctx) : hand)
+      ? new Set(forcedCard ? [forcedCard] : prefs.highlightPlayable ? legalCards(hand, view.current.cards, ctx) : hand)
       : null;
 
   const play = (card: Card) => {
@@ -917,7 +950,7 @@ export function GameView({
         </button>
       )}
       {reactions && myPos >= 0 && <ReactionPicker onReact={reactions.send} />}
-      {spectating && (
+      {spectating && !tutorial && (
         <button
           className={`btn-ghost flex items-center gap-1.5 p-2 ${learn ? 'text-gold-300' : ''}`}
           onClick={() => setLearn(!learn)}
@@ -1015,6 +1048,11 @@ export function GameView({
       {!mobile && learning && (
         <div className="flex w-full items-end justify-center gap-4">
           <div className="min-w-0 max-w-2xl flex-1">{rulesPanel}</div>
+          {conceptNotes.length > 0 && (
+            <div className="max-h-72 w-56 shrink-0 overflow-y-auto">
+              <NotesRail notes={conceptNotes.filter((k) => k !== conceptQueue[0])} mobile={false} inline />
+            </div>
+          )}
           {learnLevel >= 2 && (
             <div className="pointer-events-none shrink-0">
               <CardGuide width={Math.min(camW, 260)} withNines={view.settings.withNines} />
@@ -1037,7 +1075,7 @@ export function GameView({
       mode={view.phase === 'armutReturn' && isRichReturning ? 'pick' : view.phase === 'playing' ? 'play' : 'view'}
       playable={playable}
       picked={picked}
-      highlight={newCards}
+      highlight={forcedCard ? new Set([forcedCard]) : newCards}
       maxCardW={mobile ? 84 : 124}
       onPick={(c) =>
         setPicked((cur) => {
@@ -1055,7 +1093,7 @@ export function GameView({
     peekEl
   );
 
-  const announceEl = announce.length > 0 && (
+  const announceEl = allowAnnounce && announce.length > 0 && (
     <AnnouncePanel
       options={announce}
       party={party}
@@ -1114,7 +1152,12 @@ export function GameView({
           </div>
           {learning && (
             <div className="flex flex-col items-center gap-2">
-              {lessonFeed}
+              <AnimatePresence>
+                {conceptQueue[0] && (
+                  <ConceptCard key={conceptQueue[0]} concept={conceptQueue[0]} modal={false} onDone={dismissConcept} />
+                )}
+              </AnimatePresence>
+              {!conceptQueue[0] && lessonFeed}
               <details className="w-full">
                 <summary className="tag cursor-pointer px-1 text-[10px] text-white/50">Regeln anzeigen</summary>
                 {rulesPanel}
@@ -1147,7 +1190,14 @@ export function GameView({
           {toolbar}
           {/* Lernmodus: Die Erklärungen zeigen den letzten Stich ohnehin – sie stehen hier oben, der Tisch bleibt frei */}
           {learning ? (
-            lessonFeed
+            <>
+              <AnimatePresence mode="popLayout">
+                {conceptQueue[0] && (
+                  <ConceptCard key={conceptQueue[0]} concept={conceptQueue[0]} modal={false} onDone={dismissConcept} />
+                )}
+              </AnimatePresence>
+              {!conceptQueue[0] && lessonFeed}
+            </>
           ) : (
             <>
               {lastTrick}
@@ -1222,7 +1272,7 @@ export function GameView({
       {achievementFeed && <AchievementBanner event={achievementFeed.current} name={nameOfUser} onDone={achievementFeed.done} />}
 
       <AnimatePresence>
-        {spectating && !learnAsked && prefs.spectatorLearn === 'ask' && (
+        {spectating && !tutorial && !learnAsked && prefs.spectatorLearn === 'ask' && (
           <LearnPrompt
             level={learnLevel}
             onYes={() => {
@@ -1243,6 +1293,8 @@ export function GameView({
           <TricksDialog tricks={pastTricks} name={name} onClose={() => setTricksOpen(false)} cardW={mobile ? 40 : 56} />
         )}
       </AnimatePresence>
+
+      {learning && <BigTitle title={title} />}
 
       <LeaveDialog
         open={leaveOpen}

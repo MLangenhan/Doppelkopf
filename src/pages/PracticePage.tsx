@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import {
   applyAction,
   createGame,
@@ -17,6 +16,10 @@ import { actorOf, BOT_LEVEL_LABELS, type BotLevel, botAction } from '@engine';
 import type { GameRow, Member, ResultRow } from '../lib/supabase';
 import { useReactions } from '../lib/reactions';
 import { useCamera } from '../lib/video';
+import { PracticeChooser, type PracticeChoice } from '../components/Tutorial';
+import { LessonGame } from './LessonGame';
+import { CONCEPTS, type ConceptKey, STAGES } from '../lib/lessons';
+import { usePrefs } from '../lib/prefs';
 
 const PLAYERS = ['me', 'bot-1', 'bot-2', 'bot-3'];
 
@@ -40,10 +43,68 @@ function loadLevel(): BotLevel {
   return 'medium';
 }
 
-/** Übungsspiel gegen drei Bots – läuft komplett im Browser, ohne Server. */
+/**
+ * Übung offline: Zuerst die Wahl – Lektion mitspielen, Lektion zuschauen oder frei spielen.
+ * Alles läuft im Browser, ohne Server.
+ */
 export function PracticePage() {
   const { profile } = useAuth();
   const camera = useCamera();
+  const [prefs] = usePrefs();
+  const [choice, setChoice] = useState<PracticeChoice | null>(null);
+  const [run, setRun] = useState(0);
+  // Merkzettel: alles aus bereits geschafften Stufen ist schon drin
+  const [notes, setNotes] = useState<ConceptKey[]>(() =>
+    (Object.keys(CONCEPTS) as ConceptKey[]).filter((k) => CONCEPTS[k].stage < Math.min(4, prefs.learnLevel)),
+  );
+  const addNote = (k: ConceptKey) => setNotes((cur) => (cur.includes(k) ? cur : [...cur, k]));
+  const name = profile?.display_name ?? 'Du';
+
+  if (!choice) {
+    return (
+      <div className="flex h-full flex-col">
+        <TopBar>
+          <span className="tag hidden truncate text-[11px] text-white/55 md:inline">Übung</span>
+        </TopBar>
+        <div className="felt relative isolate flex-1 overflow-y-auto">
+          <PracticeChooser level={prefs.learnLevel} onChoose={setChoice} />
+        </div>
+      </div>
+    );
+  }
+  if (choice.mode === 'free') return <FreePractice camera={camera} onExit={() => setChoice(null)} />;
+  return (
+    <div className="flex h-full flex-col">
+      <TopBar>
+        <span className="tag hidden truncate text-[11px] text-white/55 md:inline">
+          Lektion {choice.stage} · {STAGES[choice.stage - 1].title} · {choice.mode === 'learnWatch' ? 'Zuschauen' : 'Mitspielen'}
+        </span>
+        <button className="btn-ghost tag px-2 py-1 text-[10px]" onClick={() => setChoice(null)}>
+          Zur Auswahl
+        </button>
+      </TopBar>
+      <LessonGame
+        key={`${choice.stage}-${choice.mode}-${run}`}
+        stage={choice.stage}
+        watch={choice.mode === 'learnWatch'}
+        name={name}
+        camera={camera}
+        notes={notes}
+        addNote={addNote}
+        onExit={() => setChoice(null)}
+        onNext={(stage) => setChoice({ mode: choice.mode, stage })}
+        onFree={() => {
+          setRun((r) => r + 1);
+          setChoice({ mode: 'free' });
+        }}
+      />
+    </div>
+  );
+}
+
+/** Freies Übungsspiel gegen drei Bots */
+function FreePractice({ camera, onExit }: { camera: ReturnType<typeof useCamera>; onExit: () => void }) {
+  const { profile } = useAuth();
   const [settings, setSettings] = useState(loadRules);
   const saveRules = async (s: RuleSettings) => {
     setSettings(s);
@@ -146,7 +207,6 @@ export function PracticePage() {
     setState(applyAction(stateRef.current, 0, action));
   }, []);
 
-  const navigate = useNavigate();
   const reactions = useReactions(null, 'me');
   const startGame = useCallback(async () => {
     const s = stateRef.current;
@@ -189,7 +249,7 @@ export function PracticePage() {
         online={['bot-1', 'bot-2', 'bot-3']}
         act={act}
         startGame={startGame}
-        onLeave={() => navigate('/')}
+        onLeave={onExit}
         reactions={reactions}
         rules={{ value: settings, locked: null, onSave: saveRules, bots: false }}
       />
