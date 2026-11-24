@@ -1,4 +1,4 @@
-import { augenTargets, type Party, type PublicGameState } from '@engine';
+import { augenTargets, type Party, type PublicGameState, sumAugen } from '@engine';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { useFx } from '../lib/prefs';
@@ -263,7 +263,12 @@ function ResultBody({
       )}
 
       <div className={`mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 ${revealed ? '' : 'invisible'}`}>
-        {revealed && r.scores.map((s, p) => (
+        {revealed && r.scores.map((s, p) => {
+          // Wer selbst wie viele Augen geholt hat (Summe seiner gewonnenen Stiche)
+          const won = (view.tricks ?? []).filter((t) => t.winner === p);
+          const augen = won.reduce((sum, t) => sum + sumAugen(t.cards), 0);
+          const best = Math.max(...[0, 1, 2, 3].map((q) => (view.tricks ?? []).filter((t) => t.winner === q).reduce((x, t) => x + sumAugen(t.cards), 0)));
+          return (
           <motion.div
             key={p}
             initial={{ opacity: 0, scale: 0.8 }}
@@ -275,8 +280,13 @@ function ResultBody({
           >
             <div className="truncate text-xs text-white/70">{name(p)}</div>
             <div className="tabular-nums text-xl font-bold">{s > 0 ? `+${s}` : s}</div>
+            <div className={`mt-0.5 text-[11px] tabular-nums ${augen === best && augen > 0 ? 'text-gold-200' : 'text-white/55'}`}>
+              {augen === best && augen > 0 && <span aria-label="Meiste Augen">👑 </span>}
+              {augen} Augen · {won.length} {won.length === 1 ? 'Stich' : 'Stiche'}
+            </div>
           </motion.div>
-        ))}
+          );
+        })}
       </div>
       </div>
       <div className="min-w-0 lg:border-l lg:border-white/[0.06] lg:pl-8">
