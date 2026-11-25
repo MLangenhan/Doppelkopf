@@ -1,4 +1,4 @@
-import { augenTargets, type Party, type PublicGameState, sumAugen } from '@engine';
+import { augenOf, augenTargets, type Card, isTrump, type Party, type PublicGameState, rankOf, sumAugen } from '@engine';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { useFx } from '../lib/prefs';
@@ -65,23 +65,13 @@ export function ResultDialog({
       aria-labelledby="result-title"
     >
       <motion.div
-        className={`panel max-h-full w-full overflow-y-auto p-5 sm:p-6 ${view.redeal ? 'max-w-2xl' : 'max-w-lg lg:max-w-5xl'}`}
+        className="panel max-h-full w-full max-w-lg overflow-y-auto p-5 sm:p-6 lg:max-w-5xl"
         initial={{ y: 30, scale: 0.95, opacity: 0 }}
         animate={{ y: 0, scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 240, damping: 24, delay: 0.1 }}
       >
         {view.redeal ? (
-          <>
-            <h2 id="result-title" className="display text-5xl">
-              Neu geben
-            </h2>
-            <p className="mt-2 text-white/80">
-              {view.redeal.reason === 'schmeissen'
-                ? `${name(view.redeal.pos)} hat geschmissen (${SCHMEISSEN_LABEL[view.redeal.detail as SchmeissenReason] ?? view.redeal.detail}).`
-                : `Niemand wollte die Armut von ${name(view.redeal.pos)} mitnehmen.`}
-            </p>
-            <AllHands view={view} name={name} myPos={myPos} />
-          </>
+          <RedealBody view={view} name={name} myPos={myPos} />
         ) : r ? (
           <ResultBody view={view} name={name} myPos={myPos} skip={skip} onRevealed={() => setRevealed(true)} />
         ) : null}
@@ -345,7 +335,18 @@ function useAugenReveal(
 }
 
 /** Nach dem Spiel: alle vier Blätter, wie sie ausgeteilt wurden */
-function AllHands({ view, name, myPos }: { view: PublicGameState; name: (pos: number) => string; myPos: number }) {
+function AllHands({
+  view,
+  name,
+  myPos,
+  mark,
+}: {
+  view: PublicGameState;
+  name: (pos: number) => string;
+  myPos: number;
+  /** Neu geben: Karten, die den Grund zeigen (z. B. die fünf Könige), plus kurze Notiz am Namen */
+  mark?: { pos: number; cards: Card[]; note: string } | null;
+}) {
   const [open, setOpen] = useState(true);
   const hands = view.dealtHands;
   if (!hands) return null;
@@ -366,17 +367,37 @@ function AllHands({ view, name, myPos }: { view: PublicGameState; name: (pos: nu
           >
             <div className="mt-2 flex flex-col gap-2.5">
               {hands.map((cards, p) => {
-                const sorted = arrangeHand(cards, { mode, schweinchen: hasSchweinchen(view, cards) }, 'trumpFirst', null);
+                const base = arrangeHand(cards, { mode, schweinchen: hasSchweinchen(view, cards) }, 'trumpFirst', null);
+                // Markierte Karten (Grund fürs Neugeben) gesammelt ans Ende, damit nichts verdeckt wird
+                const sorted =
+                  mark?.pos === p ? [...base.filter((c) => !mark.cards.includes(c)), ...base.filter((c) => mark.cards.includes(c))] : base;
                 const party: Party | null = r ? (r.reTeam.includes(p) ? 're' : 'kontra') : null;
                 return (
                   <div key={p}>
                     <div className="mb-1 flex items-center gap-2 text-xs text-white/70">
                       <span className={`truncate ${p === myPos ? 'font-semibold text-white' : ''}`}>{name(p)}</span>
                       {party && <PartyBadge party={party} small />}
+                      {mark?.pos === p && (
+                        <span className="rounded-full bg-gold-400/20 px-2 py-0.5 text-[10px] font-semibold text-gold-200 ring-1 ring-gold-400/40">
+                          {mark.note}
+                        </span>
+                      )}
                     </div>
                     <div className="flex">
                       {sorted.map((c, i) => (
-                        <PlayingCard key={c} card={c} width={46} style={{ marginLeft: i ? -15 : 0 }} className="ring-1 ring-black/20" />
+                        <PlayingCard
+                          key={c}
+                          card={c}
+                          width={46}
+                          style={{ marginLeft: i ? -15 : 0 }}
+                          className={
+                            mark?.pos === p
+                              ? mark.cards.includes(c)
+                                ? 'relative z-10 -translate-y-1.5 ring-2 ring-gold-400 shadow-[0_0_12px_rgba(217,180,90,0.6)]'
+                                : 'opacity-60'
+                              : 'ring-1 ring-black/20'
+                          }
+                        />
                       ))}
                     </div>
                   </div>
@@ -409,6 +430,83 @@ function AllTricks({ view, name }: { view: PublicGameState; name: (pos: number) 
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+/** Neu geben: was passiert ist, wer was gesagt hat – und rechts die Blätter mit dem markierten Grund */
+function RedealBody({ view, name, myPos }: { view: PublicGameState; name: (pos: number) => string; myPos: number }) {
+  const rd = view.redeal!;
+  const hands = view.dealtHands;
+  const hand = hands?.[rd.pos] ?? [];
+  const ctx = { mode: 'normal' as const, schweinchen: false };
+  const reason = rd.reason === 'schmeissen' ? (rd.detail as SchmeissenReason) : null;
+  const trumps = hand.filter((c) => isTrump(c, ctx));
+  const mark: { pos: number; cards: Card[]; note: string } | null =
+    reason === 'over80'
+      ? { pos: rd.pos, cards: hand.filter((c) => augenOf(c) >= 10), note: `${sumAugen(hand)} Augen` }
+      : reason === 'fiveKings'
+        ? { pos: rd.pos, cards: hand.filter((c) => rankOf(c) === 'K'), note: `${hand.filter((c) => rankOf(c) === 'K').length} Könige` }
+        : reason === 'fiveNines'
+          ? { pos: rd.pos, cards: hand.filter((c) => rankOf(c) === '9'), note: `${hand.filter((c) => rankOf(c) === '9').length} Neunen` }
+          : { pos: rd.pos, cards: trumps, note: `${trumps.length} ${trumps.length === 1 ? 'Trumpf' : 'Trümpfe'}` };
+  const declined = view.armut?.declined ?? [];
+
+  return (
+    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-8">
+      <div className="min-w-0">
+        <p className="tag text-[11px] text-white/50">{rd.reason === 'schmeissen' ? 'Geschmissen' : 'Armut abgelehnt'}</p>
+        <h2 id="result-title" className="display text-5xl sm:text-6xl">
+          Neu geben
+        </h2>
+        <p className="mt-3 text-lg text-white/85">
+          {rd.reason === 'schmeissen' ? (
+            <>
+              <span className="font-semibold text-white">{name(rd.pos)}</span> hat geschmissen:{' '}
+              <span className="text-gold-200">{reason ? SCHMEISSEN_LABEL[reason] : rd.detail}</span>
+            </>
+          ) : (
+            <>
+              Niemand wollte die Armut von <span className="font-semibold text-white">{name(rd.pos)}</span> mitnehmen.
+            </>
+          )}
+        </p>
+
+        {/* Wer hat was gesagt */}
+        <ul className="mt-5 grid grid-cols-2 gap-2">
+          {[0, 1, 2, 3].map((p) => {
+            const isCause = p === rd.pos;
+            const said =
+              rd.reason === 'armut'
+                ? isCause
+                  ? 'Armut'
+                  : declined.includes(p)
+                    ? 'Nein danke'
+                    : '–'
+                : isCause
+                  ? 'Schmeißen'
+                  : view.declarations[p] === 'healthy'
+                    ? 'Gesund'
+                    : view.declarations[p] === 'reserved'
+                      ? 'Vorbehalt'
+                      : '–';
+            return (
+              <li
+                key={p}
+                className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${
+                  isCause ? 'bg-gold-400/15 ring-1 ring-gold-400/50' : 'bg-white/5'
+                } ${p === myPos ? 'font-semibold' : ''}`}
+              >
+                <span className="truncate">{name(p)}</span>
+                <span className={isCause ? 'text-gold-200' : said === 'Nein danke' ? 'text-red-300' : 'text-white/60'}>{said}</span>
+              </li>
+            );
+          })}
+        </ul>
+
+        <p className="tag mt-5 text-[11px] text-white/55">Gleicher Geber, neue Karten – ohne Punkte.</p>
+      </div>
+      <div className="min-w-0 lg:border-l lg:border-white/[0.06] lg:pl-8">{hands && <AllHands view={view} name={name} myPos={myPos} mark={mark} />}</div>
     </div>
   );
 }
