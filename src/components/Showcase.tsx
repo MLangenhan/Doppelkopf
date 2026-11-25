@@ -7,7 +7,10 @@ export function TitleTag({ titleKey, className = '' }: { titleKey?: string | nul
   // Bots haben eigene Spaß-Titel
   if (titleKey && BOT_TITLES[titleKey]) {
     return (
-      <span className={`tag truncate font-mono text-[9px] text-cyan-200/85 ${className}`} title="Bot-Titel">
+      <span
+        className={`tag truncate font-mono text-[9px] text-red-400 [text-shadow:0_0_6px_rgba(248,113,113,0.9),0_0_12px_rgba(239,68,68,0.55)] ${className}`}
+        title="Bot-Titel"
+      >
         {BOT_TITLES[titleKey]}
       </span>
     );

@@ -722,10 +722,22 @@ export function GameView({
   const seatStatus = (pos: number) => {
     if (view.phase === 'reservations') {
       const d = view.declarations[pos];
-      if (d === 'healthy') return <span className="text-emerald-300">Gesund</span>;
-      if (d === 'reserved') return <span className="font-semibold text-gold-300">Vorbehalt!</span>;
-      if (view.declTurn === pos) return <span className="text-white/70">überlegt …</span>;
-      return null;
+      const st =
+        d === 'healthy' ? (
+          <span className="text-emerald-300">Gesund</span>
+        ) : d === 'reserved' ? (
+          <span className="font-semibold text-gold-300">Vorbehalt!</span>
+        ) : view.declTurn === pos ? (
+          <span className="text-white/70">überlegt …</span>
+        ) : null;
+      // Wer gleich ausspielt, steht deutlich am Platz
+      if (view.starter !== pos) return st;
+      return (
+        <span className="flex items-center gap-1.5">
+          {st}
+          <span className="rounded bg-gold-400 px-1.5 py-0.5 font-bold text-felt-950">▶ spielt aus</span>
+        </span>
+      );
     }
     if (view.kind === 'solo' && view.soloist === pos) return <span className="font-semibold text-gold-300">Solist</span>;
     if (view.schweinchen === pos) return <span className="font-semibold text-gold-300">Schweinchen</span>;

@@ -149,7 +149,6 @@ export function RulesForm({
         />
         <Toggle
           label="Mit offenen Karten"
-          hint="Alle sehen die Karten aller Spieler – zum Lernen und Erklären"
           checked={value.openCards}
           onChange={(v) => set('openCards', v)}
           disabled={disabled}
@@ -166,7 +165,7 @@ export function RulesForm({
       <Section title="Soli">
         <Toggle
           label="Solist kommt raus"
-          hint="Der Solist spielt den ersten Stich aus. Aus: Es beginnt wie immer der Spieler links vom Geber."
+          hint="Aus: Es beginnt der Spieler links vom Geber."
           checked={value.soloistLeads}
           onChange={(v) => set('soloistLeads', v)}
           disabled={disabled}

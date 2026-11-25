@@ -382,7 +382,6 @@ function AllHands({ view, name, myPos }: { view: PublicGameState; name: (pos: nu
                   </div>
                 );
               })}
-              <p className="text-[10px] text-white/40">So wurden die Karten ausgeteilt (vor einer Armut-Übergabe).</p>
             </div>
           </motion.div>
         )}

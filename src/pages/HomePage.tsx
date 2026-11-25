@@ -174,7 +174,6 @@ export function HomePage() {
                 <ArrowRight className="size-5" />
               </button>
             </div>
-            <p className="mt-3 text-sm text-white/45">Code oder ganzen Einladungslink einfügen.</p>
             <Link to="/uebung" className={`${arrowLink} mt-6 inline-flex items-center gap-2`}>
               Alleine üben gegen Bots <ArrowRight className="size-3.5" />
             </Link>

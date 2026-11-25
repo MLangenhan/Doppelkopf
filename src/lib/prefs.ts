@@ -6,14 +6,14 @@ import { useCallback, useSyncExternalStore } from 'react';
 export type FxKey = 'scene' | 'atmosphere' | 'cursor' | 'tilt' | 'impact' | 'moments' | 'confetti' | 'reveal' | 'cats';
 
 export const FX_LABELS: Record<FxKey, { label: string; hint: string }> = {
-  cats: { label: 'Katzen für Bots', hint: 'Die Kameras der Bots zeigen Katzen-GIFs (GIPHY), die auf das Spiel reagieren.' },
+  cats: { label: 'Katzen für Bots', hint: 'GIFs von GIPHY, die aufs Spiel reagieren.' },
   cursor: { label: 'Farbzeichen-Zeiger', hint: 'Der Mauszeiger wird zum ♠ und nimmt über Karten deren Farbe an.' },
   tilt: { label: 'Karten neigen', hint: 'Karten in der Hand kippen zur Maus und glänzen.' },
   impact: { label: 'Trumpf-Einschlag', hint: 'Dulle, Kreuz-Dame und Schweinchen lassen den Tisch beben.' },
   moments: { label: 'Große Momente', hint: 'Ansagen, Soli, Fuchs, Doppelkopf und Karlchen erscheinen groß in der Mitte.' },
-  reveal: { label: 'Spannende Auswertung', hint: 'Die Augen zählen am Ende hoch, bis der Gewinner feststeht.' },
-  confetti: { label: 'Konfetti', hint: 'Bei einem Sieg regnet es Konfetti.' },
-  atmosphere: { label: 'Atmosphäre', hint: 'Leichte Partikel hinter dem Tisch.' },
+  reveal: { label: 'Spannende Auswertung', hint: 'Die Augen zählen am Ende hoch.' },
+  confetti: { label: 'Konfetti', hint: '' },
+  atmosphere: { label: 'Atmosphäre', hint: '' },
   scene: { label: '3D-Karten', hint: 'Schwebende 3D-Karten auf der Anmelde- und Startseite.' },
 };
 

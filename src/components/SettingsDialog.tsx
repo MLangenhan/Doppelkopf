@@ -75,32 +75,31 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <p className="mt-1 text-sm text-white/55">Gilt nur für dich, in diesem Browser.</p>
 
             <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Doppelkopf lernen</h3>
             <Toggle
               checked={prefs.highlightPlayable}
               onChange={(v) => setPref('highlightPlayable', v)}
               label="Spielbare Karten hervorheben"
-              hint="Ausgeschaltet spielst du ohne Hilfe: Alle Karten sehen gleich aus. Wer nicht bedient, bekommt einen Hinweis und muss eine andere Karte wählen."
+              hint="Aus: Alle Karten sehen gleich aus."
             />
             <Toggle
               checked={prefs.cardGuide}
               onChange={(v) => setPref('cardGuide', v)}
               label="Kartenübersicht anzeigen"
-              hint="Rechts zwischen den Kameras: Trumpf-Reihenfolge von hoch nach niedrig und die Augen jeder Karte (Normalspiel). Nur auf größeren Bildschirmen."
+              hint="Trumpf-Reihenfolge und Augen, rechts zwischen den Kameras."
             />
             <Toggle
               checked={prefs.explain}
               onChange={(v) => setPref('explain', v)}
               label="Spiel erklären"
-              hint="Wenn du dran bist: welche Karten du legen darfst und warum die anderen nicht, wer gerade vorne liegt und womit du übernehmen kannst. Nach jedem Stich: warum er an wen geht."
+              hint="Bei jedem eigenen Zug und nach jedem Stich."
             />
             <Toggle
               checked={prefs.spectatorLearn === 'ask'}
               onChange={(v) => setPref('spectatorLearn', v ? 'ask' : 'off')}
               label="Beim Zuschauen fragen, ob ich lernen möchte"
-              hint="Wer zuschaut, wird zu Rundenbeginn gefragt. Dann wird jeder Stich kurz mit Symbolen und ausführlich erklärt, dazu die Regeln, die gerade greifen."
+              hint="Zu Rundenbeginn, wenn du zuschaust."
             />
 
             <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Ton</h3>
@@ -108,7 +107,6 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
               checked={prefs.sound}
               onChange={(v) => setPref('sound', v)}
               label="Sounds"
-              hint="Karten ausspielen, Stich einsammeln, Ansagen, wenn du dran bist und am Spielende."
             />
             {prefs.sound && (
               <div className="flex items-center gap-3 px-2 pt-1 pb-2">
@@ -142,7 +140,7 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
                   if (v) setTimeout(() => sound.say('Re!'), 60);
                 }}
                 label="Ansagen vorlesen"
-                hint="„Re!“, „Kontra!“, „Keine 90!“ – mit der Sprachausgabe des Browsers, zusätzlich zur Fanfare."
+                hint="Mit der Sprachausgabe des Browsers."
               />
             )}
             {prefs.sound && prefs.voice && (
@@ -267,7 +265,7 @@ function Toggle({
   checked: boolean;
   onChange: (v: boolean) => void;
   label: string;
-  hint: string;
+  hint?: string;
 }) {
   return (
     <label className="flex cursor-pointer items-start gap-3 rounded-lg p-2 hover:bg-white/5">
@@ -279,7 +277,7 @@ function Toggle({
       />
       <span className="text-sm">
         <span className="font-medium text-white">{label}</span>
-        <span className="block text-white/55">{hint}</span>
+        {hint && <span className="block text-white/55">{hint}</span>}
       </span>
     </label>
   );

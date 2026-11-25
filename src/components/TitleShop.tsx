@@ -330,7 +330,6 @@ function BuyDialog({
           <VideoTile stream={null} name={name} avatar={look.avatar} avatarColor={look.avatarColor} className="aspect-[4/3] w-full">
             <Nametag className="absolute bottom-2 left-2 max-w-[92%]" name={name} title={t.key} badges={look.showBadges ? look.badges : []} frame={look.frame} />
           </VideoTile>
-          <p className="tag mt-1.5 text-[9px] text-white/40">So sehen dich die anderen am Tisch</p>
         </div>
 
         {phase !== 'bought' ? (

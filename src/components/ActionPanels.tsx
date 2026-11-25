@@ -8,6 +8,7 @@ import {
   type PublicGameState,
   SOLO_NAMES,
 } from '@engine';
+import { Play } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { levelLabel, SCHMEISSEN_LABEL } from '../lib/gameText';
@@ -56,9 +57,20 @@ export function ReservationPanel({
     }
   }, [myTurn]);
 
+  // Wer gleich ausspielt – bei einem Solo (Hausregel) der Solist
+  const soloCanChange = view.settings.soloistLeads && Object.values(view.settings.soli).some(Boolean);
+  const leadsBadge = (
+    <span className="mx-auto mb-2 flex w-fit items-center gap-1.5 rounded-full bg-gold-400/15 px-3 py-1 text-sm font-semibold text-gold-200 ring-1 ring-gold-400/40">
+      <Play className="size-3.5 fill-current" />
+      {view.starter === myPos ? 'Du spielst aus' : `${name(view.starter)} spielt aus`}
+      {soloCanChange && <span className="text-xs font-normal text-gold-200/60">· bei Solo der Solist</span>}
+    </span>
+  );
+
   if (!myTurn) {
     return (
       <Bubble className="text-center text-sm text-white/80">
+        {leadsBadge}
         {view.declTurn !== null ? (
           <>
             <span className="font-semibold text-white">{name(view.declTurn)}</span> überlegt …
@@ -97,6 +109,7 @@ export function ReservationPanel({
 
   return (
     <Bubble className="w-full max-w-xl">
+      {leadsBadge}
       <div className="flex flex-wrap items-center justify-center gap-3">
         <span className="text-sm font-medium text-white/85">Du bist dran:</span>
         <button className="btn-primary min-w-28" disabled={busy} onClick={() => onDeclare({ kind: 'healthy' })} autoFocus>
