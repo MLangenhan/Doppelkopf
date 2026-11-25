@@ -1159,19 +1159,20 @@ export function GameView({
   );
 
   const sittingOutTiles = (noCams ? [] : sittingOut).map((m) => (
-    <VideoTile
-      key={m.user_id}
-      stream={streamOf(m.user_id)}
-      name={m.display_name}
-      mirror={m.user_id === me}
-      videoOff={m.user_id === me && !camera.enabled}
-      className={`aspect-[4/3] ${mobile ? 'w-24' : 'w-40'}`}
-    >
-      <div className="tag absolute bottom-1.5 left-1.5 rounded bg-felt-950/75 px-1.5 py-0.5 text-[10px]">
+    // Name und „setzt aus“ unter der Kamera, damit das Bild frei bleibt
+    <div key={m.user_id} className={`flex flex-col items-center gap-1 ${mobile ? 'w-24' : 'w-40'}`}>
+      <VideoTile
+        stream={streamOf(m.user_id)}
+        name={m.display_name}
+        mirror={m.user_id === me}
+        videoOff={m.user_id === me && !camera.enabled}
+        className="aspect-[4/3] w-full"
+      />
+      <div className="tag max-w-full truncate text-center text-[10px] text-white/70">
         {m.display_name}
         {m.user_id === me && ' (du)'} · setzt aus
       </div>
-    </VideoTile>
+    </div>
   ));
 
   return (
