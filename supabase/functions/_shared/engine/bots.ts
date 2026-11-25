@@ -203,15 +203,19 @@ function chooseAnnouncement(s: GameState, pos: number, level: BotLevel, rng: () 
     const hand = s.hands[pos];
     const top = hand.filter((c) => isTrump(c, ctx) && cardPower(c, ctx) >= cardPower('S-Q-0', ctx)).length;
     const trumps = hand.filter((c) => isTrump(c, ctx)).length;
-    const strong = s.kind === 'solo' ? top >= 4 : top >= 3 && trumps >= hand.length / 2;
+    // Gegen ein Solo hält der Solist fast alle Trümpfe – Kontra sagt nur mit wirklich starker Hand an
+    const vsSolo = s.kind === 'solo' && party === 'kontra';
+    const strong = vsSolo ? top >= 5 && trumps >= 6 : s.kind === 'solo' ? top >= 4 : top >= 3 && trumps >= hand.length / 2;
     return strong && announceError(s, pos, 120) === null ? 120 : null;
   }
 
   // Schwer: Siegchance per Simulation schätzen, nur am Anfang des Spiels (danach ist's zu spät)
   if (s.tricks.length > 2) return null;
   const est = estimate(s, pos, rng, opts);
-  if (mine === null && est.win >= 0.78 && announceError(s, pos, 120) === null) return 120;
-  if (mine === 120 && est.under90 >= 0.85 && announceError(s, pos, 90) === null) return 90;
+  // Gegen ein Solo höhere Hürden: der Solist spielt sein Blatt allein und meist sehr stark
+  const vsSolo = s.kind === 'solo' && party === 'kontra';
+  if (mine === null && est.win >= (vsSolo ? 0.88 : 0.78) && announceError(s, pos, 120) === null) return 120;
+  if (mine === 120 && est.under90 >= (vsSolo ? 0.95 : 0.85) && announceError(s, pos, 90) === null) return 90;
   return null;
 }
 
@@ -319,6 +323,8 @@ interface PlayInput {
   karlchen: boolean;
   /** Ich spiele ein Solo (oder stilles Solo / Hochzeit allein) */
   soloist?: boolean;
+  /** Hochzeit: Ich bin die Braut und suche noch einen Partner – die anderen sollen Stiche machen */
+  seekingPartner?: boolean;
 }
 
 function mediumCard(s: GameState, pos: number): Card {
@@ -346,6 +352,7 @@ function mediumCard(s: GameState, pos: number): Card {
     karlchen: s.settings.karlchen && s.kind !== 'solo',
     // Hochzeit vor der Partnersuche zählt nicht (da ist die Braut nur vorläufig allein)
     soloist: s.reTeam.length === 1 && s.reTeam[0] === pos && (s.kind !== 'hochzeit' || !!s.hochzeit?.alone),
+    seekingPartner: s.kind === 'hochzeit' && !!s.hochzeit && s.hochzeit.partner === null && !s.hochzeit.alone && s.hochzeit.bride === pos,
   };
   return heuristicPlay(input);
 }
@@ -364,6 +371,14 @@ function heuristicPlay(x: PlayInput): Card {
     augenOf(c) + (isTrump(c, ctx) ? 4 + (isHigh(c) ? 8 : 0) : 0) + (isFox(c) ? 20 : 0) + (isKarl(c) ? 8 : 0);
   const cheapest = (cards: Card[]) => [...cards].sort((a, b) => cost(a) - cost(b) || power(a) - power(b))[0];
   const beats = (c: Card, cards: Card[]) => trickWinnerIndex([...cards, c], ctx, x.lastTrick) === cards.length;
+
+  // Hochzeit, Partner gesucht: Fehl anspielen, damit ein anderer den Stich macht; selbst nicht überstechen
+  if (x.seekingPartner) {
+    const fehl = legal.filter((c) => !isTrump(c, ctx));
+    if (trick.length === 0) return cheapest(fehl.length ? fehl : legal);
+    const losers = legal.filter((c) => !beats(c, trick) && !isFox(c));
+    return cheapest(losers.length ? losers : legal);
+  }
 
   // ---- Ausspielen ----
   if (trick.length === 0) {
@@ -459,7 +474,16 @@ function hardCard(s: GameState, pos: number, rng: () => number, opts: BotOptions
   const options = [...new Map(legal.map((c) => [faceOf(c), c])).values()];
   if (options.length === 1) return options[0];
 
+  // Hochzeit: Die Braut sucht einen Partner – nicht selbst Stiche mit hohen Trümpfen holen,
+  // die Simulation (alle sehen dort alle Karten) bewertet „allein bleiben“ viel zu gut
+  if (s.kind === 'hochzeit' && s.hochzeit && s.hochzeit.partner === null && !s.hochzeit.alone && s.hochzeit.bride === pos) {
+    return mediumCard(s, pos);
+  }
+  const fallback = mediumCard(s, pos);
   const total = new Map<Card, number>(options.map((c) => [c, 0]));
+  // Paarweise Differenz zur Heuristik je Verteilung – für einen Signifikanztest
+  const diffSum = new Map<Card, number>(options.map((c) => [c, 0]));
+  const diffSq = new Map<Card, number>(options.map((c) => [c, 0]));
   let rounds = 0;
   const start = performance.now();
   const budget = opts.budgetMs ?? 220;
@@ -468,16 +492,31 @@ function hardCard(s: GameState, pos: number, rng: () => number, opts: BotOptions
   while (rounds < maxRounds && (rounds < minRounds || (!opts.samples && performance.now() - start < budget))) {
     const world = sampleWorld(s, pos, k, rng);
     if (!world) break;
-    for (const c of options) total.set(c, total.get(c)! + rollout(s, pos, world, c));
+    const results = new Map(options.map((c) => [c, rollout(s, pos, world, c)]));
+    const base = results.get(options.find((c) => faceOf(c) === faceOf(fallback)) ?? options[0])!;
+    for (const c of options) {
+      const r = results.get(c)!;
+      total.set(c, total.get(c)! + r);
+      diffSum.set(c, diffSum.get(c)! + (r - base));
+      diffSq.set(c, diffSq.get(c)! + (r - base) ** 2);
+    }
     rounds++;
   }
-  if (!rounds) return mediumCard(s, pos);
-  // Die Heuristik ist Vorwissen: Die Simulation muss sie klar schlagen (0,15 Punkte im Schnitt),
-  // sonst entscheidet Rauschen – z. B. Buttern auf einen Stich, dessen Gewinner man gar nicht kennt
-  const fallback = mediumCard(s, pos);
-  const score = (c: Card) => total.get(c)! / rounds + (faceOf(c) === faceOf(fallback) ? 0.15 : 0);
-  let best = options[0];
-  for (const c of options) if (score(c) > score(best)) best = c;
+  if (!rounds) return fallback;
+  // Die Heuristik ist Vorwissen: Eine andere Karte gewinnt nur, wenn sie im Schnitt klar besser ist
+  // (mind. 0,15 Punkte) UND der Vorsprung deutlich über dem Rauschen liegt (zwei Standardfehler).
+  // Sonst entscheiden Zufall und hohe Solo-Punkte – z. B. eine Kreuz-Dame unter die Dulle.
+  let best = options.find((c) => faceOf(c) === faceOf(fallback)) ?? fallback;
+  let bestGain = 0;
+  for (const c of options) {
+    const mean = diffSum.get(c)! / rounds;
+    const variance = Math.max(0, diffSq.get(c)! / rounds - mean * mean);
+    const se = Math.sqrt(variance / rounds);
+    if (mean >= 0.15 && mean > 2 * se && mean > bestGain) {
+      best = c;
+      bestGain = mean;
+    }
+  }
   return best;
 }
 
@@ -533,6 +572,20 @@ function sampleWorld(s: GameState, pos: number, k: Knowledge, rng: () => number)
       for (const q of queens) {
         const cands = [0, 1, 2, 3].filter((p) => p !== pos && k.parties[p] !== 'kontra' && fits(p, q));
         if (cands.length) give(cands[Math.floor(rng() * cands.length)], q);
+      }
+    }
+    // Wer ein Solo spielt, hat ein starkes Blatt: ihm zuerst die hohen Trümpfe geben (meist, nicht immer)
+    const soloist = s.kind === 'solo' && s.reTeam.length === 1 ? s.reTeam[0] : null;
+    if (soloist !== null && soloist !== pos) {
+      const want = Math.round(room[soloist] * 0.8);
+      const trumps = pool.filter((c) => isTrump(c, k.ctx)).sort((a, b) => cardPower(b, k.ctx) - cardPower(a, k.ctx));
+      let got = 0;
+      for (const c of trumps) {
+        if (got >= want) break;
+        if (fits(soloist, c) && rng() < 0.8) {
+          give(soloist, c);
+          got++;
+        }
       }
     }
     let ok = true;
