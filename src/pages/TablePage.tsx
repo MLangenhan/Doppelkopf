@@ -65,6 +65,16 @@ export function TablePage() {
   }, [running]);
 
   const myMember = t.members.find((m) => m.user_id === t.me);
+  // Vom Gastgeber entfernt: Wer eben noch am Tisch saß und plötzlich fehlt, geht zur Übersicht
+  const wasMember = useRef(false);
+  useEffect(() => {
+    if (myMember) wasMember.current = true;
+    else if (wasMember.current && !t.loading && t.members.length > 0) {
+      wasMember.current = false;
+      toast('Du wurdest vom Tisch genommen', 'info');
+      navigate('/');
+    }
+  }, [myMember, t.loading, t.members.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const spectatorMember = t.members.find((m) => m.spectator);
   async function setSpectator(on: boolean) {
     if (!t.table) return;
@@ -138,6 +148,13 @@ export function TablePage() {
             onStart={() => run(t.startGame)}
             onTakeSeat={(seat) => run(() => api.takeSeat(table.id, seat))}
             onSpectate={(on) => run(() => setSpectator(on))}
+            onKick={(userId) =>
+              run(async () => {
+                await api.kickPlayer(table.id, userId);
+                await t.refresh();
+                toast('Vom Tisch genommen', 'success');
+              })
+            }
             onSaveRules={(s: RuleSettings) =>
               run(async () => {
                 await api.updateSettings(table.id, s);
@@ -146,6 +163,7 @@ export function TablePage() {
             }
             onLeave={() =>
               run(async () => {
+                wasMember.current = false; // selbst gegangen, nicht entfernt
                 await api.leaveTable(table.id);
                 navigate('/');
               })

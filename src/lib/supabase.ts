@@ -135,6 +135,11 @@ export const api = {
     if (error) throw new Error(await errorMessage(error));
     return data as TableRow;
   },
+  /** Gastgeber: jemanden vom Tisch nehmen */
+  async kickPlayer(tableId: string, userId: string) {
+    const { error } = await supabase.rpc('kick_player', { p_table: tableId, p_user: userId });
+    if (error) throw new Error(await errorMessage(error));
+  },
   async leaveTable(tableId: string) {
     const { error } = await supabase.rpc('leave_table', { p_table: tableId });
     if (error) throw new Error(await errorMessage(error));

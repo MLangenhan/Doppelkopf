@@ -1,5 +1,5 @@
 import { BOT_LEVEL_LABELS, normalizeSettings, type RuleSettings } from '@engine';
-import { ArrowRight, Check, Copy } from 'lucide-react';
+import { ArrowRight, Check, Copy, UserX } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 import type { Member, TableRow } from '../lib/supabase';
@@ -22,6 +22,7 @@ export function Lobby({
   onTakeSeat,
   onSaveRules,
   onSpectate,
+  onKick,
   onLeave,
   onBack,
   busy,
@@ -38,6 +39,8 @@ export function Lobby({
   onSaveRules: (s: RuleSettings) => Promise<void>;
   /** Zuschauerplatz an/aus (gilt ab dem nächsten Spiel) */
   onSpectate: (on: boolean) => void;
+  /** Gastgeber: jemanden vom Tisch nehmen */
+  onKick: (userId: string) => void;
   onLeave: () => void;
   /** Zurück zum laufenden Abend (wenn schon gespielt wurde) */
   onBack?: () => void;
@@ -45,6 +48,9 @@ export function Lobby({
   hasPlayed: boolean;
 }) {
   const [copied, setCopied] = useState(false);
+  // Bestätigungen: Tisch verlassen bzw. wen der Gastgeber entfernen will
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [confirmKick, setConfirmKick] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<RuleSettings>(() => normalizeSettings(table.settings));
   const isHost = table.host_id === me;
@@ -122,6 +128,37 @@ export function Lobby({
                         avatar={m.avatar}
                         avatarColor={m.avatar_color}
                       >
+                        {isHost && !isMe && (
+                          <span className="absolute top-2 right-2">
+                            {confirmKick === m.user_id ? (
+                              <span className="flex items-center gap-1 rounded-lg bg-felt-950/90 p-1 text-xs ring-1 ring-red-300/40">
+                                <span className="px-1 text-white/75">Entfernen?</span>
+                                <button
+                                  className="rounded bg-red-500/80 px-2 py-0.5 font-semibold text-white hover:bg-red-500"
+                                  onClick={() => {
+                                    setConfirmKick(null);
+                                    onKick(m.user_id);
+                                  }}
+                                  disabled={busy}
+                                >
+                                  Ja
+                                </button>
+                                <button className="rounded px-2 py-0.5 text-white/70 hover:text-white" onClick={() => setConfirmKick(null)}>
+                                  Nein
+                                </button>
+                              </span>
+                            ) : (
+                              <button
+                                className="grid size-7 place-items-center rounded-full bg-felt-950/75 text-white/60 ring-1 ring-white/15 transition hover:bg-red-500/80 hover:text-white"
+                                onClick={() => setConfirmKick(m.user_id)}
+                                aria-label={`${m.display_name} vom Tisch nehmen`}
+                                title="Vom Tisch nehmen"
+                              >
+                                <UserX className="size-3.5" />
+                              </button>
+                            )}
+                          </span>
+                        )}
                         <span className="absolute bottom-2 left-2 max-w-[90%]">
                           <ProfileCard userId={m.user_id} name={m.display_name}>
                             <Nametag
@@ -182,9 +219,21 @@ export function Lobby({
             {meSpectating ? 'Doch mitspielen' : 'Nur zuschauen'}
           </button>
           <span className="flex-1" />
-          <button className="tag text-[11px] text-white/40 transition-colors hover:text-red-300" onClick={onLeave} disabled={busy}>
-            Tisch verlassen
-          </button>
+          {confirmLeave ? (
+            <span className="flex items-center gap-2">
+              <span className="text-sm text-white/70">Wirklich verlassen?</span>
+              <button className="btn-ghost px-3 py-1.5 text-sm text-red-300 hover:text-red-200" onClick={onLeave} disabled={busy} autoFocus>
+                Ja, verlassen
+              </button>
+              <button className="btn-ghost px-3 py-1.5 text-sm" onClick={() => setConfirmLeave(false)}>
+                Abbrechen
+              </button>
+            </span>
+          ) : (
+            <button className="tag text-[11px] text-white/40 transition-colors hover:text-red-300" onClick={() => setConfirmLeave(true)} disabled={busy}>
+              Tisch verlassen
+            </button>
+          )}
         </div>
       </section>
 
