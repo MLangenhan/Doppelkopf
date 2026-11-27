@@ -1529,26 +1529,15 @@ function TricksDialog({ tricks, name, onClose, cardW }: { tricks: Trick[]; name:
   );
 }
 
-/** Hinweis, warum man gerade zuschaut – Tooltip beim Darüberfahren, auf dem Handy per Antippen */
+/** Hinweis, warum man gerade zuschaut – kurz, darunter ganz klein der Grund */
 function WatchPill({ short, long }: { short: string; long: string }) {
-  const [open, setOpen] = useState(false);
   return (
-    <span className="relative flex flex-col items-center">
-      <button
-        type="button"
-        className="tag flex cursor-help items-center gap-1.5 rounded-full bg-sky-400/10 px-3 py-1 text-[10px] text-sky-200 ring-1 ring-sky-300/30"
-        title={long}
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-      >
+    <span className="flex max-w-72 flex-col items-center gap-1 text-center">
+      <span className="tag flex items-center gap-1.5 rounded-full bg-sky-400/10 px-3 py-1 text-[10px] text-sky-200 ring-1 ring-sky-300/30">
         <Info className="size-3.5" />
         {short}
-      </button>
-      {open && (
-        <span className="absolute top-full z-30 mt-1.5 w-64 rounded-lg bg-felt-950/95 px-3 py-2 text-center text-xs text-white/80 shadow-xl ring-1 ring-white/10">
-          {long}
-        </span>
-      )}
+      </span>
+      <span className="text-[10px] leading-snug text-white/45">{long}</span>
     </span>
   );
 }
