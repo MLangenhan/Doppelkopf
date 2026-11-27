@@ -17,7 +17,7 @@ import {
   SOLO_NAMES,
   sumAugen,
 } from '@engine';
-import { Crown, ArrowDownUp, Eye, GraduationCap, ListOrdered, LogOut, Video, VideoOff, X } from 'lucide-react';
+import { Crown, ArrowDownUp, Eye, GraduationCap, Info, ListOrdered, LogOut, Video, VideoOff, X } from 'lucide-react';
 import { AnimatePresence, motion, useAnimate } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -943,6 +943,26 @@ export function GameView({
     </div>
   );
 
+  // Warum schaue ich gerade zu? Selbst gewählt, Geber bei fünf Spielern oder später dazugekommen
+  const watchReason = (() => {
+    if (myPos >= 0 || !me || !members.some((m) => m.user_id === me) || tutorial) return null;
+    if (spectator?.on || members.find((m) => m.user_id === me)?.spectator)
+      return {
+        short: 'Du schaust zu',
+        long: 'Du hast dich selbst auf den Zuschauerplatz gesetzt. Über das Auge in der Leiste spielst du ab dem nächsten Spiel wieder mit.',
+      };
+    if (mySeat !== undefined && game.dealer_seat === mySeat)
+      return {
+        short: 'Du setzt diese Runde aus',
+        long: 'Zu fünft setzt der Geber aus – diesmal bist du dran. Im nächsten Spiel spielst du wieder mit.',
+      };
+    return {
+      short: 'Du bist ab dem nächsten Spiel dabei',
+      long: 'Du bist während dieses Spiels dazugekommen. Sobald es vorbei ist, spielst du mit.',
+    };
+  })();
+  const watchPill = watchReason && <WatchPill short={watchReason.short} long={watchReason.long} />;
+
   const infoLine = (
     <div className="tag flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[11px] text-white/50">
       <span className="text-white/80">Spiel {String(game.number).padStart(2, '0')}</span>
@@ -1192,6 +1212,7 @@ export function GameView({
             <div className="min-w-0 flex-1">{infoLine}</div>
             {toolbar}
           </div>
+          {watchPill && <div className="flex justify-center">{watchPill}</div>}
           {(lastTrick || sittingOutTiles.length > 0) && (
             <div className="flex items-start justify-center gap-3">
               {lastTrick}
@@ -1240,6 +1261,7 @@ export function GameView({
         <div className="relative z-10 flex min-w-0 flex-col items-center gap-3 self-start">
           {infoLine}
           {toolbar}
+          {watchPill}
           {/* Lernmodus: Die Erklärungen zeigen den letzten Stich ohnehin – sie stehen hier oben, der Tisch bleibt frei */}
           {learning ? (
             <>
@@ -1504,5 +1526,29 @@ function TricksDialog({ tricks, name, onClose, cardW }: { tricks: Trick[]; name:
         <TrickList tricks={tricks} name={name} cardW={cardW} />
       </div>
     </motion.div>
+  );
+}
+
+/** Hinweis, warum man gerade zuschaut – Tooltip beim Darüberfahren, auf dem Handy per Antippen */
+function WatchPill({ short, long }: { short: string; long: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative flex flex-col items-center">
+      <button
+        type="button"
+        className="tag flex cursor-help items-center gap-1.5 rounded-full bg-sky-400/10 px-3 py-1 text-[10px] text-sky-200 ring-1 ring-sky-300/30"
+        title={long}
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <Info className="size-3.5" />
+        {short}
+      </button>
+      {open && (
+        <span className="absolute top-full z-30 mt-1.5 w-64 rounded-lg bg-felt-950/95 px-3 py-2 text-center text-xs text-white/80 shadow-xl ring-1 ring-white/10">
+          {long}
+        </span>
+      )}
+    </span>
   );
 }
