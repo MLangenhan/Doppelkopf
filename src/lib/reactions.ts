@@ -2,6 +2,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { sound } from './sound';
 import { supabase } from './supabase';
+import { playBoardSound, SOUNDS } from './soundboard';
 
 // Schnelle Reaktionen am Tisch (Applaus, Autsch …). Laufen über einen Realtime-Broadcast pro Tisch,
 // im Übungsmodus nur lokal.
@@ -22,12 +23,16 @@ export const REACTION_LABELS: Record<ReactionKind, string> = {
 };
 
 export interface ShownReaction {
-  kind: ReactionKind;
+  kind: ReactionKind | 'sound';
   id: number;
+  /** Soundboard: Name des Sounds */
+  label?: string;
 }
 
 const SHOW_MS = 2600;
 const MIN_GAP_MS = 900;
+/** Soundboard: höchstens ein Sound alle 1,5 Sekunden pro Person */
+const SOUND_GAP_MS = 1500;
 let nextId = 1;
 
 export function useReactions(tableId: string | null, me: string | null) {
@@ -43,19 +48,39 @@ export function useReactions(tableId: string | null, me: string | null) {
     setTimeout(() => setShown((cur) => (cur[uid]?.id === id ? (({ [uid]: _gone, ...rest }) => rest)(cur) : cur)), SHOW_MS);
   }, []);
 
+  // Soundboard: kurz am Platz anzeigen, wer was abspielt, und den Sound abspielen
+  const lastSoundFrom = useRef<Record<string, number>>({});
+  const showSound = useCallback((uid: string, idx: number) => {
+    const s = SOUNDS[idx];
+    if (!s) return;
+    // Spam-Schutz auch beim Empfangen
+    const now = Date.now();
+    if (now - (lastSoundFrom.current[uid] ?? 0) < SOUND_GAP_MS - 200) return;
+    lastSoundFrom.current[uid] = now;
+    const id = nextId++;
+    setShown((cur) => ({ ...cur, [uid]: { kind: 'sound', id, label: s.label } }));
+    playBoardSound(idx);
+    setTimeout(() => setShown((cur) => (cur[uid]?.id === id ? (({ [uid]: _gone, ...rest }) => rest)(cur) : cur)), SHOW_MS);
+  }, []);
+
   useEffect(() => {
     if (!tableId || !me) return;
     const ch = supabase.channel(`react:${tableId}`, { config: { broadcast: { self: false } } });
     ch.on('broadcast', { event: 'r' }, ({ payload }) => {
       const p = payload as { from?: string; kind?: ReactionKind };
       if (p.from && p.kind) show(p.from, p.kind);
-    }).subscribe();
+    })
+      .on('broadcast', { event: 's' }, ({ payload }) => {
+        const p = payload as { from?: string; idx?: number };
+        if (p.from && typeof p.idx === 'number') showSound(p.from, p.idx);
+      })
+      .subscribe();
     channel.current = ch;
     return () => {
       supabase.removeChannel(ch);
       channel.current = null;
     };
-  }, [tableId, me, show]);
+  }, [tableId, me, show, showSound]);
 
   const send = useCallback(
     (kind: ReactionKind) => {
@@ -69,5 +94,18 @@ export function useReactions(tableId: string | null, me: string | null) {
     [me, show],
   );
 
-  return { shown, send };
+  const lastSound = useRef(0);
+  const sendSound = useCallback(
+    (idx: number) => {
+      if (!me) return;
+      const now = Date.now();
+      if (now - lastSound.current < SOUND_GAP_MS) return;
+      lastSound.current = now;
+      showSound(me, idx);
+      void channel.current?.send({ type: 'broadcast', event: 's', payload: { from: me, idx } });
+    },
+    [me, showSound],
+  );
+
+  return { shown, send, sendSound };
 }

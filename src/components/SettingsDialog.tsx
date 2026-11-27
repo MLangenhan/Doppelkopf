@@ -170,6 +170,25 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
               </div>
             )}
 
+            <div className="flex items-center gap-3 px-2 pt-1 pb-2">
+              <label htmlFor="soundboard" className="text-sm text-white/70">
+                Soundboard
+              </label>
+              <input
+                id="soundboard"
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={prefs.soundboardVolume}
+                onChange={(e) => setPref('soundboardVolume', Number(e.target.value))}
+                className="flex-1 accent-gold-400"
+              />
+              <span className="tag w-12 text-right text-[10px] text-white/55">
+                {prefs.soundboardVolume > 0 ? Math.round(prefs.soundboardVolume * 100) : 'stumm'}
+              </span>
+            </div>
+
             <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Kartenhand</h3>
             <div className="grid grid-cols-2 gap-1.5 px-2" role="radiogroup" aria-label="Sortierung">
               {(Object.keys(HAND_SORT_LABELS) as HandSort[]).map((k) => (

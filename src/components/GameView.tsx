@@ -67,7 +67,7 @@ import { CONCEPTS, type ConceptKey, RULE_CONCEPTS } from '../lib/lessons';
 import { analyzeTrick, ruleTexts } from '../lib/trickLesson';
 import { trumpRule } from '../lib/explain';
 import { AchievementBanner } from './AchievementBanner';
-import { ReactionPicker } from './Reactions';
+import { ReactionBubble, ReactionPicker, Soundboard } from './Reactions';
 import { LeaveDialog } from './LeaveDialog';
 
 /** Größe eines Elements (für Layout, das sich nach dem freien Platz richtet) */
@@ -175,7 +175,7 @@ export function GameView({
   /** Neu freigeschaltete Erfolge am Tisch */
   achievementFeed?: { current: AchievementEvent | null; done: (id: number) => void };
   /** Reaktionen am Tisch (Applaus, Autsch …) */
-  reactions?: { shown: Record<string, ShownReaction>; send: (k: ReactionKind) => void };
+  reactions?: { shown: Record<string, ShownReaction>; send: (k: ReactionKind) => void; sendSound?: (idx: number) => void };
   /** Hausregeln in der Seitenleiste anpassen */
   rules?: {
     value: RuleSettings;
@@ -251,6 +251,8 @@ export function GameView({
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   // Wer aussetzt oder zuschaut: alle Hände und alle bisherigen Stiche (vom Server, nur für Zuschauer)
   const isMember = !!me && members.some((m) => m.user_id === me);
+  const isMemberRef = useRef(isMember);
+  isMemberRef.current = isMember;
   const spectating = myPos < 0 && isMember && view.phase !== 'finished';
   const serverSpectate = spectating && !tutorial;
   const [pastTricks, setPastTricks] = useState<Trick[]>([]);
@@ -695,7 +697,7 @@ export function GameView({
       const el = e.target as HTMLElement | null;
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || el?.closest?.('input, textarea, select, [contenteditable]')) return;
       const digit = /^Digit([1-4])$/.exec(e.code);
-      if (digit && myPos >= 0) shortcuts.current.react(REACTION_KINDS[Number(digit[1]) - 1]);
+      if (digit && (myPos >= 0 || isMemberRef.current)) shortcuts.current.react(REACTION_KINDS[Number(digit[1]) - 1]);
       else if (e.code === 'KeyS' && myPos >= 0) shortcuts.current.cycleSort();
       else if (e.code === 'KeyP') shortcuts.current.toggleSidebar();
       else if (e.code === 'Escape') setSidebarOpen(false);
@@ -1019,7 +1021,9 @@ export function GameView({
           <span className="tag hidden text-[10px] text-white/55 sm:inline">{HAND_SORT_LABELS[prefs.handSort]}</span>
         </button>
       )}
-      {reactions && myPos >= 0 && <ReactionPicker onReact={reactions.send} />}
+      {/* Emotes und Soundboard: auch für alle, die aussetzen oder zuschauen */}
+      {reactions && (myPos >= 0 || isMember) && <ReactionPicker onReact={reactions.send} />}
+      {reactions?.sendSound && (myPos >= 0 || isMember) && <Soundboard onPlay={reactions.sendSound} />}
       {spectating && !tutorial && (
         <button
           className={`btn-ghost flex items-center gap-1.5 p-2 ${learn ? 'text-gold-300' : ''}`}
@@ -1187,7 +1191,9 @@ export function GameView({
         mirror={m.user_id === me}
         videoOff={m.user_id === me && !camera.enabled}
         className="aspect-[4/3] w-full"
-      />
+      >
+        <ReactionBubble reaction={reactions?.shown[m.user_id]} compact={mobile} />
+      </VideoTile>
       <div className="tag max-w-full truncate text-center text-[10px] text-white/70">
         {m.display_name}
         {m.user_id === me && ' (du)'} · setzt aus

@@ -40,6 +40,8 @@ export interface Prefs {
   learnLevel: number;
   /** Hinweis „Hovern hält den Timer an“ schon gesehen */
   learnHoverHintSeen: boolean;
+  /** Lautstärke des Soundboards 0–1 (0 = stumm) */
+  soundboardVolume: number;
   /** Nur für dich: Kartenrücken, Filzfarbe, Konfetti (durch Erfolge freigeschaltet) */
   cardBack: string;
   felt: string;
@@ -70,6 +72,7 @@ const DEFAULTS: Prefs = {
   spectatorLearn: 'ask',
   learnLevel: 1,
   learnHoverHintSeen: false,
+  soundboardVolume: 0.6,
   cardBack: 'blue',
   felt: 'green',
   confetti: 'classic',

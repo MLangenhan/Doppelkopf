@@ -1,7 +1,9 @@
-import { CircleQuestionMark, Clover, Crown, Glasses, Megaphone, PartyPopper, Rabbit, ThumbsUp, Zap } from 'lucide-react';
+import { CircleQuestionMark, Clover, Crown, Glasses, Megaphone, Music, PartyPopper, Rabbit, ThumbsUp, Volume2, VolumeX, Zap } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { EXTRA_REACTIONS } from '../lib/cosmetics';
+import { usePrefs } from '../lib/prefs';
+import { SOUNDS } from '../lib/soundboard';
 import { useMyAchievements } from '../lib/myAchievements';
 import { EXTRA_REACTION_KINDS, REACTION_KINDS, REACTION_LABELS, type ReactionKind, type ShownReaction } from '../lib/reactions';
 
@@ -35,10 +37,12 @@ export function ReactionBubble({ reaction, compact }: { reaction?: ShownReaction
             }`}
           >
             {(() => {
-              const Icon = REACTION_ICONS[reaction.kind];
+              const Icon = reaction.kind === 'sound' ? Volume2 : REACTION_ICONS[reaction.kind];
               return <Icon className={compact ? 'size-5' : 'size-9'} strokeWidth={1.75} />;
             })()}
-            <span className={`tag text-white ${compact ? 'text-[8px]' : 'text-[11px]'}`}>{REACTION_LABELS[reaction.kind]}</span>
+            <span className={`tag text-white ${compact ? 'text-[8px]' : 'text-[11px]'}`}>
+              {reaction.kind === 'sound' ? reaction.label : REACTION_LABELS[reaction.kind]}
+            </span>
           </div>
         </motion.div>
       )}
@@ -104,6 +108,87 @@ export function ReactionPicker({ onReact }: { onReact: (k: ReactionKind) => void
                 </button>
               );
             })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/** Soundboard: alle Sounds frei für alle; Lautstärke (bzw. stumm) direkt im Menü */
+export function Soundboard({ onPlay }: { onPlay: (idx: number) => void }) {
+  const [open, setOpen] = useState(false);
+  const [prefs, setPref] = usePrefs();
+  const ref = useRef<HTMLDivElement>(null);
+  const muted = prefs.soundboardVolume <= 0;
+  const lastVol = useRef(prefs.soundboardVolume || 0.6);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    window.addEventListener('pointerdown', close);
+    return () => window.removeEventListener('pointerdown', close);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        className={`btn-ghost p-2 ${muted ? 'text-white/40' : ''}`}
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Soundboard"
+        aria-expanded={open}
+        title="Soundboard"
+        data-cursor="Sounds"
+      >
+        <Music className="size-4" />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            className="panel absolute top-full left-1/2 z-40 mt-1 w-[22rem] max-w-[92vw] -translate-x-1/2 p-2"
+          >
+            {/* Lautstärke für alles, was das Soundboard abspielt – auch die Sounds der anderen */}
+            <div className="mb-2 flex items-center gap-2 px-1">
+              <button
+                className="btn-ghost p-1"
+                onClick={() => {
+                  if (muted) setPref('soundboardVolume', lastVol.current || 0.6);
+                  else {
+                    lastVol.current = prefs.soundboardVolume;
+                    setPref('soundboardVolume', 0);
+                  }
+                }}
+                aria-label={muted ? 'Soundboard einschalten' : 'Soundboard stumm schalten'}
+                title={muted ? 'Stumm – antippen zum Einschalten' : 'Stumm schalten'}
+              >
+                {muted ? <VolumeX className="size-4 text-red-300" /> : <Volume2 className="size-4" />}
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={prefs.soundboardVolume}
+                onChange={(e) => setPref('soundboardVolume', Number(e.target.value))}
+                className="flex-1 accent-gold-400"
+                aria-label="Lautstärke Soundboard"
+              />
+              <span className="tag w-8 text-right text-[10px] text-white/55 tabular-nums">{Math.round(prefs.soundboardVolume * 100)}</span>
+            </div>
+            <div className="grid max-h-72 grid-cols-3 gap-1 overflow-y-auto">
+              {SOUNDS.map((s, i) => (
+                <button
+                  key={s.file}
+                  className="btn-ghost truncate px-2 py-1.5 text-left text-xs"
+                  onClick={() => onPlay(i)}
+                  title={s.label}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
