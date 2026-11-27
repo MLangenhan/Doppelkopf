@@ -40,7 +40,7 @@ const NAMES = [
   'Magic Spells',
   'Laugh Toy World',
   'You Are My Sunshine',
-  'Taco Bell',
+  'Fahh',
 ];
 
 export const SOUNDS: { file: string; label: string }[] = NAMES.map((label, i) => ({
