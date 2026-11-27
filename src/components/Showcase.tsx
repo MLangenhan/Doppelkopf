@@ -1,5 +1,5 @@
 import { BOT_BADGES, BOT_TITLES } from '../lib/botLooks';
-import { TITLE_BY_KEY } from '@engine';
+import { titleOf } from '@engine';
 import { AchievementBadge } from './AchievementBadge';
 
 /** Gekaufter Titel; die sehr seltenen leuchten babyblau */
@@ -15,7 +15,8 @@ export function TitleTag({ titleKey, className = '' }: { titleKey?: string | nul
       </span>
     );
   }
-  const t = titleKey ? TITLE_BY_KEY.get(titleKey) : null;
+  const found = titleOf(titleKey);
+  const t = found ? { ...found.def, name: found.name } : null;
   if (!t) return null;
   return (
     <span

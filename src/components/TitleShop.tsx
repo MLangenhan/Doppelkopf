@@ -1,4 +1,4 @@
-import { achievementPointsOf, ACHIEVEMENT_BY_KEY, TITLE_BY_KEY, TITLES, type TitleDef } from '@engine';
+import { achievementPointsOf, ACHIEVEMENT_BY_KEY, TITLE_BY_KEY, titleOf, TITLES, type TitleDef } from '@engine';
 import { Check, Coins, Lock, RotateCcw, Sparkles, X } from 'lucide-react';
 import { AnimatePresence, animate, motion, useMotionValue, useTransform } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
@@ -134,33 +134,59 @@ export function TitleShop({
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {sorted.map((t) => {
           const has = owned.includes(t.key);
-          const active = look.title === t.key;
           const afford = free >= t.cost;
+          // Zwei Formen (z. B. Stichsammler / Stichsammlerin): ein Kauf, beide tragbar
+          const forms = t.nameF ? [t.key, `${t.key}:f`] : [t.key];
+          const cardClass = `shine-sweep group flex w-full flex-col gap-3 rounded-xl p-4 text-left ring-1 transition hover:-translate-y-0.5 ${
+            t.rare ? 'shine-border bg-gradient-to-br from-sky-400/15 to-transparent ring-sky-300/30' : 'bg-white/[0.03] ring-white/[0.06] hover:ring-gold-400/40'
+          } ${has ? '' : afford ? '' : 'opacity-70'}`;
+          const names = (
+            <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              {forms.map((f, i) => (
+                <span key={f} className="flex items-center gap-1.5">
+                  {i > 0 && <span className="text-[10px] text-white/30">/</span>}
+                  <TitleTag titleKey={f} className="text-[12px]!" />
+                </span>
+              ))}
+            </span>
+          );
           return (
-            <li key={t.key}>
-              <button
-                onPointerEnter={() => onPeek(t.key)}
-                onPointerLeave={() => onPeek(null)}
-                onClick={() => (has ? onWear(active ? null : t.key) : setOpen(t))}
-                className={`shine-sweep group flex w-full flex-col gap-3 rounded-xl p-4 text-left ring-1 transition hover:-translate-y-0.5 ${
-                  t.rare ? 'shine-border bg-gradient-to-br from-sky-400/15 to-transparent ring-sky-300/30' : 'bg-white/[0.03] ring-white/[0.06] hover:ring-gold-400/40'
-                } ${has ? '' : afford ? '' : 'opacity-70'}`}
-              >
-                <TitleTag titleKey={t.key} className="self-start text-[12px]!" />
-                <span className="flex items-center gap-2">
-                  {has ? (
-                    <span className={`tag flex items-center gap-1 text-[10px] ${active ? 'text-gold-300' : 'text-white/55'}`}>
-                      <Check className="size-3" /> {active ? 'Getragen' : 'Besitzt du · Tragen'}
-                    </span>
-                  ) : (
+            <li key={t.key} onPointerEnter={() => onPeek(forms.includes(look.title ?? '') ? look.title : t.key)} onPointerLeave={() => onPeek(null)}>
+              {has ? (
+                <div className={cardClass}>
+                  {names}
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    {forms.map((f) => {
+                      const active = look.title === f;
+                      return (
+                        <button
+                          key={f}
+                          className={`tag flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] ring-1 ${
+                            active ? 'bg-gold-400/20 text-gold-200 ring-gold-400/50' : 'text-white/60 ring-white/15 hover:text-white'
+                          }`}
+                          onPointerEnter={() => onPeek(f)}
+                          onClick={() => onWear(active ? null : f)}
+                        >
+                          {active && <Check className="size-3" />}
+                          {forms.length > 1 ? (titleOf(f)?.name ?? f) : active ? 'Getragen' : 'Tragen'}
+                        </button>
+                      );
+                    })}
+                    {t.rare && <span className="tag text-[9px] text-sky-200/80">sehr selten</span>}
+                  </span>
+                </div>
+              ) : (
+                <button onClick={() => setOpen(t)} className={cardClass}>
+                  {names}
+                  <span className="flex items-center gap-2">
                     <span className={`tag flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] ${afford ? 'bg-gold-400/15 text-gold-200' : 'bg-white/5 text-white/50'}`}>
                       {afford ? <Coins className="size-3" /> : <Lock className="size-3" />}
                       {t.cost}
                     </span>
-                  )}
-                  {t.rare && <span className="tag text-[9px] text-sky-200/80">sehr selten</span>}
-                </span>
-              </button>
+                    {t.rare && <span className="tag text-[9px] text-sky-200/80">sehr selten</span>}
+                  </span>
+                </button>
+              )}
             </li>
           );
         })}
@@ -210,6 +236,8 @@ function BuyDialog({
   onClose: () => void;
 }) {
   const [phase, setPhase] = useState<Phase>('confirm');
+  // Welche Form getragen werden soll (beide sind mit dem Kauf frei)
+  const [form, setForm] = useState(t.key);
   const [hold, setHold] = useState(0);
   const [undo, setUndo] = useState(10);
   const [coins, setCoins] = useState<{ x: number; y: number } | null>(null);
@@ -314,7 +342,7 @@ function BuyDialog({
           animate={phase === 'bought' ? { scale: [0.7, 1.25, 1], rotate: [0, -3, 0] } : { scale: 1 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
         >
-          <TitleTag titleKey={t.key} className="text-xl! tracking-wider" />
+          <TitleTag titleKey={form} className="text-xl! tracking-wider" />
           {phase === 'bought' && (
             <motion.span
               className="pointer-events-none absolute inset-0 bg-[linear-gradient(105deg,transparent_30%,rgba(255,255,255,0.7)_50%,transparent_70%)]"
@@ -325,10 +353,26 @@ function BuyDialog({
           )}
         </motion.div>
 
+        {t.nameF && (
+          <div className="mx-auto mt-3 flex w-fit gap-1 rounded-lg bg-black/25 p-0.5" role="radiogroup" aria-label="Form des Titels">
+            {[t.key, `${t.key}:f`].map((f) => (
+              <button
+                key={f}
+                role="radio"
+                aria-checked={form === f}
+                onClick={() => setForm(f)}
+                className={`rounded-md px-3 py-1 text-xs ${form === f ? 'bg-white/15 text-white' : 'text-white/55 hover:text-white'}`}
+              >
+                {titleOf(f)?.name}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* So sieht es am Tisch aus */}
         <div className="mx-auto mt-5 w-64">
           <VideoTile stream={null} name={name} avatar={look.avatar} avatarColor={look.avatarColor} className="aspect-[4/3] w-full">
-            <Nametag className="absolute bottom-2 left-2 max-w-[92%]" name={name} title={t.key} badges={look.showBadges ? look.badges : []} frame={look.frame} />
+            <Nametag className="absolute bottom-2 left-2 max-w-[92%]" name={name} title={form} badges={look.showBadges ? look.badges : []} frame={look.frame} />
           </VideoTile>
         </div>
 
@@ -375,7 +419,7 @@ function BuyDialog({
               <button
                 className="btn-primary flex-1 justify-center py-3 text-base"
                 onClick={() => {
-                  onWear(t.key);
+                  onWear(form);
                   onClose();
                 }}
                 autoFocus

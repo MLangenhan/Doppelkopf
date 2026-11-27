@@ -147,7 +147,7 @@ export function AchievementsContent() {
       return false;
     }
     setOwned((o) => o.filter((k) => k !== key));
-    if (look.title === key) setLook((l) => ({ ...l, title: null }));
+    if (look.title?.split(':')[0] === key) setLook((l) => ({ ...l, title: null }));
     toast('Kauf rückgängig gemacht – Punkte sind zurück', 'success');
     return true;
   };

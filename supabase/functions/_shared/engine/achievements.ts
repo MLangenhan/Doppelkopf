@@ -292,27 +292,39 @@ export interface TitleDef {
   cost: number;
   /** Sehr selten: babyblaues Leuchten */
   rare?: boolean;
+  /** Weibliche Form (gleicher Titel, gleicher Preis) – gespeichert als „key:f“ */
+  nameF?: string;
 }
 
 export const TITLES: TitleDef[] = [
   { key: 'pechvogel', name: 'Pechvogel vom Dienst', cost: 20 },
-  { key: 'kartenschubser', name: 'Kartenschubser', cost: 30 },
-  { key: 'stichsammler', name: 'Stichsammler', cost: 40 },
-  { key: 'fuchsfluesterer', name: 'Fuchsflüsterer', cost: 50 },
-  { key: 'karokoenig', name: 'Karo-König', cost: 60 },
-  { key: 'dullenschwinger', name: 'Dullenschwinger', cost: 70 },
+  { key: 'kartenschubser', name: 'Kartenschubser', cost: 30, nameF: 'Kartenschubserin' },
+  { key: 'stichsammler', name: 'Stichsammler', cost: 40, nameF: 'Stichsammlerin' },
+  { key: 'fuchsfluesterer', name: 'Fuchsflüsterer', cost: 50, nameF: 'Fuchsflüsterin' },
+  { key: 'karokoenig', name: 'Karo-König', cost: 60, nameF: 'Karo-Königin' },
+  { key: 'dullenschwinger', name: 'Dullenschwinger', cost: 70, nameF: 'Dullenschwingerin' },
   { key: 'ansagenass', name: 'Ansagen-Ass', cost: 80 },
-  { key: 'schweinchenzuechter', name: 'Schweinchenzüchter', cost: 90 },
-  { key: 'hochzeitsplaner', name: 'Hochzeitsplaner', cost: 100 },
-  { key: 'kontrarebell', name: 'Kontra-Rebell', cost: 110 },
-  { key: 'solokuenstler', name: 'Solo-Künstler', cost: 120 },
-  { key: 'unbestechlich', name: 'Der Unbestechliche', cost: 130 },
-  { key: 'schwarzmaler', name: 'Der Schwarzmaler', cost: 250, rare: true },
-  { key: 'grossmeister', name: 'Großmeister des Doppelkopfs', cost: 300, rare: true },
+  { key: 'schweinchenzuechter', name: 'Schweinchenzüchter', cost: 90, nameF: 'Schweinchenzüchterin' },
+  { key: 'hochzeitsplaner', name: 'Hochzeitsplaner', cost: 100, nameF: 'Hochzeitsplanerin' },
+  { key: 'kontrarebell', name: 'Kontra-Rebell', cost: 110, nameF: 'Kontra-Rebellin' },
+  { key: 'solokuenstler', name: 'Solo-Künstler', cost: 120, nameF: 'Solo-Künstlerin' },
+  { key: 'unbestechlich', name: 'Der Unbestechliche', cost: 130, nameF: 'Die Unbestechliche' },
+  { key: 'schwarzmaler', name: 'Der Schwarzmaler', cost: 250, rare: true, nameF: 'Die Schwarzmalerin' },
+  { key: 'grossmeister', name: 'Großmeister des Doppelkopfs', cost: 300, rare: true, nameF: 'Großmeisterin des Doppelkopfs' },
   { key: 'legende', name: 'Legende der Tafelrunde', cost: 400, rare: true },
 ];
 
 export const TITLE_BY_KEY = new Map(TITLES.map((t) => [t.key, t]));
+
+/** Titel samt gewählter Form: „stichsammler“ oder „stichsammler:f“ */
+export function titleOf(key: string | null | undefined): { def: TitleDef; name: string; female: boolean } | null {
+  if (!key) return null;
+  const [base, variant] = key.split(':');
+  const def = TITLE_BY_KEY.get(base);
+  if (!def) return null;
+  const female = variant === 'f' && !!def.nameF;
+  return { def, name: female ? def.nameF! : def.name, female };
+}
 
 export function achievementPointsOf(key: string): number {
   const a = ACHIEVEMENT_BY_KEY.get(key);
