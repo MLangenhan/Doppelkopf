@@ -37,7 +37,7 @@ import { giphyEnabled } from '../lib/giphy';
 import { REACTION_KINDS, type ReactionKind, type ShownReaction } from '../lib/reactions';
 import { explainTrick, explainTurn } from '../lib/explain';
 import { arrangeHand, defaultFaceOrder, orderFromHand, updateFaceOrder } from '../lib/handSort';
-import { HAND_SORT_LABELS, type HandSort, useFx, usePrefs } from '../lib/prefs';
+import { getPrefs, HAND_SORT_LABELS, type HandSort, useFx, usePrefs } from '../lib/prefs';
 import { sound } from '../lib/sound';
 import { api, type GameRow, type Member, type ResultRow } from '../lib/supabase';
 import type { RemoteVideo } from '../lib/video';
@@ -690,14 +690,23 @@ export function GameView({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
   // Tasten: S = Sortierung wechseln, P = Punkte und Regeln
-  const shortcuts = useRef({ cycleSort: () => {}, toggleSidebar: () => {}, react: (_k: ReactionKind) => {} });
-  shortcuts.current = { cycleSort, toggleSidebar: () => setSidebarOpen((o) => !o), react: (k) => reactions?.send(k) };
+  const shortcuts = useRef({ cycleSort: () => {}, toggleSidebar: () => {}, react: (_k: ReactionKind) => {}, sound: (_i: number) => {} });
+  shortcuts.current = {
+    cycleSort,
+    toggleSidebar: () => setSidebarOpen((o) => !o),
+    react: (k) => reactions?.send(k),
+    sound: (i) => reactions?.sendSound?.(i),
+  };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || el?.closest?.('input, textarea, select, [contenteditable]')) return;
-      const digit = /^Digit([1-4])$/.exec(e.code);
-      if (digit && (myPos >= 0 || isMemberRef.current)) shortcuts.current.react(REACTION_KINDS[Number(digit[1]) - 1]);
+      // Zifferntasten: eigene Soundboard-Belegung (Einstellungen) geht vor, sonst Reaktionen auf 1–4
+      const digit = /^(?:Digit|Numpad)([0-9])$/.exec(e.code);
+      const atTable = myPos >= 0 || isMemberRef.current;
+      const bound = digit ? getPrefs().soundHotkeys[(Number(digit[1]) + 9) % 10] : null;
+      if (digit && atTable && bound !== null && bound !== undefined) shortcuts.current.sound(bound);
+      else if (digit && atTable && Number(digit[1]) >= 1 && Number(digit[1]) <= 4) shortcuts.current.react(REACTION_KINDS[Number(digit[1]) - 1]);
       else if (e.code === 'KeyS' && myPos >= 0) shortcuts.current.cycleSort();
       else if (e.code === 'KeyP') shortcuts.current.toggleSidebar();
       else if (e.code === 'Escape') setSidebarOpen(false);

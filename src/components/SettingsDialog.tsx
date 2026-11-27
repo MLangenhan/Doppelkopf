@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { FX_LABELS, type FxKey, HAND_SORT_LABELS, type HandSort, setAllFx, setFx, usePrefs } from '../lib/prefs';
 import { useAllCardOrders } from '../lib/cardOrder';
 import { germanVoices, sound } from '../lib/sound';
+import { HOTKEY_LABELS, SOUNDS } from '../lib/soundboard';
 
 const SHORTCUTS: [string[], string][] = [
   [['←', '→'], 'Karte wählen'],
@@ -14,6 +15,7 @@ const SHORTCUTS: [string[], string][] = [
   [['S'], 'Sortierung der Hand wechseln'],
   [['P'], 'Punkte und Regeln ein- und ausblenden'],
   [['1', '2', '3', '4'], 'Reaktion: Applaus, Autsch, Glück gehabt, Hmm'],
+  [['1', '…', '0'], 'Soundboard-Sound, wenn die Taste unten belegt ist'],
 ];
 
 const PAD: [string[], string][] = [
@@ -187,6 +189,33 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
               <span className="tag w-12 text-right text-[10px] text-white/55">
                 {prefs.soundboardVolume > 0 ? Math.round(prefs.soundboardVolume * 100) : 'stumm'}
               </span>
+            </div>
+
+            <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Soundboard-Tasten</h3>
+            <p className="mb-2 px-2 text-xs text-white/50">Belegte Tasten spielen den Sound ab – auf 1–4 statt der Reaktion.</p>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 px-2">
+              {HOTKEY_LABELS.map((key, i) => (
+                <label key={key} className="flex items-center gap-2">
+                  <kbd className="tag w-6 rounded border border-white/20 py-0.5 text-center text-[10px] text-white/80">{key}</kbd>
+                  <select
+                    className="input min-w-0 flex-1 py-1 text-xs"
+                    value={prefs.soundHotkeys[i] ?? ''}
+                    onChange={(e) => {
+                      const next = [...prefs.soundHotkeys];
+                      next[i] = e.target.value === '' ? null : Number(e.target.value);
+                      setPref('soundHotkeys', next);
+                    }}
+                    aria-label={`Taste ${key}`}
+                  >
+                    <option value="">{i < 4 ? `– (Reaktion)` : '–'}</option>
+                    {SOUNDS.map((s, j) => (
+                      <option key={s.file} value={j}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
             </div>
 
             <h3 className="mt-5 mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">Kartenhand</h3>

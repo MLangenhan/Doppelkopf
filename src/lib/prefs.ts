@@ -42,6 +42,8 @@ export interface Prefs {
   learnHoverHintSeen: boolean;
   /** Lautstärke des Soundboards 0–1 (0 = stumm) */
   soundboardVolume: number;
+  /** Tasten 1–9, 0 → Sound (Index im Soundboard) oder null; belegt ersetzt die Reaktion auf 1–4 */
+  soundHotkeys: (number | null)[];
   /** Nur für dich: Kartenrücken, Filzfarbe, Konfetti (durch Erfolge freigeschaltet) */
   cardBack: string;
   felt: string;
@@ -73,6 +75,7 @@ const DEFAULTS: Prefs = {
   learnLevel: 1,
   learnHoverHintSeen: false,
   soundboardVolume: 0.6,
+  soundHotkeys: [null, null, null, null, null, null, null, null, null, null],
   cardBack: 'blue',
   felt: 'green',
   confetti: 'classic',

@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { EXTRA_REACTIONS } from '../lib/cosmetics';
 import { usePrefs } from '../lib/prefs';
-import { SOUNDS } from '../lib/soundboard';
+import { HOTKEY_LABELS, SOUNDS } from '../lib/soundboard';
 import { useMyAchievements } from '../lib/myAchievements';
 import { EXTRA_REACTION_KINDS, REACTION_KINDS, REACTION_LABELS, type ReactionKind, type ShownReaction } from '../lib/reactions';
 
@@ -185,6 +185,11 @@ export function Soundboard({ onPlay }: { onPlay: (idx: number) => void }) {
                   onClick={() => onPlay(i)}
                   title={s.label}
                 >
+                  {prefs.soundHotkeys.indexOf(i) >= 0 && (
+                    <kbd className="tag mr-1 rounded border border-white/25 px-1 text-[9px] text-gold-200">
+                      {HOTKEY_LABELS[prefs.soundHotkeys.indexOf(i)]}
+                    </kbd>
+                  )}
                   {s.label}
                 </button>
               ))}

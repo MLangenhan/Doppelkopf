@@ -1,10 +1,55 @@
 import { getPrefs } from './prefs';
 
 /** Soundboard: kurze Meme-Sounds, für alle frei. Namen lassen sich hier anpassen. */
-export const SOUNDS: { file: string; label: string }[] = Array.from({ length: 39 }, (_, i) => ({
+const NAMES = [
+  'God Damn!',
+  'Spawn',
+  'Metal Pipe Falling',
+  'Undertakers Bell',
+  'Travis Scott',
+  'Mentality',
+  'PS2 Startup',
+  'French',
+  'Bass Drop',
+  'Windows 95',
+  'Windows XP',
+  'Windows XP Shutdown',
+  'English or Spanish',
+  'Flashbang',
+  'Siren',
+  'Among Us',
+  'Long Brain Fart',
+  'Gay Echo',
+  'Mewing',
+  'Get out',
+  'Glass Breaking',
+  'RDR2 Low Honor',
+  'Grandma House',
+  'Collect Gold',
+  'Slow Motion',
+  'Spongebob Walking',
+  'I be poppin bottles',
+  'Depressed Penguin',
+  'Super Idol',
+  'Fortnite Shield Pot',
+  'Don Pollo Ahh Sound',
+  'Dark Piano Dexter',
+  'Optimus Prime',
+  'Hells Kitchen Suspense',
+  'Bone Crack',
+  'Magic Spells',
+  'Laugh Toy World',
+  'You Are My Sunshine',
+  'Taco Bell',
+];
+
+export const SOUNDS: { file: string; label: string }[] = NAMES.map((label, i) => ({
   file: `meme-${String(i + 1).padStart(2, '0')}.mp3`,
-  label: `Sound ${i + 1}`,
+  label,
 }));
+
+/** Tasten 1–9 und 0 (Index 0–9) → Sound-Index oder null */
+export const HOTKEY_LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
 
 const cache = new Map<number, HTMLAudioElement>();
 
